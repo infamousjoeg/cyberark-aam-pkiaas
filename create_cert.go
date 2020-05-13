@@ -9,6 +9,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -18,9 +19,11 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/gddo/httputil/header"
+	"github.com/gorilla/mux"
 )
 
 // CreateCertReq ---------------------------------------------------------------
@@ -62,14 +65,16 @@ type Template struct {
 	PolicyIdentifiers []string
 }
 
+// CertificateResponse -----------------------------------------
 type CertificateResponse struct {
 	Certificate   []byte           `json:"certificate"`
-	PrivateKey    []byte           `json: "private key"`
-	CACert        x509.Certificate `json: "CA certificate"`
-	SerialNumber  *big.Int         `json: "serial number"`
-	LeaseDuration int64            `json: "lease duration"`
+	PrivateKey    []byte           `json:"private key"`
+	CACert        x509.Certificate `json:"CA certificate"`
+	SerialNumber  *big.Int         `json:"serial number"`
+	LeaseDuration int64            `json:"lease duration"`
 }
 
+// SignRequest ------------------------------------------------
 type SignRequest struct {
 	CSR          string
 	CommonName   string
@@ -103,10 +108,20 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Validate and sanitize Subject data
 	// Validate SAN objects
-	// Validate key usage
-	// Validate extended key usage
+	_, err = ProcessKeyUsages(newTemplate.KeyUsages)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	_, err = ProcessExtKeyUsages(newTemplate.ExtKeyUsages)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
 	// Validate permitted/excluded data
-	// Validate policy identifiers
+	_, err = ProcessPolicyIdentifiers(newTemplate.PolicyIdentifiers)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 
 	// CreateTemplateInDAP(newTemplate)
 }
@@ -159,19 +174,21 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetTemplateHandler ----------------------------------------------------------
 func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
-	template, err := GetTemplateFromDAP(r.URL.Query()["TemplateName"])
+	template, err := GetTemplateFromDAP(mux.Vars(r)["templateName"])
 
 	if err != nil {
 		http.Error(w, "Unable to retrieve requested template", http.StatusBadRequest)
 	}
+	fmt.Printf("%+x", template)
 }
 
 // ListTemplatesHandler ---------------------------------------------------------
 func ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
-	templates, err := GetAllTemplatesFromDAP()
+	//	templates, err := GetAllTemplatesFromDAP()
 
+	var err error = nil
 	if err != nil {
-		http.Error(w, "Failed to retrieve a list of templates")
+		http.Error(w, "Failed to retrieve a list of templates", http.StatusBadRequest)
 	}
 }
 
@@ -189,6 +206,7 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 	var signReq SignRequest
 	err = json.Unmarshal(reqBody, &signReq)
 	certReq, err := x509.ParseCertificateRequest([]byte(signReq.CSR))
+	fmt.Printf("%+v", certReq)
 }
 
 // CreateCertHandler -----------------------------------------------------------
@@ -248,12 +266,7 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No matching signature algorithm found in requested template", http.StatusInternalServerError)
 	}
 
-	//	var keyUsage x509.KeyUsage
-	//	first := true
-
-	//	for usage := range template.KeyUsages {
-
-	//	}
+	keyUsage, err := ProcessKeyUsages(template.KeyUsages)
 
 	newCert := x509.Certificate{
 		SerialNumber: serialNumber,
@@ -271,19 +284,8 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		NotAfter:           time.Now().Add(time.Second * time.Duration(ttl)),
 		SignatureAlgorithm: sigAlgo,
 		AuthorityKeyId:     caCert.SubjectKeyId,
-		//		SubjectKeyId: sha1HashOfPublicKey bit string
+		KeyUsage:           keyUsage,
 	}
-	/*
-	   CERTIFICATE PEM BLOCK
-	   EXPIRATION DATE
-	   SERIAL NUMBER
-	   REVOKATION STATUS
-
-
-	   []string, err := ConjurCertList()
-	   { "certs": ["serial#1", "serial#2", "etc"]}
-
-	*/
 	derCert, err := x509.CreateCertificate(rand.Reader, &newCert, &caCert, clientPubKey, signingKey)
 
 	// Update CRL Code Block
@@ -396,6 +398,96 @@ func ValidateContentType(headers http.Header, expected string) bool {
 	return false
 }
 
+// ProcessKeyUsages -----------------------------------------------------
+func ProcessKeyUsages(keyUsages []string) (x509.KeyUsage, error) {
+	var retKeyUsage x509.KeyUsage
+
+	for _, keyUsage := range keyUsages {
+		switch keyUsage {
+		case "digitalSignature":
+			retKeyUsage |= x509.KeyUsageDigitalSignature
+		case "keyEncipherment":
+			retKeyUsage |= x509.KeyUsageKeyEncipherment
+		case "dataEncipherment":
+			retKeyUsage |= x509.KeyUsageDataEncipherment
+		case "contentCommitment":
+			retKeyUsage |= x509.KeyUsageContentCommitment
+		case "keyAgreement":
+			retKeyUsage |= x509.KeyUsageKeyAgreement
+		case "CertSign":
+			retKeyUsage |= x509.KeyUsageCertSign
+		case "CRLSign":
+			retKeyUsage |= x509.KeyUsageCRLSign
+		case "encipherOnly":
+			retKeyUsage |= x509.KeyUsageEncipherOnly
+		case "decipherOnly":
+			retKeyUsage |= x509.KeyUsageDecipherOnly
+		default:
+			return retKeyUsage, errors.New("Invalid key usage type is specified in request")
+		}
+	}
+	return retKeyUsage, nil
+}
+
+// ProcessExtKeyUsages ------------------------------------------------------------
+func ProcessExtKeyUsages(extKeyUsages []string) ([]x509.ExtKeyUsage, error) {
+	retExtKeyUsage := []x509.ExtKeyUsage{}
+
+	for _, extKeyUsage := range extKeyUsages {
+		switch extKeyUsage {
+		case "any":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageAny)
+		case "serverAuth":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageServerAuth)
+		case "clientAuth":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageClientAuth)
+		case "codeSigning":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageCodeSigning)
+		case "emailProtection":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+		case "timeStamping":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageTimeStamping)
+		case "OCSPSigning":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
+		case "ipsecEndSystem":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageIPSECEndSystem)
+		case "ipsecTunnel":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageIPSECTunnel)
+		case "ipsecUser":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageIPSECUser)
+		case "msSGC":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageMicrosoftServerGatedCrypto)
+		case "nsSGC":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageNetscapeServerGatedCrypto)
+		case "msCodeCom":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageMicrosoftCommercialCodeSigning)
+		case "msCodeKernel":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
+		default:
+			return retExtKeyUsage, errors.New("Invalid extended key usage " + extKeyUsage + " was found in request")
+		}
+	}
+	return retExtKeyUsage, nil
+}
+
+// ProcessPolicyIdentifiers -----------------------------------------------------
+func ProcessPolicyIdentifiers(policyIdentifiers []string) ([]asn1.ObjectIdentifier, error) {
+	asn1PolicyID := []asn1.ObjectIdentifier{}
+	for _, pid := range policyIdentifiers {
+		separated := strings.Split(pid, ".")
+		var intPids []int
+		for _, elem := range separated {
+			temp, err := strconv.Atoi(elem)
+			if err != nil {
+				return []asn1.ObjectIdentifier{}, errors.New("One or more of the policy identifiers presented is not a valid ASN.1 OID")
+			}
+			intPids = append(intPids, temp)
+		}
+		asn1PolicyID = append(asn1PolicyID, intPids)
+	}
+	return asn1PolicyID, nil
+}
+
 // GetTemplate -------------------------------------------------------------------
 // Returns an object containing the details associated with the template name passed
 // to the method. Returns error if template is not found.
@@ -454,4 +546,9 @@ func ValidateKeyAlgoAndSize(keyAlgo string, keySize string) error {
 // GetCACert ------------------------------------------------------------------
 func GetCACert() (x509.Certificate, error) {
 	return x509.Certificate{}, nil
+}
+
+// GetTemplateFromDAP ----------------------------------------------------------
+func GetTemplateFromDAP(templateName string) (Template, error) {
+	return Template{}, nil
 }
