@@ -15,7 +15,7 @@ type CreateCertReq struct {
 	Format       string   `json:"format"`
 }
 
-// Template -------------------------------------------------------------------
+// Template --------------------------------------------------------------------
 // Structure that represents a certificate request template
 type Template struct {
 	TemplateName      string   `json:"templateName"`
@@ -34,17 +34,17 @@ type Template struct {
 	MaxPathLength     string   `json:"maxPathLength"`
 	PermDNSDomains    []string `json:"permDNSDomains"`
 	ExclDNSDomains    []string `json:"exclDNSDomains"`
-	PermIPRanges      []string
-	ExclIPRanges      []string
-	PermittedEmails   []string
-	ExclEmails        []string
-	PermURIDomains    []string
-	ExclURIDomains    []string
-	PolicyIdentifiers []string //
+	PermIPRanges      []string `json:"permIPRanges"`
+	ExclIPRanges      []string `json:"exclIPRanges"`
+	PermEmails        []string `json:"permEmails"`
+	ExclEmails        []string `json:"exclEmails"`
+	PermURIDomains    []string `json:"permURIDomains"`
+	ExclURIDomains    []string `json:"exclURIDomains"`
+	PolicyIdentifiers []string `json:"policyIdentifiers"`
 }
 
-// CertificateResponse -----------------------------------------
-type CertificateResponse struct {
+// CreateCertificateResponse ---------------------------------------------------
+type CreateCertificateResponse struct {
 	Certificate   string   `json:"certificate"`
 	PrivateKey    string   `json:"privateKey"`
 	CACert        string   `json:"caCertificate"`
@@ -52,11 +52,28 @@ type CertificateResponse struct {
 	LeaseDuration int64    `json:"leaseDuration"`
 }
 
-// SignRequest ------------------------------------------------
+// GetCertificateResponse ------------------------------------------------------
+type PEMCertificate struct {
+	Certificate string `json:"certificate"`
+}
+
+type CertificateListResponse struct {
+	Certificates []string `json:"certificates"`
+}
+
+// SignRequest -----------------------------------------------------------------
 type SignRequest struct {
-	CSR          string
-	commonName   string
-	templateName string
-	TTL          int64
-	returnFormat string
+	CSR          string `json:"csr"`
+	CommonName   string `json:"commonName"`
+	TemplateName string `json:"templateName"`
+	TTL          int64  `json:"ttl"`
+	ReturnFormat string `json:"returnFormat"`
+}
+
+// IntermediateRequest --------------------------------------------------------
+type IntermediateRequest struct {
+}
+
+// RevokeRequest --------------------------------------------------------------
+type RevokeRequest struct {
 }
