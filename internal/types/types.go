@@ -73,4 +73,6 @@ type IntermediateRequest struct {
 
 // RevokeRequest --------------------------------------------------------------
 type RevokeRequest struct {
+	SerialNumber string `json:"serialNumber"`
+	Reason       string `json:"reason"`
 }

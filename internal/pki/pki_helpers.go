@@ -16,8 +16,10 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang/gddo/httputil/header"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
@@ -170,8 +172,8 @@ func SetCertSubject(template types.Template, commonName string) (pkix.Name, erro
 }
 
 // ProcessSubjectAltNames ---------------------------------------------------------
-func ProcessSubjectAltNames(altNames []string) ([]string, []string, []net.IP, []url.URL, error) {
-	dnsNames, emailAddresses, ipAddresses, URIs := []string{}, []string{}, []net.IP{}, []url.URL{}
+func ProcessSubjectAltNames(altNames []string) ([]string, []string, []net.IP, []*url.URL, error) {
+	dnsNames, emailAddresses, ipAddresses, URIs := []string{}, []string{}, []net.IP{}, []*url.URL{}
 
 	for _, altName := range altNames {
 		if !strings.Contains(altName, ":") {
@@ -185,14 +187,134 @@ func ProcessSubjectAltNames(altNames []string) ([]string, []string, []net.IP, []
 			}
 			ipAddresses = append(ipAddresses, tempIP)
 		case "DNS":
+
+			dnsNames = append(dnsNames, strings.Split(altName, ":")[1])
 		case "email":
+			emailAddresses = append(emailAddresses, strings.Split(altName, ":")[1])
 		case "URI":
+			tempURI, err := url.ParseRequestURI(strings.Split(altName, ":")[1])
+			if err != nil {
+				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("One or more of the URIs sent in the request were unable to be successfully processed")
+			}
+			URIs = append(URIs, tempURI)
 		default:
-			return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("One of more of the provided SANs is not properly formatted")
+			return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("One of more of the provided SANs in the certificate request is not properly formatted")
 		}
 	}
-
 	return dnsNames, emailAddresses, ipAddresses, URIs, nil
+}
+
+// ValidateSubjectAltNames ------------------------------------------------------
+func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddresses []net.IP, URIs []*url.URL, template types.Template) error {
+
+	if len(template.PermIPRanges) > 0 {
+		for _, network := range template.PermIPRanges {
+			for _, address := range ipAddresses {
+				permitted := false
+				_, ipNet, err := net.ParseCIDR(network)
+				if err != nil {
+					return errors.New("There was an error handling permitted IP network ranges")
+				}
+				if ipNet.Contains(address) {
+					permitted = true
+				}
+				if !permitted {
+					return errors.New("One of more of the IP address SANs were not in the explicitly permitted IP ranges")
+				}
+			}
+		}
+	}
+	if len(template.ExclIPRanges) > 0 {
+		for _, network := range template.PermIPRanges {
+			for _, address := range ipAddresses {
+				excluded := false
+				_, ipNet, err := net.ParseCIDR(network)
+				if err != nil {
+					return errors.New("There was an error handling permitted IP network ranges")
+				}
+				if ipNet.Contains(address) {
+					excluded = true
+				}
+				if excluded {
+					return errors.New("One of more of the IP address SANs were in the excluded IP ranges")
+				}
+			}
+		}
+	}
+	var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	if len(template.PermEmails) > 0 {
+		for _, permEmail := range template.PermEmails {
+			for _, email := range emailAddresses {
+				permitted := false
+				if rxEmail.MatchString(permEmail) {
+					if email == permEmail {
+						permitted = true
+					}
+				} else {
+					if len(email) > len(permEmail) {
+						if string(email[len(email)-len(permEmail):]) == permEmail {
+							permitted = true
+						}
+					}
+				}
+				if !permitted {
+					return errors.New("One of more of the email address SANs were not in the explicitly permitted emails")
+				}
+			}
+		}
+	}
+	if len(template.ExclEmails) > 0 {
+		for _, exclEmail := range template.ExclEmails {
+			for _, email := range emailAddresses {
+				excluded := false
+				if rxEmail.MatchString(exclEmail) {
+					if email == exclEmail {
+						excluded = true
+					}
+				} else {
+					if len(email) > len(exclEmail) {
+						if string(email[len(email)-len(exclEmail):]) == exclEmail {
+							excluded = true
+						}
+					}
+				}
+				if excluded {
+					return errors.New("One of more of the email address SANs were in the excluded emails")
+				}
+			}
+		}
+	}
+	if len(template.PermDNSDomains) > 0 {
+		for _, permDNS := range template.PermDNSDomains {
+			for _, dns := range dnsNames {
+				permitted := false
+				if len(dns) > len(permDNS) {
+					if string(dns[len(dns)-len(permDNS):]) == permDNS {
+						permitted = true
+					}
+				}
+				if !permitted {
+					return errors.New("One of more of the DNS domain SANs were not in the explicitly permitted DNS domains")
+				}
+			}
+		}
+	}
+	if len(template.ExclDNSDomains) > 0 {
+		for _, exclDNS := range template.ExclDNSDomains {
+			for _, dns := range dnsNames {
+				excluded := false
+				if len(dns) > len(exclDNS) {
+					if string(dns[len(dns)-len(exclDNS):]) == exclDNS {
+						excluded = true
+					}
+				}
+				if excluded {
+					return errors.New("One of more of the DNS domain SANs were in the excluded DNS domains")
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // ProcessExtKeyUsages ------------------------------------------------------------
@@ -315,6 +437,32 @@ func ConvertSerialOctetStringToInt(octetSerialNum string) (*big.Int, error) {
 	return retSerialNum, nil
 }
 
+// ReturnReasonCode --------------------------------------------------------------
+func ReturnReasonCode(reasonString string) (int, error) {
+	switch reasonString {
+	case "keyCompromise":
+		return 1, nil
+	case "cACompromise":
+		return 2, nil
+	case "affiliationChanged":
+		return 3, nil
+	case "superseded":
+		return 4, nil
+	case "cessationOfOperation":
+		return 5, nil
+	case "certificateHold":
+		return 0, errors.New("This endpoint is for certificate revocation. For temporary hold, use HoldCertificate")
+	case "removeFromCRL":
+		return 0, errors.New("This endpoint is for certificate revocation. To release tenporary hold, use ReleaseCertificate")
+	case "privilegeWithdrawn":
+		return 9, nil
+	case "aACompromise":
+		return 10, nil
+	default:
+		return 0, errors.New("The requested reason code does not match any acceptable reasons for certificate revocation")
+	}
+}
+
 // GetCertFromDAP ----------------------------------------------------------------
 // Finds matching certificate matching serial number in DAP and returns it; Sends appropriate
 // error message as necessary
@@ -357,8 +505,23 @@ func GetSigningCertFromDAP() (string, error) {
 	return "", nil
 }
 
-// GetSigningKeyFromDAP -------------------------------------------------------
+// GetSigningKeyFromDAP --------------------------------------------------------
 func GetSigningKeyFromDAP() (crypto.PrivateKey, error) {
 	var signingKey crypto.PrivateKey
 	return signingKey, nil
+}
+
+// GetRevokedCertsFromDAP ------------------------------------------------------
+func GetRevokedCertsFromDAP() []pkix.RevokedCertificate {
+	return []pkix.RevokedCertificate{}
+}
+
+// RevokeCertInDAP -------------------------------------------------------------
+func RevokeCertInDAP(serialNumber *big.Int, reasonCode int, revocationDate time.Time) {
+
+}
+
+// WriteCRLToDAP ----------------------------------------------------------------
+func WriteCRLToDAP(newCRL string) {
+
 }

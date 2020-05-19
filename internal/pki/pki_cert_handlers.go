@@ -6,11 +6,14 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -31,6 +34,39 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 	var signReq types.SignRequest
 	err = json.Unmarshal(reqBody, &signReq)
 	certReq, err := x509.ParseCertificateRequest([]byte(signReq.CSR))
+	if err != nil {
+		http.Error(w, "The CSR provided in the request was not able to be successfully parsed", http.StatusInternalServerError)
+		return
+	}
+	template, err := GetTemplateFromDAP(signReq.TemplateName)
+	if err != nil {
+		http.Error(w, "Unable to retrieve template "+signReq.TemplateName+" sent in request", http.StatusBadRequest)
+		return
+	}
+	templateSubject := pkix.Name{
+		Country:            []string{template.Country},
+		Organization:       []string{template.Organization},
+		OrganizationalUnit: []string{template.OrgUnit},
+		Locality:           []string{template.Locality},
+		Province:           []string{template.Province},
+		StreetAddress:      []string{template.Address},
+		PostalCode:         []string{template.PostalCode},
+	}
+
+	csrSubject := pkix.Name{
+		Country:            certReq.Subject.Country,
+		Organization:       certReq.Subject.Organization,
+		OrganizationalUnit: certReq.Subject.OrganizationalUnit,
+		Locality:           certReq.Subject.Locality,
+		Province:           certReq.Subject.Province,
+		StreetAddress:      certReq.Subject.StreetAddress,
+		PostalCode:         certReq.Subject.PostalCode,
+	}
+
+	if templateSubject.String() != csrSubject.String() {
+		http.Error(w, "The subject of the CSR does not match the allowed format in the requested template", http.StatusBadRequest)
+	}
+
 	fmt.Printf("%+v", certReq)
 }
 
@@ -48,6 +84,7 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
+
 	var certReq types.CreateCertReq
 	err = json.Unmarshal(reqBody, &certReq)
 	if err != nil {
@@ -79,6 +116,7 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	blockCaCert, _ := pem.Decode([]byte(caCertPEM))
 	derCaCert := blockCaCert.Bytes
 	caCert, err := x509.ParseCertificate(derCaCert)
@@ -118,16 +156,24 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	dnsNames, emailAddresses, ipAddresses, URIs, err := ProcessSubjectAltNames(certReq.AltNames)
 
+	// Still need to configure logic in new certificate for OCSPServer/IssuingCertificateURL/CRLDistributionPoints
 	newCert := x509.Certificate{
-		SerialNumber:       serialNumber,
-		Subject:            certSubject,
-		NotBefore:          time.Now(),
-		NotAfter:           time.Now().Add(time.Second * time.Duration(ttl)),
-		SignatureAlgorithm: sigAlgo,
-		AuthorityKeyId:     caCert.SubjectKeyId,
-		KeyUsage:           keyUsage,
-		ExtKeyUsage:        extKeyUsage,
+		SerialNumber:          serialNumber,
+		Subject:               certSubject,
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Second * time.Duration(ttl)),
+		SignatureAlgorithm:    sigAlgo,
+		AuthorityKeyId:        caCert.SubjectKeyId,
+		KeyUsage:              keyUsage,
+		ExtKeyUsage:           extKeyUsage,
+		BasicConstraintsValid: false,
+		IsCA:                  false,
+		DNSNames:              dnsNames,
+		EmailAddresses:        emailAddresses,
+		IPAddresses:           ipAddresses,
+		URIs:                  URIs,
 	}
 	derCert, err := x509.CreateCertificate(rand.Reader, &newCert, caCert, clientPubKey, signingKey)
 
@@ -219,5 +265,74 @@ func ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 
 // RevokeCertHandler -----------------------------------------------------------------
 func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
+	reqBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Unable to read request body", http.StatusBadRequest)
+		return
+	}
+	if !ValidateContentType(r.Header, "application/json") {
+		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
+		return
+	}
 
+	var crlReq = types.RevokeRequest{}
+
+	err = json.Unmarshal(reqBody, &crlReq)
+	if err != nil {
+		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	reasonCode := -1
+	if crlReq.Reason != "" {
+		reasonCode, err = ReturnReasonCode(crlReq.Reason)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	crlExtensions := []pkix.Extension{}
+	if reasonCode > 0 {
+		reasonExtension := pkix.Extension{
+			Id:    asn1.ObjectIdentifier{2, 5, 29, 21},
+			Value: []byte(strconv.Itoa(reasonCode)),
+		}
+		crlExtensions = append(crlExtensions, reasonExtension)
+	}
+
+	revokeTime := time.Now()
+	intSerialNum, err := ConvertSerialOctetStringToInt(crlReq.SerialNumber)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	revokedCert := pkix.RevokedCertificate{
+		SerialNumber:   intSerialNum,
+		RevocationTime: revokeTime,
+		Extensions:     crlExtensions,
+	}
+
+	revokedCertList := []pkix.RevokedCertificate{revokedCert}
+
+	revokedCertList = append(revokedCertList, GetRevokedCertsFromDAP()...)
+	RevokeCertInDAP(intSerialNum, reasonCode, revokeTime)
+
+	signingKey, err := GetSigningKeyFromDAP()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	caCertPEM, err := GetSigningCertFromDAP()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	blockCaCert, _ := pem.Decode([]byte(caCertPEM))
+	derCaCert := blockCaCert.Bytes
+	caCert, err := x509.ParseCertificate(derCaCert)
+	newCRL, err := caCert.CreateCRL(rand.Reader, signingKey, revokedCertList, revokeTime, revokeTime.Add(time.Hour*12))
+
+	pemCRL := pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: newCRL})
+
+	WriteCRLToDAP(string(pemCRL))
 }
