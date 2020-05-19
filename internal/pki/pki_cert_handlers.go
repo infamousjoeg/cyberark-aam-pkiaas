@@ -55,6 +55,10 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	template, err := GetTemplateFromDAP(certReq.TemplateName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	clientPrivKey, clientPubKey, err := GenerateKeys(template.KeyAlgo, template.KeyBits)
 	if err != nil {
@@ -70,12 +74,20 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		ttl = template.MaxTTL
 	}
 
-	caCert, err := GetSigningCertFromDAP()
+	caCertPEM, err := GetSigningCertFromDAP()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	blockCaCert, _ := pem.Decode([]byte(caCertPEM))
+	derCaCert := blockCaCert.Bytes
+	caCert, err := x509.ParseCertificate(derCaCert)
 	signingKey, err := GetSigningKeyFromDAP()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	keyType := fmt.Sprintf("%T", signingKey)
 
 	var sigAlgo x509.SignatureAlgorithm
@@ -117,7 +129,7 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		KeyUsage:           keyUsage,
 		ExtKeyUsage:        extKeyUsage,
 	}
-	derCert, err := x509.CreateCertificate(rand.Reader, &newCert, &caCert, clientPubKey, signingKey)
+	derCert, err := x509.CreateCertificate(rand.Reader, &newCert, caCert, clientPubKey, signingKey)
 
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derCert})
 	pemCA := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.RawTBSCertificate})
