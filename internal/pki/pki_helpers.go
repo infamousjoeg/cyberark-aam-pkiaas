@@ -74,6 +74,24 @@ func GenerateKeys(keyAlgo string, keySize string) (crypto.PrivateKey, crypto.Pub
 	}
 }
 
+// GenerateSerialNumber ------------------------------------------------------------------
+// Generates a new serial number and validates it doesn't already exist in the certificate
+// store
+func GenerateSerialNumber() (*big.Int, error) {
+	maxValue := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, maxValue)
+	if err != nil {
+		return big.NewInt(0), errors.New("Unable to generate a new serial number")
+	}
+	for _, err := GetCertFromDAP(serialNumber); err == nil; {
+		serialNumber, err = rand.Int(rand.Reader, maxValue)
+		if err != nil {
+			return big.NewInt(0), errors.New("Unable to generate a new serial number")
+		}
+	}
+	return serialNumber, nil
+}
+
 // ValidateContentType ---------------------------------------------------------
 // Helper function to ensure that the Content-Type of a given HTTP request matches
 // what is expected by the API
@@ -163,7 +181,7 @@ func ProcessSubjectAltNames(altNames []string) ([]string, []string, []net.IP, []
 		case "IP":
 			tempIP := net.ParseIP(strings.Split(altName, ":")[1])
 			if tempIP == nil {
-				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("An invalid IP address was present in the request SAN")
+				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("An invalid IP address was present in the requested SAN")
 			}
 			ipAddresses = append(ipAddresses, tempIP)
 		case "DNS":
@@ -234,24 +252,6 @@ func ProcessPolicyIdentifiers(policyIdentifiers []string) ([]asn1.ObjectIdentifi
 		asn1PolicyID = append(asn1PolicyID, intPids)
 	}
 	return asn1PolicyID, nil
-}
-
-// GenSerialNum ------------------------------------------------------------------
-// Generates a new serial number and validates it doesn't already exist in the certificate
-// store
-func GenSerialNum() (*big.Int, error) {
-	maxValue := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, maxValue)
-	if err != nil {
-		return big.NewInt(0), errors.New("Unable to generate a new serial number")
-	}
-	for _, err := GetCertFromDAP(serialNumber); err == nil; {
-		serialNumber, err = rand.Int(rand.Reader, maxValue)
-		if err != nil {
-			return big.NewInt(0), errors.New("Unable to generate a new serial number")
-		}
-	}
-	return serialNumber, nil
 }
 
 // ValidateKeyAlgoAndSize ------------------------------------------------------
@@ -350,4 +350,15 @@ func DeleteTemplateFromDAP(templateName string) error {
 // GetAllTemplatesFromDAP ------------------------------------------------------
 func GetAllTemplatesFromDAP() ([]string, error) {
 	return []string{}, nil
+}
+
+// GetSigningCertFromDAP -------------------------------------------------------
+func GetSigningCertFromDAP() (string, error) {
+	return "", nil
+}
+
+// GetSigningKeyFromDAP -------------------------------------------------------
+func GetSigningKeyFromDAP() (crypto.PrivateKey, error) {
+	var signingKey crypto.PrivateKey
+	return signingKey, nil
 }

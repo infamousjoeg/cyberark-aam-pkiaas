@@ -1,9 +1,5 @@
 package types
 
-import (
-	"math/big"
-)
-
 // CreateCertReq ---------------------------------------------------------------
 // Structure representing the HTTP request POSTed to the CreateCert API endpoint
 type CreateCertReq struct {
@@ -45,18 +41,19 @@ type Template struct {
 
 // CreateCertificateResponse ---------------------------------------------------
 type CreateCertificateResponse struct {
-	Certificate   string   `json:"certificate"`
-	PrivateKey    string   `json:"privateKey"`
-	CACert        string   `json:"caCertificate"`
-	SerialNumber  *big.Int `json:"serialNumber"`
-	LeaseDuration int64    `json:"leaseDuration"`
+	Certificate   string `json:"certificate"`
+	PrivateKey    string `json:"privateKey"`
+	CACert        string `json:"caCertificate"`
+	SerialNumber  string `json:"serialNumber"`
+	LeaseDuration int64  `json:"leaseDuration"`
 }
 
-// GetCertificateResponse ------------------------------------------------------
+// PEMCertificate -----------------------------------------------------------------
 type PEMCertificate struct {
 	Certificate string `json:"certificate"`
 }
 
+// CertificateListResponse -----------------------------------------------------
 type CertificateListResponse struct {
 	Certificates []string `json:"certificates"`
 }
