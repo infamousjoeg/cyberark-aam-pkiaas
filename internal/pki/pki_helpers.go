@@ -10,9 +10,11 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
+	"math/bits"
 	"net"
 	"net/http"
 	"net/url"
@@ -137,6 +139,160 @@ func ProcessKeyUsages(keyUsages []string) (x509.KeyUsage, error) {
 		}
 	}
 	return retKeyUsage, nil
+}
+
+// ValidateKeyUsageConstraints ---------------------------------------------------
+func ValidateKeyUsageConstraints(csrKeyUsage []byte, templateKeyUsage []string) (x509.KeyUsage, error) {
+	allowedUsages, err := ProcessKeyUsages(templateKeyUsage)
+	var retUsage uint16
+	if err != nil {
+		return 0, errors.New("There was an error processing the requested template key usages")
+	}
+	var bsAllowedUsage, csrUsage asn1.BitString
+	allowedUsages = x509.KeyUsage(bits.Reverse16(uint16(allowedUsages)))
+	bsAllowedUsage.BitLength = 9
+	bsAllowedUsage.Bytes = []byte{byte(0xff & (allowedUsages >> 8)), byte(0xff & allowedUsages)}
+	_, err = asn1.Unmarshal(csrKeyUsage, &csrUsage)
+	if err != nil {
+		return 0, errors.New("There was an error unmarshaling the ASN.1 encoded key usage data")
+	}
+	for i := 0; i < csrUsage.BitLength; i++ {
+		if csrUsage.At(i) == 1 && csrUsage.At(i) != bsAllowedUsage.At(i) {
+			return 0, errors.New("The requested CSR contains one or more key usages that are not permitted by the template")
+		}
+	}
+	retUsage = binary.BigEndian.Uint16(csrUsage.Bytes)
+	retUsage = bits.Reverse16(retUsage)
+	return x509.KeyUsage(retUsage), nil
+}
+
+// ProcessExtKeyUsages ------------------------------------------------------------
+func ProcessExtKeyUsages(extKeyUsages []string) ([]x509.ExtKeyUsage, error) {
+	retExtKeyUsage := []x509.ExtKeyUsage{}
+
+	for _, extKeyUsage := range extKeyUsages {
+		switch extKeyUsage {
+		case "any":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageAny)
+		case "serverAuth":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageServerAuth)
+		case "clientAuth":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageClientAuth)
+		case "codeSigning":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageCodeSigning)
+		case "emailProtection":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+		case "timeStamping":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageTimeStamping)
+		case "OCSPSigning":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
+		case "ipsecEndSystem":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageIPSECEndSystem)
+		case "ipsecTunnel":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageIPSECTunnel)
+		case "ipsecUser":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageIPSECUser)
+		case "msSGC":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageMicrosoftServerGatedCrypto)
+		case "nsSGC":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageNetscapeServerGatedCrypto)
+		case "msCodeCom":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageMicrosoftCommercialCodeSigning)
+		case "msCodeKernel":
+			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
+		default:
+			return retExtKeyUsage, errors.New("Invalid extended key usage " + extKeyUsage + " was found in request")
+		}
+	}
+	return retExtKeyUsage, nil
+}
+
+// ValidateExtKeyUsageConstraints --------------------------------------------------
+func ValidateExtKeyUsageConstraints(csrExtKeyUsage []byte, templateExtKeyUsage []string) ([]x509.ExtKeyUsage, error) {
+	allowedUsage, err := ProcessExtKeyUsages(templateExtKeyUsage)
+	retUsage := []x509.ExtKeyUsage{}
+	if err != nil {
+		return []x509.ExtKeyUsage{}, errors.New("There was an error processing the requested template extended key usages")
+	}
+
+	var csrExtKeyUsageOid []asn1.ObjectIdentifier
+	_, err = asn1.Unmarshal(csrExtKeyUsage, csrExtKeyUsageOid)
+	if err != nil {
+		return []x509.ExtKeyUsage{}, errors.New("There was an error unmarshaling the ASN.1 encoded extended key usage data")
+	}
+	for i := 0; i < len(csrExtKeyUsageOid); i++ {
+		extAllowed := false
+		for j := 0; j < len(allowedUsage); j++ {
+			switch csrExtKeyUsageOid[i].String() {
+			case "1.3.6.1.5.5.7.3.1":
+				if allowedUsage[j] == x509.ExtKeyUsageServerAuth {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageServerAuth)
+				}
+			case "1.3.6.1.5.5.7.3.2":
+				if allowedUsage[j] == x509.ExtKeyUsageClientAuth {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageClientAuth)
+				}
+			case "1.3.6.1.5.5.7.3.3":
+				if allowedUsage[j] == x509.ExtKeyUsageCodeSigning {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageCodeSigning)
+				}
+			case "1.3.6.1.5.5.7.3.4":
+				if allowedUsage[j] == x509.ExtKeyUsageEmailProtection {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageEmailProtection)
+				}
+			case "1.3.6.1.5.5.7.3.5":
+				if allowedUsage[j] == x509.ExtKeyUsageIPSECEndSystem {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageIPSECEndSystem)
+				}
+			case "1.3.6.1.5.5.7.3.6":
+				if allowedUsage[j] == x509.ExtKeyUsageIPSECTunnel {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageIPSECTunnel)
+				}
+			case "1.3.6.1.5.5.7.3.7":
+				if allowedUsage[j] == x509.ExtKeyUsageIPSECUser {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageIPSECUser)
+				}
+			case "1.3.6.1.5.5.7.3.8":
+				if allowedUsage[j] == x509.ExtKeyUsageTimeStamping {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageTimeStamping)
+				}
+			case "1.3.6.1.5.5.7.3.9":
+				if allowedUsage[j] == x509.ExtKeyUsageOCSPSigning {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageOCSPSigning)
+				}
+			case "1.3.6.1.4.1.311.10.3.3":
+				if allowedUsage[j] == x509.ExtKeyUsageMicrosoftServerGatedCrypto {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageMicrosoftServerGatedCrypto)
+				}
+			case "2.16.840.1.113730.4.1":
+				if allowedUsage[j] == x509.ExtKeyUsageNetscapeServerGatedCrypto {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageNetscapeServerGatedCrypto)
+				}
+			case "1.3.6.1.4.1.311.2.1.22":
+				if allowedUsage[j] == x509.ExtKeyUsageMicrosoftCommercialCodeSigning {
+					extAllowed = true
+					retUsage = append(retUsage, x509.ExtKeyUsageMicrosoftCommercialCodeSigning)
+				}
+			default:
+				return []x509.ExtKeyUsage{}, errors.New("The CSR has requested extended key usages that are not permitted in the given template")
+			}
+		}
+		if !extAllowed {
+			return []x509.ExtKeyUsage{}, errors.New("The CSR has requested extended key usages that are not permitted in the given template")
+		}
+	}
+	return retUsage, nil
 }
 
 // SetCertSubject -----------------------------------------------------------------
@@ -317,47 +473,6 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 	return nil
 }
 
-// ProcessExtKeyUsages ------------------------------------------------------------
-func ProcessExtKeyUsages(extKeyUsages []string) ([]x509.ExtKeyUsage, error) {
-	retExtKeyUsage := []x509.ExtKeyUsage{}
-
-	for _, extKeyUsage := range extKeyUsages {
-		switch extKeyUsage {
-		case "any":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageAny)
-		case "serverAuth":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageServerAuth)
-		case "clientAuth":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageClientAuth)
-		case "codeSigning":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageCodeSigning)
-		case "emailProtection":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageEmailProtection)
-		case "timeStamping":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageTimeStamping)
-		case "OCSPSigning":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
-		case "ipsecEndSystem":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageIPSECEndSystem)
-		case "ipsecTunnel":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageIPSECTunnel)
-		case "ipsecUser":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageIPSECUser)
-		case "msSGC":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageMicrosoftServerGatedCrypto)
-		case "nsSGC":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageNetscapeServerGatedCrypto)
-		case "msCodeCom":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageMicrosoftCommercialCodeSigning)
-		case "msCodeKernel":
-			retExtKeyUsage = append(retExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
-		default:
-			return retExtKeyUsage, errors.New("Invalid extended key usage " + extKeyUsage + " was found in request")
-		}
-	}
-	return retExtKeyUsage, nil
-}
-
 // ProcessPolicyIdentifiers -----------------------------------------------------
 func ProcessPolicyIdentifiers(policyIdentifiers []string) ([]asn1.ObjectIdentifier, error) {
 	asn1PolicyID := []asn1.ObjectIdentifier{}
@@ -518,10 +633,10 @@ func GetRevokedCertsFromDAP() []pkix.RevokedCertificate {
 
 // RevokeCertInDAP -------------------------------------------------------------
 func RevokeCertInDAP(serialNumber *big.Int, reasonCode int, revocationDate time.Time) {
-
+	return
 }
 
 // WriteCRLToDAP ----------------------------------------------------------------
 func WriteCRLToDAP(newCRL string) {
-
+	return
 }
