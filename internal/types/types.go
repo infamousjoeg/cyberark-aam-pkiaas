@@ -69,6 +69,17 @@ type SignRequest struct {
 
 // IntermediateRequest --------------------------------------------------------
 type IntermediateRequest struct {
+	KeyAlgo      string   `json:"keyAlgo"`
+	KeyBits      string   `json:"keyBits"`
+	MaxTTL       int64    `json:"maxTTL"`
+	Organization string   `json:"organization"`
+	OrgUnit      string   `json:"orgUnit"`
+	Country      string   `json:"country"`
+	Locality     string   `json:"locality"`
+	Province     string   `json:"province"`
+	Address      string   `json:"address"`
+	PostalCode   string   `json:"postalCode"`
+	AltNames     []string `json:"altNames"`
 }
 
 // RevokeRequest --------------------------------------------------------------

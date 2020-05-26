@@ -15,7 +15,7 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		http.Error(w, "Unable to read request body", http.StatusBadRequest)
+		http.Error(w, "Unable to read request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -66,7 +66,7 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		http.Error(w, "Unable to read request body", http.StatusBadRequest)
+		http.Error(w, "Unable to read request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -124,7 +124,7 @@ func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	respTemplate, err := json.Marshal(template)
 
 	if err != nil {
-		http.Error(w, "The requested template was unable to be successfully processed into a response", http.StatusInternalServerError)
+		http.Error(w, "The requested template was unable to be successfully processed into a response: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
