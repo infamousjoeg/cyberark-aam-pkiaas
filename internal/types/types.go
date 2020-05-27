@@ -14,29 +14,23 @@ type CreateCertReq struct {
 // Template --------------------------------------------------------------------
 // Structure that represents a certificate request template
 type Template struct {
-	TemplateName      string   `json:"templateName"`
-	KeyAlgo           string   `json:"keyAlgo"`
-	KeyBits           string   `json:"keyBits"`
-	MaxTTL            int64    `json:"maxTTL"`
-	Organization      string   `json:"organization"`
-	OrgUnit           string   `json:"orgUnit"`
-	Country           string   `json:"country"`
-	Locality          string   `json:"locality"`
-	Province          string   `json:"province"`
-	Address           string   `json:"address"`
-	PostalCode        string   `json:"postalCode"`
-	KeyUsages         []string `json:"keyUsages"`
-	ExtKeyUsages      []string `json:"extKeyUsages"`
-	MaxPathLength     string   `json:"maxPathLength"`
-	PermDNSDomains    []string `json:"permDNSDomains"`
-	ExclDNSDomains    []string `json:"exclDNSDomains"`
-	PermIPRanges      []string `json:"permIPRanges"`
-	ExclIPRanges      []string `json:"exclIPRanges"`
-	PermEmails        []string `json:"permEmails"`
-	ExclEmails        []string `json:"exclEmails"`
-	PermURIDomains    []string `json:"permURIDomains"`
-	ExclURIDomains    []string `json:"exclURIDomains"`
-	PolicyIdentifiers []string `json:"policyIdentifiers"`
+	TemplateName      string        `json:"templateName"`
+	KeyAlgo           string        `json:"keyAlgo"`
+	KeyBits           string        `json:"keyBits"`
+	MaxTTL            int64         `json:"maxTTL"`
+	Subject           SubjectFields `json:"subject"`
+	KeyUsages         []string      `json:"keyUsages"`
+	ExtKeyUsages      []string      `json:"extKeyUsages"`
+	MaxPathLength     string        `json:"maxPathLength"`
+	PermDNSDomains    []string      `json:"permDNSDomains"`
+	ExclDNSDomains    []string      `json:"exclDNSDomains"`
+	PermIPRanges      []string      `json:"permIPRanges"`
+	ExclIPRanges      []string      `json:"exclIPRanges"`
+	PermEmails        []string      `json:"permEmails"`
+	ExclEmails        []string      `json:"exclEmails"`
+	PermURIDomains    []string      `json:"permURIDomains"`
+	ExclURIDomains    []string      `json:"exclURIDomains"`
+	PolicyIdentifiers []string      `json:"policyIdentifiers"`
 }
 
 // CreateCertificateResponse ---------------------------------------------------
@@ -48,9 +42,27 @@ type CreateCertificateResponse struct {
 	LeaseDuration int64  `json:"leaseDuration"`
 }
 
+// CreateCertificateInDap ---------------------------------------------------
+type CreateCertificateInDap struct {
+	Certificate    string `json:"certificate"`
+	Revoked        bool   `json:"revoked"`
+	ExpirationDate string `json:"expirationDate"`
+	SerialNumber   string `json:"serialNumber"`
+}
+
 // PEMCertificate -----------------------------------------------------------------
 type PEMCertificate struct {
 	Certificate string `json:"certificate"`
+}
+
+// PEMCertificateBundle -----------------------------------------------------------
+type PEMCertificateBundle struct {
+	CertBundle string `json:"certBundle"`
+}
+
+// PEMCSR -------------------------------------------------------------------------
+type PEMCSR struct {
+	CSR string `json:"csr"`
 }
 
 // CertificateListResponse -----------------------------------------------------
@@ -69,21 +81,27 @@ type SignRequest struct {
 
 // IntermediateRequest --------------------------------------------------------
 type IntermediateRequest struct {
-	KeyAlgo      string   `json:"keyAlgo"`
-	KeyBits      string   `json:"keyBits"`
-	MaxTTL       int64    `json:"maxTTL"`
-	Organization string   `json:"organization"`
-	OrgUnit      string   `json:"orgUnit"`
-	Country      string   `json:"country"`
-	Locality     string   `json:"locality"`
-	Province     string   `json:"province"`
-	Address      string   `json:"address"`
-	PostalCode   string   `json:"postalCode"`
-	AltNames     []string `json:"altNames"`
+	CommonName string        `json:"commonName"`
+	KeyAlgo    string        `json:"keyAlgo"`
+	KeyBits    string        `json:"keyBits"`
+	MaxTTL     int64         `json:"maxTTL"`
+	Subject    SubjectFields `json:"subject"`
+	AltNames   []string      `json:"altNames"`
 }
 
 // RevokeRequest --------------------------------------------------------------
 type RevokeRequest struct {
 	SerialNumber string `json:"serialNumber"`
 	Reason       string `json:"reason"`
+}
+
+// SubjectFields -------------------------------------------------------------
+type SubjectFields struct {
+	Organization string `json:"organization"`
+	OrgUnit      string `json:"orgUnit"`
+	Country      string `json:"country"`
+	Locality     string `json:"locality"`
+	Province     string `json:"province"`
+	Address      string `json:"address"`
+	PostalCode   string `json:"postalCode"`
 }

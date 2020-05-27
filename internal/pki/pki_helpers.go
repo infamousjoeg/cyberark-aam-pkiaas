@@ -296,29 +296,29 @@ func ValidateExtKeyUsageConstraints(csrExtKeyUsage []byte, templateExtKeyUsage [
 }
 
 // SetCertSubject -----------------------------------------------------------------
-func SetCertSubject(template types.Template, commonName string) (pkix.Name, error) {
+func SetCertSubject(subject types.SubjectFields, commonName string) (pkix.Name, error) {
 	var subjectName pkix.Name
 
-	if template.Country != "" {
-		subjectName.Country = []string{template.Country}
+	if subject.Country != "" {
+		subjectName.Country = []string{subject.Country}
 	}
-	if template.Organization != "" {
-		subjectName.Organization = []string{template.Organization}
+	if subject.Organization != "" {
+		subjectName.Organization = []string{subject.Organization}
 	}
-	if template.OrgUnit != "" {
-		subjectName.OrganizationalUnit = []string{template.OrgUnit}
+	if subject.OrgUnit != "" {
+		subjectName.OrganizationalUnit = []string{subject.OrgUnit}
 	}
-	if template.Locality != "" {
-		subjectName.Locality = []string{template.Locality}
+	if subject.Locality != "" {
+		subjectName.Locality = []string{subject.Locality}
 	}
-	if template.Province != "" {
-		subjectName.Province = []string{template.Province}
+	if subject.Province != "" {
+		subjectName.Province = []string{subject.Province}
 	}
-	if template.Address != "" {
-		subjectName.StreetAddress = []string{template.Address}
+	if subject.Address != "" {
+		subjectName.StreetAddress = []string{subject.Address}
 	}
-	if template.PostalCode != "" {
-		subjectName.PostalCode = []string{template.PostalCode}
+	if subject.PostalCode != "" {
+		subjectName.PostalCode = []string{subject.PostalCode}
 	}
 	if commonName == "" {
 		return pkix.Name{}, errors.New("New certificate must have common name provided in the request")
@@ -590,6 +590,11 @@ func GetCACertFromDAP() (x509.Certificate, error) {
 	return x509.Certificate{}, nil
 }
 
+// GetCAChainFromDAP ------------------------------------------------------------------
+func GetCAChainFromDAP() ([]string, error) {
+	return []string{""}, nil
+}
+
 // GetAllCertsFromDAP ----------------------------------------------------------
 func GetAllCertsFromDAP() ([]*big.Int, error) {
 	return []*big.Int{}, nil
@@ -627,16 +632,26 @@ func GetSigningKeyFromDAP() (crypto.PrivateKey, error) {
 }
 
 // GetRevokedCertsFromDAP ------------------------------------------------------
-func GetRevokedCertsFromDAP() []pkix.RevokedCertificate {
-	return []pkix.RevokedCertificate{}
+func GetRevokedCertsFromDAP() ([]pkix.RevokedCertificate, error) {
+	return []pkix.RevokedCertificate{}, nil
 }
 
 // RevokeCertInDAP -------------------------------------------------------------
-func RevokeCertInDAP(serialNumber *big.Int, reasonCode int, revocationDate time.Time) {
-	return
+func RevokeCertInDAP(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error {
+	return nil
 }
 
 // WriteCRLToDAP ----------------------------------------------------------------
-func WriteCRLToDAP(newCRL string) {
-	return
+func WriteCRLToDAP(newCRL string) error {
+	return nil
+}
+
+// WriteSigningCertToDAP --------------------------------------------------------
+func WriteSigningCertToDAP(newCert string) error {
+	return nil
+}
+
+// WriteCAChainToDAP ------------------------------------------------------------
+func WriteCAChainToDAP(certBundle []string) error {
+	return nil
 }

@@ -33,6 +33,10 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	var signReq types.SignRequest
 	err = json.Unmarshal(reqBody, &signReq)
+	if err != nil {
+		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// Extract the CSR from the request and process it to be converted to useful CertificateRequest object
 	pemCSR, _ := pem.Decode([]byte(signReq.CSR))
@@ -48,25 +52,10 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Setting subject data for template and CSR to validate that CSR is not out of bounds
-	templateSubject := pkix.Name{
-		Country:            []string{template.Country},
-		Organization:       []string{template.Organization},
-		OrganizationalUnit: []string{template.OrgUnit},
-		Locality:           []string{template.Locality},
-		Province:           []string{template.Province},
-		StreetAddress:      []string{template.Address},
-		PostalCode:         []string{template.PostalCode},
-	}
+	templateSubject, err := SetCertSubject(template.Subject, "")
 
-	csrSubject := pkix.Name{
-		Country:            certReq.Subject.Country,
-		Organization:       certReq.Subject.Organization,
-		OrganizationalUnit: certReq.Subject.OrganizationalUnit,
-		Locality:           certReq.Subject.Locality,
-		Province:           certReq.Subject.Province,
-		StreetAddress:      certReq.Subject.StreetAddress,
-		PostalCode:         certReq.Subject.PostalCode,
-	}
+	csrSubject := certReq.Subject
+	csrSubject.CommonName = ""
 
 	if templateSubject.String() != csrSubject.String() {
 		http.Error(w, "The subject of the CSR does not match the allowed format in the requested template", http.StatusBadRequest)
@@ -272,7 +261,7 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Extract all the necessary data from the template to be used in generating the new
 	// x509.Certificate object to be signed
-	certSubject, err := SetCertSubject(template, certReq.CommonName)
+	certSubject, err := SetCertSubject(template.Subject, certReq.CommonName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -292,6 +281,7 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	err = ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -458,8 +448,12 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	revokedCertList := []pkix.RevokedCertificate{revokedCert}
-
-	revokedCertList = append(revokedCertList, GetRevokedCertsFromDAP()...)
+	oldCRL, err := GetRevokedCertsFromDAP()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	revokedCertList = append(revokedCertList, oldCRL...)
 	RevokeCertInDAP(intSerialNum, reasonCode, revokeTime)
 
 	signingKey, err := GetSigningKeyFromDAP()
