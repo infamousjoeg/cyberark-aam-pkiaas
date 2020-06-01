@@ -141,7 +141,7 @@ var routes = Routes{
 	Route{
 		"DeleteTemplate",
 		strings.ToUpper("Delete"),
-		"/template/{templateName}",
+		"/template/delete/{templateName}",
 		pki.DeleteTemplateHandler,
 	},
 
