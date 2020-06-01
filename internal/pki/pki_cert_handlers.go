@@ -8,10 +8,12 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"strconv"
 	"time"
@@ -354,16 +356,20 @@ func GetCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	certificate, err := GetCertFromDAP(intSerialNumber)
 
+	certificate, err := GetCertFromDAP(intSerialNumber)
 	if err != nil {
 		http.Error(w, "Unable to retrieve certificate matching requested serial number", http.StatusNotFound)
 		return
 	}
 
-	// This will likely need to change to just return the `certificate` variable, as I believe it will
-	// be stored in DAP as a PEM-string already
-	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificate.RawTBSCertificate})
+	derCert, err := base64.StdEncoding.DecodeString(certificate)
+	if err != nil {
+		http.Error(w, "Unable to decode certificate returned from DAP: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derCert})
 	response := types.PEMCertificate{
 		Certificate: string(pemCert),
 	}
@@ -382,13 +388,16 @@ func ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 
 	retSerialNumbers := []string{}
 	for _, serialNumber := range serialNumberList {
-		strSerialNumber, err := ConvertSerialIntToOctetString(serialNumber)
+		intSerialNumber := new(big.Int)
+		if intSerialNumber, success := intSerialNumber.SetString(serialNumber, 10); success {
+			strSerialNumber, err := ConvertSerialIntToOctetString(intSerialNumber)
 
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			retSerialNumbers = append(retSerialNumbers, strSerialNumber)
 		}
-		retSerialNumbers = append(retSerialNumbers, strSerialNumber)
 	}
 
 	response := types.CertificateListResponse{

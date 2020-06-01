@@ -105,3 +105,9 @@ type SubjectFields struct {
 	Address      string `json:"address"`
 	PostalCode   string `json:"postalCode"`
 }
+
+// CABasicConstraints --------------------------------------------------------
+type CABasicConstraints struct {
+	CA                bool `json:"ca,omitempty"`
+	PathLenConstraint int  `json:"pathLenConstraint,omitempty"`
+}

@@ -581,13 +581,13 @@ func ReturnReasonCode(reasonString string) (int, error) {
 // GetCertFromDAP ----------------------------------------------------------------
 // Finds matching certificate matching serial number in DAP and returns it; Sends appropriate
 // error message as necessary
-func GetCertFromDAP(serialNumber *big.Int) (x509.Certificate, error) {
-	return x509.Certificate{}, errors.New("No certificate found matching serial number")
+func GetCertFromDAP(serialNumber *big.Int) (string, error) {
+	return "", nil
 }
 
 // GetCACertFromDAP ------------------------------------------------------------------
-func GetCACertFromDAP() (x509.Certificate, error) {
-	return x509.Certificate{}, nil
+func GetCACertFromDAP() (string, error) {
+	return "", nil
 }
 
 // GetCAChainFromDAP ------------------------------------------------------------------
@@ -596,8 +596,8 @@ func GetCAChainFromDAP() ([]string, error) {
 }
 
 // GetAllCertsFromDAP ----------------------------------------------------------
-func GetAllCertsFromDAP() ([]*big.Int, error) {
-	return []*big.Int{}, nil
+func GetAllCertsFromDAP() ([]string, error) {
+	return []string{""}, nil
 }
 
 // GetTemplateFromDAP ----------------------------------------------------------
@@ -626,8 +626,8 @@ func GetSigningCertFromDAP() (string, error) {
 }
 
 // GetSigningKeyFromDAP --------------------------------------------------------
-func GetSigningKeyFromDAP() (crypto.PrivateKey, error) {
-	var signingKey crypto.PrivateKey
+func GetSigningKeyFromDAP() (string, error) {
+	var signingKey string
 	return signingKey, nil
 }
 
@@ -648,6 +648,11 @@ func WriteCRLToDAP(newCRL string) error {
 
 // WriteSigningCertToDAP --------------------------------------------------------
 func WriteSigningCertToDAP(newCert string) error {
+	return nil
+}
+
+// WriteSigningKeyToDAP ---------------------------------------------------------
+func WriteSigningKeyToDAP(newKey string) error {
 	return nil
 }
 
