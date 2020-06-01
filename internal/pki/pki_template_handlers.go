@@ -139,7 +139,10 @@ func ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to retrieve a list of templates", http.StatusBadRequest)
 		return
 	}
-	respTemplates, err := json.Marshal(templates)
+	templateObject := types.TemplateListResponse{
+		Templates: templates,
+	}
+	respTemplates, err := json.Marshal(templateObject)
 	if err != nil {
 		http.Error(w, "The server was unable to process the template list into an appropriate response", http.StatusInternalServerError)
 		return
