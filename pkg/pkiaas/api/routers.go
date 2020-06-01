@@ -75,13 +75,6 @@ var routes = Routes{
 		pki.GetCAChainHandler,
 	},
 
-	// Route{
-	// 	"CheckCertificate",
-	// 	strings.ToUpper("Post"),
-	// 	"/certificate/check/{serialNumber}",
-	// 	CheckCertificate,
-	// },
-
 	Route{
 		"CreateCertificate",
 		strings.ToUpper("Post"),
@@ -104,15 +97,15 @@ var routes = Routes{
 	},
 
 	Route{
-		"PurgeCertificates",
+		"Purge",
 		strings.ToUpper("Post"),
-		"/certificates/purge/{timeBuffer}",
+		"/purge",
 		pki.PurgeHandler,
 	},
 
 	Route{
 		"RevokeCertificate",
-		strings.ToUpper("Delete"),
+		strings.ToUpper("Post"),
 		"/certificate/revoke/{serialNumber}",
 		pki.RevokeCertHandler,
 	},
@@ -128,13 +121,13 @@ var routes = Routes{
 	// 	"GetCRL",
 	// 	strings.ToUpper("Get"),
 	// 	"/crl",
-	// 	GetCRL,
+	// 	pki.GetCRLHandler,
 	// },
 
 	Route{
 		"PurgeCRL",
 		strings.ToUpper("Post"),
-		"/crl/purge/{timeBuffer}",
+		"/crl/purge",
 		pki.PurgeCRLHandler,
 	},
 
@@ -148,7 +141,7 @@ var routes = Routes{
 	Route{
 		"DeleteTemplate",
 		strings.ToUpper("Delete"),
-		"/template/delete/{templateName}",
+		"/template/{templateName}",
 		pki.DeleteTemplateHandler,
 	},
 
@@ -172,4 +165,11 @@ var routes = Routes{
 		"/template/manage",
 		pki.ManageTemplateHandler,
 	},
+
+	// Route{
+	// 	"Health",
+	// 	strings.ToUpper("Get"),
+	// 	"/health",
+	// 	TBD
+	// },
 }
