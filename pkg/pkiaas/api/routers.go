@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 )
 
 // Route struct
@@ -64,14 +65,14 @@ var routes = Routes{
 		"GetCA",
 		strings.ToUpper("Get"),
 		"/ca/certificate",
-		GetCA,
+		pki.GetCAHandler,
 	},
 
 	Route{
 		"GetCAChain",
 		strings.ToUpper("Get"),
 		"/ca/chain",
-		GetCAChain,
+		pki.GetCAChainHandler,
 	},
 
 	// Route{
@@ -81,94 +82,94 @@ var routes = Routes{
 	// 	CheckCertificate,
 	// },
 
-	// Route{
-	// 	"CreateCertificate",
-	// 	strings.ToUpper("Post"),
-	// 	"/certificate/create",
-	// 	CreateCertificate,
-	// },
+	Route{
+		"CreateCertificate",
+		strings.ToUpper("Post"),
+		"/certificate/create",
+		pki.CreateCertHandler,
+	},
 
 	Route{
 		"GetCertificate",
 		strings.ToUpper("Get"),
 		"/certificate/{serialNumber}",
-		GetCertificate,
+		pki.GetCertHandler,
 	},
 
 	Route{
 		"ListCertificates",
 		strings.ToUpper("Get"),
 		"/certificates",
-		ListCertificates,
+		pki.ListCertsHandler,
+	},
+
+	Route{
+		"PurgeCertificates",
+		strings.ToUpper("Post"),
+		"/certificates/purge/{timeBuffer}",
+		pki.PurgeHandler,
+	},
+
+	Route{
+		"RevokeCertificate",
+		strings.ToUpper("Delete"),
+		"/certificate/revoke/{serialNumber}",
+		pki.RevokeCertHandler,
+	},
+
+	Route{
+		"SignCertificate",
+		strings.ToUpper("Post"),
+		"/certificate/sign",
+		pki.SignCertHandler,
 	},
 
 	// Route{
-	// 	"PurgeCertificates",
-	// 	strings.ToUpper("Post"),
-	// 	"/certificates/purge/{timeBuffer}",
-	// 	PurgeCertificates,
-	// },
-
-	// Route{
-	// 	"RevokeCertificate",
-	// 	strings.ToUpper("Delete"),
-	// 	"/certificate/revoke/{serialNumber}",
-	// 	RevokeCertificate,
-	// },
-
-	// Route{
-	// 	"SignCertificate",
-	// 	strings.ToUpper("Post"),
-	// 	"/certificate/sign",
-	// 	SignCertificate,
+	// 	"GetCRL",
+	// 	strings.ToUpper("Get"),
+	// 	"/crl",
+	// 	GetCRL,
 	// },
 
 	Route{
-		"GetCRL",
-		strings.ToUpper("Get"),
-		"/crl",
-		GetCRL,
+		"PurgeCRL",
+		strings.ToUpper("Post"),
+		"/crl/purge/{timeBuffer}",
+		pki.PurgeCRLHandler,
 	},
 
-	// Route{
-	// 	"PurgeCRL",
-	// 	strings.ToUpper("Post"),
-	// 	"/crl/purge/{timeBuffer}",
-	// 	PurgeCRL,
-	// },
+	Route{
+		"CreateTemplate",
+		strings.ToUpper("Post"),
+		"/template/create",
+		pki.CreateTemplateHandler,
+	},
 
-	// Route{
-	// 	"CreateTemplate",
-	// 	strings.ToUpper("Post"),
-	// 	"/template/create",
-	// 	CreateTemplate,
-	// },
-
-	// Route{
-	// 	"DeleteTemplate",
-	// 	strings.ToUpper("Delete"),
-	// 	"/template/delete/{templateName}",
-	// 	DeleteTemplate,
-	// },
+	Route{
+		"DeleteTemplate",
+		strings.ToUpper("Delete"),
+		"/template/delete/{templateName}",
+		pki.DeleteTemplateHandler,
+	},
 
 	Route{
 		"GetTemplate",
 		strings.ToUpper("Get"),
 		"/template/{templateName}",
-		GetTemplate,
+		pki.GetTemplateHandler,
 	},
 
 	Route{
 		"ListTemplates",
 		strings.ToUpper("Get"),
 		"/templates",
-		ListTemplates,
+		pki.ListTemplatesHandler,
 	},
 
-	// Route{
-	// 	"ManageTemplate",
-	// 	strings.ToUpper("Put"),
-	// 	"/template/manage",
-	// 	ManageTemplate,
-	// },
+	Route{
+		"ManageTemplate",
+		strings.ToUpper("Put"),
+		"/template/manage",
+		pki.ManageTemplateHandler,
+	},
 }
