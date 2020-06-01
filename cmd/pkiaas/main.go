@@ -1,16 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/pkiaas"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/pkiaas/api"
 )
 
 func main() {
-	router := mux.NewRouter().StrictSlash(true)
-	fmt.Printf("Running at http://localhost:8080 - v%s", pkiaas.FullVersionName)
+	log.Printf("Server started")
+
+	router := api.NewRouter()
+
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
