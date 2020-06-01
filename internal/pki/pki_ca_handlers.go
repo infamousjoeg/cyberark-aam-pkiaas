@@ -291,6 +291,11 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetCRLHandler ----------------------------------------------------
+func GetCRLHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
 // PurgeHandler -----------------------------------------------------
 func PurgeHandler(w http.ResponseWriter, r *http.Request) {
 

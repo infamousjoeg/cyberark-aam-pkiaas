@@ -70,6 +70,11 @@ type CertificateListResponse struct {
 	Certificates []string `json:"certificates"`
 }
 
+// TemplateListResponse --------------------------------------------------------
+type TemplateListResponse struct {
+	Templates []string `json:"templates"`
+}
+
 // SignRequest -----------------------------------------------------------------
 type SignRequest struct {
 	CSR          string `json:"csr"`
@@ -103,7 +108,7 @@ type SubjectFields struct {
 	Locality     string `json:"locality"`
 	Province     string `json:"province"`
 	Address      string `json:"address"`
-	PostalCode   string `json:"postalCode"`
+	PostalCode   string `json:"postalCode,omitempty"`
 }
 
 // CABasicConstraints --------------------------------------------------------
