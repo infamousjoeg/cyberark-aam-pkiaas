@@ -48,52 +48,6 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Successful GET /")
 }
 
-// GetCA route //
-// Returns CA certificate
-func GetCA(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Successful GET /ca/certificate")
-}
-
-// GetCAChain route //
-// Returns CA certificate chain
-func GetCAChain(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Successful GET /ca/chain")
-}
-
-// GetCertificate route //
-// Returns signed certificate based on serial number given
-func GetCertificate(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	serialNumber := vars["serialNumber"]
-	fmt.Fprintf(w, "Successful GET /certificate/%s", serialNumber)
-}
-
-// ListCertificates route //
-// Returns all certificates signed by the CA
-func ListCertificates(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Successful GET /certificates")
-}
-
-// GetCRL route //
-// Returns the current Certificate Revokation List (CRL)
-func GetCRL(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Successful GET /crl")
-}
-
-// GetTemplate route //
-// Returns a template from Conjur service based on template name
-func GetTemplate(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	templateName := vars["templateName"]
-	fmt.Fprintf(w, "Successful GET /template/%s", templateName)
-}
-
-// ListTemplates route //
-// Returns a list of templates created in the Conjur service
-func ListTemplates(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Successful GET /templates")
-}
-
 ////////////////////////
 // POST ROUTES START //
 ///////////////////////
