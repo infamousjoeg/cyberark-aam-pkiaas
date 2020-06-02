@@ -106,7 +106,7 @@ var routes = Routes{
 	Route{
 		"RevokeCertificate",
 		strings.ToUpper("Post"),
-		"/certificate/revoke/{serialNumber}",
+		"/certificate/revoke",
 		pki.RevokeCertHandler,
 	},
 

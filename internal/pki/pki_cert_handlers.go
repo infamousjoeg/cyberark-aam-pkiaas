@@ -16,6 +16,7 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -79,7 +80,7 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		if extension.Id.Equal([]int{2, 5, 29, 15}) {
 			keyUsage, err = ValidateKeyUsageConstraints(extension.Value, template.KeyUsages)
 			if err != nil {
-				http.Error(w, err.Error()+"The CSR has requested key usages that are not permitted in the given template", http.StatusBadRequest)
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 		}
@@ -109,21 +110,44 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the intermediate CA certificate from DAP and go through the necessary steps
 	// to convert it from a PEM-string to a usable x509.Certificate object
-	caCertPEM, err := GetSigningCertFromDAP()
+	strCert, err := GetSigningCertFromDAP()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	blockCaCert, _ := pem.Decode([]byte(caCertPEM))
-	derCaCert := blockCaCert.Bytes
-	caCert, err := x509.ParseCertificate(derCaCert)
+
+	derCACert, err := base64.StdEncoding.DecodeString(strCert)
+	if err != nil {
+		http.Error(w, "Error decoding CA certificate: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	caCert, err := x509.ParseCertificate(derCACert)
 
 	// Retrieve the signing key from DAP and calculate the signature algorithm for use in the
 	// certificate generation
-	signingKey, err := GetSigningKeyFromDAP()
+	strKey, err := GetSigningKeyFromDAP()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	decodedKey, err := base64.StdEncoding.DecodeString(strKey)
+	if err != nil {
+		http.Error(w, "Unable to decode signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	signingKey, err := x509.ParsePKCS8PrivateKey(decodedKey)
+	if err != nil {
+		if strings.Contains(err.Error(), "ParsePKCS1PrivateKey") {
+			signingKey, err = x509.ParsePKCS1PrivateKey(decodedKey)
+			if err != nil {
+				http.Error(w, "Unable to parse signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, "Unable to parse signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	keyType := fmt.Sprintf("%T", signingKey)
@@ -229,25 +253,49 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the intermediate CA certificate from DAP and go through the necessary steps
 	// to convert it from a PEM-string to a usable x509.Certificate object
-	caCertPEM, err := GetSigningCertFromDAP()
+	strCert, err := GetSigningCertFromDAP()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	blockCaCert, _ := pem.Decode([]byte(caCertPEM))
-	derCaCert := blockCaCert.Bytes
-	caCert, err := x509.ParseCertificate(derCaCert)
 
+	derCACert, err := base64.StdEncoding.DecodeString(strCert)
+	if err != nil {
+		http.Error(w, "Error decoding CA certificate: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	caCert, err := x509.ParseCertificate(derCACert)
+	if err != nil {
+		http.Error(w, "Unable to parse CA certificate returned from DAP:"+err.Error(), http.StatusInternalServerError)
+	}
 	// Retrieve the signing key from DAP and calculate the signature algorithm for use in the
 	// certificate generation
-	signingKey, err := GetSigningKeyFromDAP()
+	strKey, err := GetSigningKeyFromDAP()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	decodedKey, err := base64.StdEncoding.DecodeString(strKey)
+	if err != nil {
+		http.Error(w, "Unable to decode signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	signingKey, err := x509.ParsePKCS8PrivateKey(decodedKey)
+	if err != nil {
+		if strings.Contains(err.Error(), "ParsePKCS1PrivateKey") {
+			signingKey, err = x509.ParsePKCS1PrivateKey(decodedKey)
+			if err != nil {
+				http.Error(w, "Unable to parse signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, "Unable to parse signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	keyType := fmt.Sprintf("%T", signingKey)
-
 	var sigAlgo x509.SignatureAlgorithm
 	switch keyType {
 	case "*rsa.PrivateKey":
@@ -299,14 +347,26 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		SignatureAlgorithm:    sigAlgo,
 		AuthorityKeyId:        caCert.SubjectKeyId,
 		KeyUsage:              keyUsage,
-		ExtKeyUsage:           extKeyUsage,
 		BasicConstraintsValid: false,
 		IsCA:                  false,
-		DNSNames:              dnsNames,
-		EmailAddresses:        emailAddresses,
-		IPAddresses:           ipAddresses,
-		URIs:                  URIs,
 	}
+
+	if len(extKeyUsage) > 0 {
+		newCert.ExtKeyUsage = extKeyUsage
+	}
+	if len(dnsNames) > 0 {
+		newCert.DNSNames = dnsNames
+	}
+	if len(emailAddresses) > 0 {
+		newCert.EmailAddresses = emailAddresses
+	}
+	if len(ipAddresses) > 0 {
+		newCert.IPAddresses = ipAddresses
+	}
+	if len(URIs) > 0 {
+		newCert.URIs = URIs
+	}
+
 	derCert, err := x509.CreateCertificate(rand.Reader, &newCert, caCert, clientPubKey, signingKey)
 
 	// Convert the certifcate objects into PEMs to be returned as strings
@@ -465,21 +525,46 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	revokedCertList = append(revokedCertList, oldCRL...)
 	RevokeCertInDAP(intSerialNum, reasonCode, revokeTime)
 
-	signingKey, err := GetSigningKeyFromDAP()
+	encodedSigningKey, err := GetSigningKeyFromDAP()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	caCertPEM, err := GetSigningCertFromDAP()
+	decodedSigningKey, err := base64.StdEncoding.DecodeString(encodedSigningKey)
+	signingKey, err := x509.ParsePKCS8PrivateKey(decodedSigningKey)
+	if err != nil {
+		if strings.Contains(err.Error(), "ParsePKCS1PrivateKey") {
+			signingKey, err = x509.ParsePKCS1PrivateKey(decodedSigningKey)
+			if err != nil {
+				http.Error(w, "Unable to parse signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, "Unable to parse signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	encodedCACert, err := GetSigningCertFromDAP()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	blockCaCert, _ := pem.Decode([]byte(caCertPEM))
-	derCaCert := blockCaCert.Bytes
-	caCert, err := x509.ParseCertificate(derCaCert)
+	derCACert, err := base64.StdEncoding.DecodeString(encodedCACert)
+	if err != nil {
+		http.Error(w, "Unable to decode encoded CA certificate: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	caCert, err := x509.ParseCertificate(derCACert)
+	if err != nil {
+		http.Error(w, "Unable to parse CA certificate: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	newCRL, err := caCert.CreateCRL(rand.Reader, signingKey, revokedCertList, revokeTime, revokeTime.Add(time.Hour*12))
-
+	if err != nil {
+		http.Error(w, "Error while creating new CRL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	pemCRL := pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: newCRL})
 
 	WriteCRLToDAP(string(pemCRL))

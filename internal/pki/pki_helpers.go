@@ -21,7 +21,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/golang/gddo/httputil/header"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
@@ -126,9 +125,9 @@ func ProcessKeyUsages(keyUsages []string) (x509.KeyUsage, error) {
 			retKeyUsage |= x509.KeyUsageContentCommitment
 		case "keyAgreement":
 			retKeyUsage |= x509.KeyUsageKeyAgreement
-		case "CertSign":
+		case "certSign":
 			retKeyUsage |= x509.KeyUsageCertSign
-		case "CRLSign":
+		case "crlSign":
 			retKeyUsage |= x509.KeyUsageCRLSign
 		case "encipherOnly":
 			retKeyUsage |= x509.KeyUsageEncipherOnly
@@ -216,7 +215,7 @@ func ValidateExtKeyUsageConstraints(csrExtKeyUsage []byte, templateExtKeyUsage [
 	}
 
 	var csrExtKeyUsageOid []asn1.ObjectIdentifier
-	_, err = asn1.Unmarshal(csrExtKeyUsage, csrExtKeyUsageOid)
+	_, err = asn1.Unmarshal(csrExtKeyUsage, &csrExtKeyUsageOid)
 	if err != nil {
 		return []x509.ExtKeyUsage{}, errors.New("There was an error unmarshaling the ASN.1 encoded extended key usage data")
 	}
@@ -495,8 +494,8 @@ func ProcessPolicyIdentifiers(policyIdentifiers []string) ([]asn1.ObjectIdentifi
 func ValidateKeyAlgoAndSize(keyAlgo string, keySize string) error {
 	switch keyAlgo {
 	case "RSA":
-		if _, err := strconv.Atoi(keySize); err != nil {
-			return errors.New("Invalid key size for key algorithm RSA")
+		if keyBits, err := strconv.Atoi(keySize); err != nil || keyBits < 2048 {
+			return errors.New("Invalid key size for key algorithm RSA, must be at least 2048 bits")
 		}
 		return nil
 	case "ECDSA":
@@ -513,30 +512,31 @@ func ValidateKeyAlgoAndSize(keyAlgo string, keySize string) error {
 
 // ConvertSerialIntToOctetString --------------------------------------------------------
 func ConvertSerialIntToOctetString(intSerialNum *big.Int) (string, error) {
-	asn1SerialNNum, err := asn1.Marshal(intSerialNum)
-
+	asn1SerialNum, err := asn1.Marshal(intSerialNum)
 	if err != nil {
 		return "", errors.New("Problem converting serial number integer to ASN.1")
 	}
-	var retSerialNUm string
-	for _, octet := range asn1SerialNNum {
-		temp := fmt.Sprintf("%x", octet)
-		if len(temp) < 2 {
-			temp = "0" + temp
-		}
-		if retSerialNUm == "" {
-			retSerialNUm = temp
-		} else {
-			retSerialNUm = retSerialNUm + ":" + temp
+	retSerialNum := ""
+	for i := 1; i < len(asn1SerialNum); i++ {
+		if i != 0 {
+			temp := fmt.Sprintf("%x", asn1SerialNum[i])
+			if len(temp) < 2 {
+				temp = "0" + temp
+			}
+			if retSerialNum == "" {
+				retSerialNum = temp
+			} else {
+				retSerialNum = retSerialNum + ":" + temp
+			}
 		}
 	}
-	return retSerialNUm, nil
+	return retSerialNum, nil
 }
 
 // ConvertSerialOctetStringToInt -------------------------------------------------
 func ConvertSerialOctetStringToInt(octetSerialNum string) (*big.Int, error) {
 	octets := []byte{}
-
+	octets = append(octets, byte(2))
 	if len(strings.Split(octetSerialNum, ":")) > 20 {
 		return nil, errors.New("Invalid serial number: too large, maximum x.509 serial number size is 20 octets")
 	}
@@ -576,87 +576,4 @@ func ReturnReasonCode(reasonString string) (int, error) {
 	default:
 		return 0, errors.New("The requested reason code does not match any acceptable reasons for certificate revocation")
 	}
-}
-
-// GetCertFromDAP ----------------------------------------------------------------
-// Finds matching certificate matching serial number in DAP and returns it; Sends appropriate
-// error message as necessary
-func GetCertFromDAP(serialNumber *big.Int) (string, error) {
-	return "", nil
-}
-
-// GetCACertFromDAP ------------------------------------------------------------------
-func GetCACertFromDAP() (string, error) {
-	return "", nil
-}
-
-// GetCAChainFromDAP ------------------------------------------------------------------
-func GetCAChainFromDAP() ([]string, error) {
-	return []string{""}, nil
-}
-
-// GetAllCertsFromDAP ----------------------------------------------------------
-func GetAllCertsFromDAP() ([]string, error) {
-	return []string{""}, nil
-}
-
-// GetTemplateFromDAP ----------------------------------------------------------
-func GetTemplateFromDAP(templateName string) (types.Template, error) {
-	return types.Template{}, nil
-}
-
-// CreateTemplateInDAP ---------------------------------------------------------
-func CreateTemplateInDAP(newTemplate types.Template) error {
-	return nil
-}
-
-// DeleteTemplateFromDAP --------------------------------------------------------
-func DeleteTemplateFromDAP(templateName string) error {
-	return nil
-}
-
-// GetAllTemplatesFromDAP ------------------------------------------------------
-func GetAllTemplatesFromDAP() ([]string, error) {
-	return []string{}, nil
-}
-
-// GetSigningCertFromDAP -------------------------------------------------------
-func GetSigningCertFromDAP() (string, error) {
-	return "", nil
-}
-
-// GetSigningKeyFromDAP --------------------------------------------------------
-func GetSigningKeyFromDAP() (string, error) {
-	var signingKey string
-	return signingKey, nil
-}
-
-// GetRevokedCertsFromDAP ------------------------------------------------------
-func GetRevokedCertsFromDAP() ([]pkix.RevokedCertificate, error) {
-	return []pkix.RevokedCertificate{}, nil
-}
-
-// RevokeCertInDAP -------------------------------------------------------------
-func RevokeCertInDAP(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error {
-	return nil
-}
-
-// WriteCRLToDAP ----------------------------------------------------------------
-func WriteCRLToDAP(newCRL string) error {
-	return nil
-}
-
-// WriteSigningCertToDAP --------------------------------------------------------
-func WriteSigningCertToDAP(newCert string) error {
-	return nil
-}
-
-// WriteSigningKeyToDAP ---------------------------------------------------------
-func WriteSigningKeyToDAP(newKey string) error {
-	return nil
-}
-
-// WriteCAChainToDAP ------------------------------------------------------------
-func WriteCAChainToDAP(certBundle []string) error {
-	return nil
 }
