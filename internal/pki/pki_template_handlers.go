@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 
 	"github.com/gorilla/mux"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
@@ -82,25 +81,49 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oldTemplate, err := GetTemplateFromDAP(newTemplate.TemplateName)
+	template, err := GetTemplateFromDAP(newTemplate.TemplateName)
 	if err != nil {
 		http.Error(w, "The requested template "+newTemplate.TemplateName+" cannot be located", http.StatusBadRequest)
 		return
 	}
-	rNewTemplate := reflect.ValueOf(newTemplate)
-	rOldTemplate := reflect.ValueOf(&oldTemplate)
-	rOldTemplate = rOldTemplate.Elem()
-	typeTemplate := rNewTemplate.Type()
-	for i := 0; i < rNewTemplate.NumField(); i++ {
-		if rNewTemplate.Field(i).Interface() != "" {
-			fieldName := typeTemplate.Field(i).Name
-			newField := rOldTemplate.FieldByName(fieldName)
-			newValue := rNewTemplate.Field(i).Interface().(string)
-			newField.SetString(newValue)
-		}
+	template.Subject = newTemplate.Subject
+	err = json.Unmarshal(reqBody, &template)
+	if err != nil {
+		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
+		return
 	}
-	err = DeleteTemplateFromDAP(newTemplate.TemplateName)
 
+	err = DeleteTemplateFromDAP(template.TemplateName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	err = ValidateKeyAlgoAndSize(template.KeyAlgo, template.KeyBits)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Validate and sanitize Subject data
+
+	_, err = ProcessKeyUsages(template.KeyUsages)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	_, err = ProcessExtKeyUsages(template.ExtKeyUsages)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate permitted/excluded data
+	_, err = ProcessPolicyIdentifiers(template.PolicyIdentifiers)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = CreateTemplateInDAP(template)
 }
 
 // DeleteTemplateHandler -------------------------------------------------------
@@ -108,7 +131,7 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	templateName := mux.Vars(r)["templateName"]
 	err := DeleteTemplateFromDAP(templateName)
 	if err != nil {
-		http.Error(w, "Unable to delete requested template", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 }
@@ -118,17 +141,12 @@ func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	template, err := GetTemplateFromDAP(mux.Vars(r)["templateName"])
 
 	if err != nil {
-		http.Error(w, "Unable to retrieve requested template", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	respTemplate, err := json.Marshal(template)
 
-	if err != nil {
-		http.Error(w, "The requested template was unable to be successfully processed into a response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(respTemplate)
+	json.NewEncoder(w).Encode(template)
 }
 
 // ListTemplatesHandler ---------------------------------------------------------
@@ -139,14 +157,10 @@ func ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to retrieve a list of templates", http.StatusBadRequest)
 		return
 	}
-	templateObject := types.TemplateListResponse{
+	respTemplates := types.TemplateListResponse{
 		Templates: templates,
 	}
-	respTemplates, err := json.Marshal(templateObject)
-	if err != nil {
-		http.Error(w, "The server was unable to process the template list into an appropriate response", http.StatusInternalServerError)
-		return
-	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(respTemplates)
 }
