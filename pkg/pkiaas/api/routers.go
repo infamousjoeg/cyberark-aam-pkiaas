@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/conjur"
 )
 
 // Route struct
@@ -39,19 +40,13 @@ func NewRouter() *mux.Router {
 	return router
 }
 
-///////////////////////
-// GET ROUTES START //
-//////////////////////
-
 // Index route //
 // Returns confirmation message on successful GET of /
 func Index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Successful GET /")
 }
 
-////////////////////////
-// POST ROUTES START //
-///////////////////////
+var backend := pki.Pki { Backend: new(conjur.ConjurPki) }
 
 var routes = Routes{
 	Route{
@@ -65,105 +60,105 @@ var routes = Routes{
 		"GetCA",
 		strings.ToUpper("Get"),
 		"/ca/certificate",
-		pki.GetCAHandler,
+		backend.GetCAHandler,
 	},
 
 	Route{
 		"GetCAChain",
 		strings.ToUpper("Get"),
 		"/ca/chain",
-		pki.GetCAChainHandler,
+		backend.GetCAChainHandler,
 	},
 
 	Route{
 		"CreateCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/create",
-		pki.CreateCertHandler,
+		backend.CreateCertHandler,
 	},
 
 	Route{
 		"GetCertificate",
 		strings.ToUpper("Get"),
 		"/certificate/{serialNumber}",
-		pki.GetCertHandler,
+		backend.GetCertHandler,
 	},
 
 	Route{
 		"ListCertificates",
 		strings.ToUpper("Get"),
 		"/certificates",
-		pki.ListCertsHandler,
+		backend.ListCertsHandler,
 	},
 
 	Route{
 		"Purge",
 		strings.ToUpper("Post"),
 		"/purge",
-		pki.PurgeHandler,
+		backend.PurgeHandler,
 	},
 
 	Route{
 		"RevokeCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/revoke",
-		pki.RevokeCertHandler,
+		backend.RevokeCertHandler,
 	},
 
 	Route{
 		"SignCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/sign",
-		pki.SignCertHandler,
+		backend.SignCertHandler,
 	},
 
 	// Route{
 	// 	"GetCRL",
 	// 	strings.ToUpper("Get"),
 	// 	"/crl",
-	// 	pki.GetCRLHandler,
+	// 	backend.GetCRLHandler,
 	// },
 
 	Route{
 		"PurgeCRL",
 		strings.ToUpper("Post"),
 		"/crl/purge",
-		pki.PurgeCRLHandler,
+		backend.PurgeCRLHandler,
 	},
 
 	Route{
 		"CreateTemplate",
 		strings.ToUpper("Post"),
 		"/template/create",
-		pki.CreateTemplateHandler,
+		backend.CreateTemplateHandler,
 	},
 
 	Route{
 		"DeleteTemplate",
 		strings.ToUpper("Delete"),
 		"/template/delete/{templateName}",
-		pki.DeleteTemplateHandler,
+		backend.DeleteTemplateHandler,
 	},
 
 	Route{
 		"GetTemplate",
 		strings.ToUpper("Get"),
 		"/template/{templateName}",
-		pki.GetTemplateHandler,
+		backend.GetTemplateHandler,
 	},
 
 	Route{
 		"ListTemplates",
 		strings.ToUpper("Get"),
 		"/templates",
-		pki.ListTemplatesHandler,
+		backend.ListTemplatesHandler,
 	},
 
 	Route{
 		"ManageTemplate",
 		strings.ToUpper("Put"),
 		"/template/manage",
-		pki.ManageTemplateHandler,
+		backend.ManageTemplateHandler,
 	},
 
 	// Route{
