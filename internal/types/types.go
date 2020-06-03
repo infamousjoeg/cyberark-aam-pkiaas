@@ -1,5 +1,12 @@
 package types
 
+import "conjur"
+
+// PKI -------------------------------------------------------------------------
+type PKI struct {
+	conjurObj conjur.ConjurPki
+}
+
 // CreateCertReq ---------------------------------------------------------------
 // Structure representing the HTTP request POSTed to the CreateCert API endpoint
 type CreateCertReq struct {
