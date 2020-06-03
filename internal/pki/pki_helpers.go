@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -324,6 +325,80 @@ func SetCertSubject(subject types.SubjectFields, commonName string) (pkix.Name, 
 	}
 	subjectName.CommonName = commonName
 	return subjectName, nil
+}
+
+// PrepareCertificateParameters ---------------------------------------------------
+func PrepareCertificateParameters(templateName string, reqTTL int64) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
+	template, err := GetTemplateFromDAP(templateName)
+	if err != nil {
+		return types.Template{}, nil, 0, 0, nil, nil, err
+	}
+
+	serialNumber, err := GenerateSerialNumber()
+	if err != nil {
+		return types.Template{}, nil, 0, 0, nil, nil, err
+	}
+
+	// Set the TTL value to either that which was request or the max TTL allowed by the template
+	// in the event that the requested TTL was greater
+	var ttl int64
+	if reqTTL < template.MaxTTL {
+		ttl = reqTTL
+	} else {
+		ttl = template.MaxTTL
+	}
+
+	// Retrieve the intermediate CA certificate from DAP and go through the necessary steps
+	// to convert it from a PEM-string to a usable x509.Certificate object
+	strCert, err := GetSigningCertFromDAP()
+	if err != nil {
+		return types.Template{}, nil, 0, 0, nil, nil, err
+	}
+
+	derCACert, err := base64.StdEncoding.DecodeString(strCert)
+	if err != nil {
+		return types.Template{}, nil, 0, 0, nil, nil, err
+	}
+	caCert, err := x509.ParseCertificate(derCACert)
+	if err != nil {
+		return types.Template{}, nil, 0, 0, nil, nil, err
+	}
+	// Retrieve the signing key from DAP and calculate the signature algorithm for use in the
+	// certificate generation
+	strKey, err := GetSigningKeyFromDAP()
+	if err != nil {
+		return types.Template{}, nil, 0, 0, nil, nil, err
+	}
+
+	decodedKey, err := base64.StdEncoding.DecodeString(strKey)
+	if err != nil {
+		return types.Template{}, nil, 0, 0, nil, nil, err
+	}
+	signingKey, err := x509.ParsePKCS8PrivateKey(decodedKey)
+	if err != nil {
+		if strings.Contains(err.Error(), "ParsePKCS1PrivateKey") {
+			signingKey, err = x509.ParsePKCS1PrivateKey(decodedKey)
+			if err != nil {
+				return types.Template{}, nil, 0, 0, nil, nil, err
+			}
+		} else {
+			return types.Template{}, nil, 0, 0, nil, nil, err
+		}
+	}
+
+	keyType := fmt.Sprintf("%T", signingKey)
+	var sigAlgo x509.SignatureAlgorithm
+	switch keyType {
+	case "*rsa.PrivateKey":
+		sigAlgo = x509.SHA256WithRSA
+	case "*ecdsa.PrivateKey":
+		sigAlgo = x509.ECDSAWithSHA256
+	case "ed25519.PrivateKey":
+		sigAlgo = x509.PureEd25519
+	default:
+		return types.Template{}, nil, 0, 0, nil, nil, err
+	}
+	return template, serialNumber, ttl, sigAlgo, caCert, signingKey, nil
 }
 
 // ProcessSubjectAltNames ---------------------------------------------------------
