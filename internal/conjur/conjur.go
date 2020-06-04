@@ -33,6 +33,24 @@ func (c ConjurPki) getCertificatePolicyBranch() string {
 	return c.policyBranch + "/certificates"
 }
 
+func (c ConjurPki) getCAChainVariableID() string {
+	return c.policyBranch + "/ca/chain"
+}
+
+func (c ConjurPki) getSigningCertVariableID() string {
+	return c.policyBranch + "/ca/cert"
+}
+
+func (c ConjurPki) getSigningKeyVariableID() string {
+	return c.policyBranch + "/ca/key"
+}
+
+func (c ConjurPki) getCRLVariableID() string {
+	return c.policyBranch + "/crl"
+}
+
+
+
 // NewTemplates ...
 func NewTemplates(newTemplate string, deleteTemplate string, newCertificate string, deleteCertificate string) ConjurTemplates {
 	return ConjurTemplates{
@@ -51,6 +69,8 @@ func NewConjurPki(client *conjurapi.Client, policyBranch string, templates Conju
 		templates:    templates,
 	}
 }
+
+
 
 // CreateTemplate ...
 func (c ConjurPki) CreateTemplate(template types.Template) (*conjurapi.PolicyResponse, error) {
@@ -166,6 +186,8 @@ func (c ConjurPki) DeleteTemplate(templateName string) (*conjurapi.PolicyRespons
 	return response, err
 }
 
+
+
 // CreateCertificate ...
 func (c ConjurPki) CreateCertificate(cert types.CreateCertificateInDap) (*conjurapi.PolicyResponse, error) {
 	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
@@ -279,4 +301,103 @@ func (c ConjurPki) DeleteCertificate(serialNumber *big.Int) (*conjurapi.PolicyRe
 	}
 
 	return response, err
+}
+
+
+
+// GetCAChain ...
+func (c ConjurPki) GetCAChain() (string, error) [
+	variableID := getCAChainVariableID()
+
+	value, err := c.client.RetrieveSecret(variableID)
+	if err != nil {
+		return "", fmt.Errorf("Failed to retrieve certificate chain with variable id '%s'. %s", variableID, err)
+	}
+
+	return string(value)
+}
+
+// WriteCAChain ...
+func (c ConjurPki) WriteCAChain(content string) (string, error) [
+	variableID := getCAChainVariableID()
+
+	value, err := c.client.AddSecret(variableID, content)
+	if err != nil {
+		return "", fmt.Errorf("Failed to set certificate chain with variable id '%s'. %s", variableID, err)
+	}
+
+	return string(value)
+}
+
+// GetSigningCert ...
+func (c ConjurPki) GetSigningCert() (string, error) [
+	variableID := getSigningCertVariableID()
+
+	value, err := c.client.RetrieveSecret(variableID)
+	if err != nil {
+		return "", fmt.Errorf("Failed to retrieve signing certificate with variable id '%s'. %s", variableID, err)
+	}
+
+	return string(value), err
+}
+
+// WriteSigningCert ...
+func (c ConjurPki) WriteSigningCert(content string) (string, error) [
+	variableID := getSigningCertVariableID()
+
+	value, err := c.client.AddSecret(variableID, content)
+	if err != nil {
+		return "", fmt.Errorf("Failed to set signing certificate with variable id '%s'. %s", variableID, err)
+	}
+
+	return string(value), err
+}
+
+// GetSigningKey ...
+func (c ConjurPki) GetSigningKey() (string, error) [
+	variableID := getSigningKeyVariableID()
+
+	value, err := c.client.RetrieveSecret(variableID)
+	if err != nil {
+		return "", fmt.Errorf("Failed to retrieve signing key with variable id '%s'. %s", variableID, err)
+	}
+
+	return string(value), err
+}
+
+// WriteSigningKey ...
+func (c ConjurPki) WriteSigningKey(content string)) (string, error) [
+	variableID := getSigningKeyVariableID()
+
+	value, err := c.client.AddSecret(variableID, content)
+	if err != nil {
+		return "", fmt.Errorf("Failed to set signing key with variable id '%s'. %s", variableID, err)
+	}
+
+	return string(value), err
+}
+
+
+// GetCRL ...
+func (c ConjurPki) GetCRL() (string, error) [
+	variableID := getCRLVariableID()
+
+	value, err := c.client.RetrieveSecret(variableID)
+	if err != nil {
+		return "", fmt.Errorf("Failed to retrieve CRL with variable id '%s'. %s", variableID, err)
+	}
+
+	return string(value), err
+}
+
+// WriteCRL ...
+func (c ConjurPki) WriteCRL(content string)) (string, error) [
+	variableID := getCRLVariableID()
+
+	value, err := c.client.AddSecret(variableID, content)
+	if err != nil {
+		return "", fmt.Errorf("Failed to set CRL with variable id '%s'. %s", variableID, err)
+	}
+
+	return string(value), err
 }
