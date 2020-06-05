@@ -298,22 +298,33 @@ func (c ConjurPki) DeleteCertificate(serialNumber *big.Int) (*conjurapi.PolicyRe
 }
 
 // GetCAChain ...
-func (c ConjurPki) GetCAChain() (string, error) {
+func (c ConjurPki) GetCAChain() ([]string, error) {
 	variableID := c.getCAChainVariableID()
+	caChain := &[]string{}
 
 	value, err := c.client.RetrieveSecret(variableID)
 	if err != nil {
-		return "", fmt.Errorf("Failed to retrieve certificate chain with variable id '%s'. %s", variableID, err)
+		return *caChain, fmt.Errorf("Failed to retrieve certificate chain with variable id '%s'. %s", variableID, err)
 	}
 
-	return string(value), nil
+	err = json.Unmarshal(value, caChain)
+	if err != nil {
+		return *caChain, fmt.Errorf("Failed to unmarshal certificate chain. %s", err)
+	}
+
+	return *caChain, nil
 }
 
 // WriteCAChain ...
-func (c ConjurPki) WriteCAChain(content string) error {
+func (c ConjurPki) WriteCAChain(certBundle []string) error {
 	variableID := c.getCAChainVariableID()
 
-	err := c.client.AddSecret(variableID, content)
+	certBundleJSON, err := json.Marshal(certBundle)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal cert bundle. %s", err)
+	}
+
+	err = c.client.AddSecret(variableID, string(certBundleJSON))
 	if err != nil {
 		return fmt.Errorf("Failed to set certificate chain with variable id '%s'. %s", variableID, err)
 	}
