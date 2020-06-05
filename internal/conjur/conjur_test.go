@@ -371,3 +371,43 @@ func TestDeleteNonExistentCertificate(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteCAChain(t *testing.T) {
+	conjurPki, err := defaultConjurPki()
+	if err != nil {
+		t.Errorf("Failed to init conjurPki interface. %s", err)
+	}
+
+	// write chain "hello", "world"
+	chain := []string{"hello", "world"}
+	err = conjurPki.WriteCAChain(chain)
+	if err != nil {
+		t.Errorf("Failed to write to CA Chain. %s", err)
+	}
+
+	// Retrieve this chain
+	storedChain, err := conjurPki.GetCAChain()
+	if err != nil {
+		t.Errorf("Failed to retrieve ca chain even though it exists!")
+	}
+
+	// Validate order of the chain and contents are the same
+	for i, pem := range chain {
+		storedPEM := storedChain[i]
+		if pem != storedPEM {
+			t.Errorf("PEM created does not match PEM Stored. '%s' does not equal '%s'", pem, storedPEM)
+		}
+	}
+}
+
+func TestGetCAChainNonExistent(t *testing.T) {
+	client, _ := defaultConjurClient()
+	templates := defaultTemplates()
+	conjurPki := conjur.NewConjurPki(client, "not-pki", templates)
+
+	// Retrieve this chain
+	_, err := conjurPki.GetCAChain()
+	if err == nil {
+		t.Errorf("Retrieve the CA chain even though it does not exists!")
+	}
+}
