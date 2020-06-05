@@ -21,6 +21,11 @@ func testCreateTemplate() string {
 func testCreateCertificate() string {
 	return `- !variable
   id: "<SerialNumber>"
+  annotations:
+    Revoked: <Revoked>
+    RevocationDate: <RevocationDate>
+    RevocationReasonCode: <RevocationReasonCode>
+    ExpirationDate: <ExpirationDate>
 `
 }
 
