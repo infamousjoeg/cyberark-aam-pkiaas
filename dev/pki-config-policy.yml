@@ -1,0 +1,12 @@
+- !host pki-service
+- !policy
+  id: pki
+  owner: !host pki-service
+  body:
+  - !variable ca/cert
+  - !variable ca/key
+  - !variable ca/cert-chain
+  - !variable crl
+
+  - !policy templates
+  - !policy certificates
