@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/conjur"
@@ -26,6 +27,7 @@ func testCreateCertificate() string {
     RevocationDate: <RevocationDate>
     RevocationReasonCode: <RevocationReasonCode>
     ExpirationDate: <ExpirationDate>
+    InternalState: csasa<InternalState>csasa
 `
 }
 
@@ -113,9 +115,9 @@ func TestCreateTemplate(t *testing.T) {
 	conjurPki.DeleteTemplate(template.TemplateName)
 
 	// Load the new template from above
-	response, err := conjurPki.CreateTemplate(template)
+	err = conjurPki.CreateTemplate(template)
 	if err != nil {
-		t.Errorf("%v, %s", response, err)
+		t.Errorf("%s", err)
 	}
 
 	// retrieve the stored template
@@ -144,13 +146,13 @@ func TestCreateTemplateAlreadyExists(t *testing.T) {
 	conjurPki.DeleteTemplate(template.TemplateName)
 
 	// Load the new template from above
-	response, err := conjurPki.CreateTemplate(template)
+	err = conjurPki.CreateTemplate(template)
 	if err != nil {
-		t.Errorf("%v, %s", response, err)
+		t.Errorf("%s", err)
 	}
 
 	// Load the new template again and it should fail
-	response, err = conjurPki.CreateTemplate(template)
+	err = conjurPki.CreateTemplate(template)
 	if err == nil {
 		t.Errorf("Loading a template twice in a row should result in an error, template already exists.")
 	}
@@ -169,15 +171,15 @@ func TestDeleteTemplate(t *testing.T) {
 	}
 
 	// Load the new template from above
-	response, err := conjurPki.CreateTemplate(template)
+	err = conjurPki.CreateTemplate(template)
 	if err != nil {
-		t.Errorf("%v, %s", response, err)
+		t.Errorf("%s", err)
 	}
 	// something
 	// Delete the template, should be successful
-	response, err = conjurPki.DeleteTemplate(template.TemplateName)
+	err = conjurPki.DeleteTemplate(template.TemplateName)
 	if err != nil {
-		t.Errorf("Error: %v, %s", response, err)
+		t.Errorf("%s", err)
 	}
 }
 
@@ -187,7 +189,7 @@ func TestDeleteNonExistentTemplate(t *testing.T) {
 		t.Errorf("Failed to init conjurPki interface. %s", err)
 	}
 
-	_, err = conjurPki.DeleteTemplate("notRealTemplate")
+	err = conjurPki.DeleteTemplate("notRealTemplate")
 	if err == nil {
 		t.Errorf("Delete template that does not exist should fail.")
 	}
@@ -305,9 +307,9 @@ func TestCreateCertificate(t *testing.T) {
 
 	// Load the new template from above
 	conjurPki.DeleteCertificate(serialNumber)
-	response, err := conjurPki.CreateCertificate(cert)
+	err = conjurPki.CreateCertificate(cert)
 	if err != nil {
-		t.Errorf("%v, %s", response, err)
+		t.Errorf("%s", err)
 	}
 
 	// retrieve the stored template
@@ -335,7 +337,7 @@ func TestCreateCertificateAlreadyExists(t *testing.T) {
 	}
 
 	conjurPki.CreateCertificate(cert)
-	_, err = conjurPki.CreateCertificate(cert)
+	err = conjurPki.CreateCertificate(cert)
 	if err == nil {
 		t.Errorf("Created a certificate even though '%s' is already created", serialNumber.String())
 	}
@@ -354,9 +356,9 @@ func TestDeleteCertificate(t *testing.T) {
 	}
 
 	conjurPki.CreateCertificate(newCert)
-	response, err := conjurPki.DeleteCertificate(serialNumber)
+	err = conjurPki.DeleteCertificate(serialNumber)
 	if err != nil {
-		t.Errorf("Failed to delete certificate '%s' but should be deletable. response: %v", serialNumber.String(), response)
+		t.Errorf("Failed to delete certificate '%s' but should be deletable. response: %s", serialNumber.String(), err)
 	}
 }
 
@@ -367,7 +369,7 @@ func TestDeleteNonExistentCertificate(t *testing.T) {
 	}
 
 	serialNumber, _ := new(big.Int).SetString("098765098765", 10)
-	_, err = conjurPki.DeleteCertificate(serialNumber)
+	err = conjurPki.DeleteCertificate(serialNumber)
 	if err == nil {
 		t.Errorf("Certificate '%s' was deleted but does not exist", serialNumber.String())
 	} else {
@@ -414,5 +416,84 @@ func TestGetCAChainNonExistent(t *testing.T) {
 	_, err := conjurPki.GetCAChain()
 	if err == nil {
 		t.Errorf("Retrieve the CA chain even though it does not exists!")
+	}
+}
+
+func TestRevokeCertificate(t *testing.T) {
+	conjurPki, err := defaultConjurPki()
+	if err != nil {
+		t.Errorf("Failed to init conjurPki interface. %s", err)
+	}
+	serialNumber, _ := new(big.Int).SetString("88349947748020022", 10)
+	// Create template for this test case
+	cert := types.CreateCertificateInDap{
+		Certificate:  "SomeDEREncodedBlob",
+		SerialNumber: "88349947748020022",
+	}
+
+	err = conjurPki.CreateCertificate(cert)
+	if err != nil {
+		t.Errorf("Failed to create certificate even though it should not exist. %s", err)
+	}
+
+	err = conjurPki.RevokeCertificate(serialNumber, 1, time.Now())
+	if err != nil {
+		t.Errorf("Failed to revoked certficiate even though it should be revokable. %s", err)
+	}
+
+	err = conjurPki.DeleteCertificate(serialNumber)
+	if err != nil {
+		t.Errorf("Failed to delete certificate even though it should exist. %s", err)
+	}
+}
+
+func TestRevokeCertificateDoesNotExist(t *testing.T) {
+	conjurPki, err := defaultConjurPki()
+	if err != nil {
+		t.Errorf("Failed to init conjurPki interface. %s", err)
+	}
+	serialNumber, _ := new(big.Int).SetString("88349947748020022101010", 10)
+
+	err = conjurPki.RevokeCertificate(serialNumber, 1, time.Now())
+	if err != nil {
+		if !strings.Contains(fmt.Sprintf("%s", err), "404 Not Found") {
+			t.Errorf("Invalid error message, certificate should not be found. %s", err)
+		}
+	}
+}
+
+func TestGetRevokedCertificates(t *testing.T) {
+	conjurPki, err := defaultConjurPki()
+	if err != nil {
+		t.Errorf("Failed to init conjurPki interface. %s", err)
+	}
+	serialNumber, _ := new(big.Int).SetString("88349947748020022222222", 10)
+	// Create template for this test case
+	cert := types.CreateCertificateInDap{
+		Certificate:  "SomeDEREncodedBlob",
+		SerialNumber: "88349947748020022222222",
+	}
+
+	_ = conjurPki.DeleteCertificate(serialNumber)
+
+	err = conjurPki.CreateCertificate(cert)
+	if err != nil {
+		t.Errorf("Failed to create certificate even though it should not exist. %s", err)
+	}
+
+	err = conjurPki.RevokeCertificate(serialNumber, 1, time.Now())
+	if err != nil {
+		t.Errorf("Failed to revoked certficiate even though it should be revokable. %s", err)
+	}
+
+	revokedCerts, err := conjurPki.GetRevokedCerts()
+	if err != nil {
+		t.Errorf("Failed to get revoked certificates. %s", err)
+	}
+
+	for _, revokedCert := range revokedCerts {
+		if revokedCert.SerialNumber != cert.SerialNumber {
+			t.Errorf("Revoked certificate '%s' is not '%s'", revokedCert.SerialNumber, cert.SerialNumber)
+		}
 	}
 }
