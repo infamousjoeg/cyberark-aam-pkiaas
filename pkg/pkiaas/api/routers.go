@@ -40,19 +40,13 @@ func NewRouter() *mux.Router {
 	return router
 }
 
-///////////////////////
-// GET ROUTES START //
-//////////////////////
-
 // Index route //
 // Returns confirmation message on successful GET of /
 func Index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Successful GET /")
 }
 
-////////////////////////
-// POST ROUTES START //
-///////////////////////
+var backend pki.Pki = pki.Pki{Backend: conjur.ConjurPki{}}
 
 var backend pki.Pki = pki.Pki{Backend: conjur.ConjurPki{}}
 
@@ -103,7 +97,7 @@ var routes = Routes{
 		"Purge",
 		strings.ToUpper("Post"),
 		"/purge",
-		pki.PurgeHandler,
+		backend.PurgeHandler,
 	},
 
 	Route{
@@ -131,42 +125,63 @@ var routes = Routes{
 		"PurgeCRL",
 		strings.ToUpper("Post"),
 		"/crl/purge",
-		pki.PurgeCRLHandler,
+		backend.PurgeCRLHandler,
 	},
 
 	Route{
 		"CreateTemplate",
 		strings.ToUpper("Post"),
 		"/template/create",
-		pki.CreateTemplateHandler,
+		backend.CreateTemplateHandler,
 	},
 
 	Route{
 		"DeleteTemplate",
 		strings.ToUpper("Delete"),
 		"/template/delete/{templateName}",
-		pki.DeleteTemplateHandler,
+		backend.DeleteTemplateHandler,
 	},
 
 	Route{
 		"GetTemplate",
 		strings.ToUpper("Get"),
 		"/template/{templateName}",
-		pki.GetTemplateHandler,
+		backend.GetTemplateHandler,
 	},
 
 	Route{
 		"ListTemplates",
 		strings.ToUpper("Get"),
 		"/templates",
-		pki.ListTemplatesHandler,
+		backend.ListTemplatesHandler,
 	},
 
 	Route{
 		"ManageTemplate",
 		strings.ToUpper("Put"),
 		"/template/manage",
-		pki.ManageTemplateHandler,
+		backend.ManageTemplateHandler,
+	},
+
+	Route{
+		"GenerateIntermediateCSR",
+		strings.ToUpper("Post"),
+		"/ca/generate",
+		backend.GenerateIntermediateCSRHandler,
+	},
+
+	Route{
+		"SetIntermediateCertificate",
+		strings.ToUpper("Post"),
+		"/ca/set",
+		backend.SetIntermediateCertificateHandler,
+	},
+
+	Route{
+		"SetCAChain",
+		strings.ToUpper("Post"),
+		"/ca/chain/set",
+		backend.SetCAChainHandler,
 	},
 
 	// Route{
