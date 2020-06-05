@@ -10,7 +10,7 @@ import (
 )
 
 // CreateTemplateHandler ---------------------------------------------------
-func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
@@ -57,11 +57,11 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	CreateTemplateInDAP(newTemplate)
+	_, err = p.Backend.CreateTemplate(newTemplate)
 }
 
 // ManageTemplateHandler -------------------------------------------------------
-func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
@@ -81,7 +81,7 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	template, err := GetTemplateFromDAP(newTemplate.TemplateName)
+	template, err := p.Backend.GetTemplate(newTemplate.TemplateName)
 	if err != nil {
 		http.Error(w, "The requested template "+newTemplate.TemplateName+" cannot be located", http.StatusBadRequest)
 		return
@@ -91,11 +91,6 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
 		return
-	}
-
-	err = DeleteTemplateFromDAP(template.TemplateName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
 	err = ValidateKeyAlgoAndSize(template.KeyAlgo, template.KeyBits)
@@ -123,13 +118,17 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = CreateTemplateInDAP(template)
+	_, err = p.Backend.DeleteTemplate(template.TemplateName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	_, err = p.Backend.CreateTemplate(template)
 }
 
 // DeleteTemplateHandler -------------------------------------------------------
-func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	templateName := mux.Vars(r)["templateName"]
-	err := DeleteTemplateFromDAP(templateName)
+	_, err := p.Backend.DeleteTemplate(templateName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -137,8 +136,8 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetTemplateHandler ----------------------------------------------------------
-func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
-	template, err := GetTemplateFromDAP(mux.Vars(r)["templateName"])
+func (p *Pki) GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
+	template, err := p.Backend.GetTemplate(mux.Vars(r)["templateName"])
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -150,8 +149,8 @@ func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListTemplatesHandler ---------------------------------------------------------
-func ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
-	templates, err := GetAllTemplatesFromDAP()
+func (p *Pki) ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
+	templates, err := p.Backend.ListTemplates()
 
 	if err != nil {
 		http.Error(w, "Failed to retrieve a list of templates", http.StatusBadRequest)

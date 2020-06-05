@@ -21,41 +21,41 @@ import (
 )
 
 // GenerateIntermediateCSRHandler ------------------------------------------
-func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		http.Error(w, "Unable to read request body", http.StatusBadRequest)
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Unable to process HTTP request body - ioutil.ReadAll returned: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Invalid HTTP Content-Type header, expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
 	var intermediateRequest types.IntermediateRequest
 	err = json.Unmarshal(reqBody, &intermediateRequest)
 	if err != nil {
-		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Unable to parse HTTP request body data - json.Unmarshal returned: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	signPrivKey, _, err := GenerateKeys(intermediateRequest.KeyAlgo, intermediateRequest.KeyBits)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Unable to generate signing key - pki.GenerateKeys returned: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	certSubject, err := SetCertSubject(intermediateRequest.Subject, intermediateRequest.CommonName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Unable to process signing certificate subject - pki.SetCertSubject returned: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	dnsNames, emailAddresses, ipAddresses, URIs, err := ProcessSubjectAltNames(intermediateRequest.AltNames)
 	if err != nil {
-		http.Error(w, "Error handling request Subject Alternate Names: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Error processing SANs - pki.ProcessSubjectAltNames returned: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -65,7 +65,7 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	encodedCaConstraint, err := asn1.Marshal(caConstraint)
 	if err != nil {
-		http.Error(w, "Error marshaling CA basic constraints in ASN.1 format: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Unable to marshal CA basic constraints to ASN.1 format - asn1.Marshal returned: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	isCAExtension := pkix.Extension{
@@ -81,7 +81,7 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 	bsKeyUsage.Bytes = []byte{byte(0xff & (keyUsage >> 8)), byte(0xff & keyUsage)}
 	encodedKeyUsage, err := asn1.Marshal(bsKeyUsage)
 	if err != nil {
-		http.Error(w, "Error marshaling CA key usages in ASN.1 format: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Unable to marshal CA key usages to ASN.1 format - asn1.Marshal returned: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	keyUsageExtension := pkix.Extension{
@@ -101,7 +101,7 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 	case "ed25519.PrivateKey":
 		sigAlgo = x509.PureEd25519
 	default:
-		http.Error(w, "No matching signature algorithm found in requested template", http.StatusInternalServerError)
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: No matching signature algorithm found in requested template", http.StatusInternalServerError)
 		return
 	}
 
@@ -118,7 +118,7 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	signCSR, err := x509.CreateCertificateRequest(rand.Reader, &signRequest, signPrivKey)
 	if err != nil {
-		http.Error(w, "Unable to generate new certificate request: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Error while generating new CSR - x509.CreateCertificateRequest returned: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -132,19 +132,24 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 	case "ECDSA":
 		keyBytes, err = x509.MarshalECPrivateKey(signPrivKey.(*ecdsa.PrivateKey))
 		if err != nil {
-			http.Error(w, "Unable to successfully marshal new ECDSA key into PEM format for return", http.StatusInternalServerError)
+			http.Error(w, "PKI: GenerateIntermediateCSRHandler: Unable to marshal new ECDSA private key - x509.MarshalECPrivateKey returned: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "ED25519":
 		keyBytes = signPrivKey.(ed25519.PrivateKey)
 	}
-	err = WriteSigningKeyToDAP(base64.StdEncoding.EncodeToString(keyBytes))
+
+	err = p.Backend.WriteSigningCert(base64.StdEncoding.EncodeToString(keyBytes))
+	if err != nil {
+		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Error while writing signing key to Conjur - conjur.WriteSigningKey returned: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	json.NewEncoder(w).Encode(csrResponse)
 }
 
 // SetIntermediateCertHandler ----------------------------------------------
-func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
@@ -176,7 +181,7 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	strSigningKey, err := GetSigningCertFromDAP()
+	strSigningKey, err := p.Backend.GetSigningKey()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -218,12 +223,12 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	WriteSigningCertToDAP(base64.StdEncoding.EncodeToString(derCert))
+	p.Backend.WriteSigningCert(base64.StdEncoding.EncodeToString(derCert))
 }
 
 // GetCAHandler ----------------------------------------------------------------------
-func GetCAHandler(w http.ResponseWriter, r *http.Request) {
-	encodedCA, err := GetSigningCertFromDAP()
+func (p *Pki) GetCAHandler(w http.ResponseWriter, r *http.Request) {
+	encodedCA, err := p.Backend.GetSigningCert()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -238,9 +243,9 @@ func GetCAHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetCAChainHandler -----------------------------------------------------------------
-func GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	caChain := ""
-	encodedBundle, err := GetCAChainFromDAP()
+	encodedBundle, err := p.Backend.GetCAChain()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -260,7 +265,7 @@ func GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // SetCAChainHandler -----------------------------------------------------------------
-func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
@@ -285,7 +290,7 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 		encodedCert := base64.StdEncoding.EncodeToString(derCert)
 		certBundle = append(certBundle, encodedCert)
 	}
-	err = WriteCAChainToDAP(certBundle)
+	err = p.Backend.WriteCAChain(certBundle)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

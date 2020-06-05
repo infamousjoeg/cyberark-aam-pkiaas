@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/conjur"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 )
 
@@ -53,6 +54,8 @@ func Index(w http.ResponseWriter, r *http.Request) {
 // POST ROUTES START //
 ///////////////////////
 
+var backend pki.Pki = pki.Pki{Backend: conjur.ConjurPki{}}
+
 var routes = Routes{
 	Route{
 		"Index",
@@ -65,35 +68,35 @@ var routes = Routes{
 		"GetCA",
 		strings.ToUpper("Get"),
 		"/ca/certificate",
-		pki.GetCAHandler,
+		backend.GetCAHandler,
 	},
 
 	Route{
 		"GetCAChain",
 		strings.ToUpper("Get"),
 		"/ca/chain",
-		pki.GetCAChainHandler,
+		backend.GetCAChainHandler,
 	},
 
 	Route{
 		"CreateCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/create",
-		pki.CreateCertHandler,
+		backend.CreateCertHandler,
 	},
 
 	Route{
 		"GetCertificate",
 		strings.ToUpper("Get"),
 		"/certificate/{serialNumber}",
-		pki.GetCertHandler,
+		backend.GetCertHandler,
 	},
 
 	Route{
 		"ListCertificates",
 		strings.ToUpper("Get"),
 		"/certificates",
-		pki.ListCertsHandler,
+		backend.ListCertsHandler,
 	},
 
 	Route{
@@ -107,22 +110,22 @@ var routes = Routes{
 		"RevokeCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/revoke",
-		pki.RevokeCertHandler,
+		backend.RevokeCertHandler,
 	},
 
 	Route{
 		"SignCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/sign",
-		pki.SignCertHandler,
+		backend.SignCertHandler,
 	},
 
-	// Route{
-	// 	"GetCRL",
-	// 	strings.ToUpper("Get"),
-	// 	"/crl",
-	// 	pki.GetCRLHandler,
-	// },
+	Route{
+		"GetCRL",
+		strings.ToUpper("Get"),
+		"/crl",
+		pki.GetCRLHandler,
+	},
 
 	Route{
 		"PurgeCRL",

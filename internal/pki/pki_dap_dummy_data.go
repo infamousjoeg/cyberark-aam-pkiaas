@@ -75,7 +75,6 @@ jn9cBqplHlxB0c09IFccUg1Rv1ppFeaz25fx2h1H3fZ8JIdD4ScgN5qEHTCyN6XTwu6ByuqLyhqD
 SYiaan+03TI5KlBqIzWwY9Ww9HVZww+NFrnX9IrvXcgYkY1ZyxUZNmpOmOWWf8QBc8IIhNucxhvT
 Iw==`)
 	return chain, nil
-
 }
 
 // GetAllCertsFromDAP ----------------------------------------------------------
@@ -89,7 +88,6 @@ func GetTemplateFromDAP(templateName string) (types.Template, error) {
 		return dummyTemplate, nil
 	}
 	return types.Template{}, errors.New("Unable to locate template with template name " + templateName)
-
 }
 
 // CreateTemplateInDAP ---------------------------------------------------------
@@ -211,5 +209,10 @@ func WriteSigningKeyToDAP(newKey string) error {
 
 // WriteCAChainToDAP ------------------------------------------------------------
 func WriteCAChainToDAP(certBundle []string) error {
+	return nil
+}
+
+// DeleteCertificateFromDAP -----------------------------------------------------
+func DeleteCertificateFromDAP(serialNumber *big.Int) error {
 	return nil
 }
