@@ -1,5 +1,7 @@
 package types
 
+import "time"
+
 // CreateCertReq ---------------------------------------------------------------
 // Structure representing the HTTP request POSTed to the CreateCert API endpoint
 type CreateCertReq struct {
@@ -43,10 +45,12 @@ type CreateCertificateResponse struct {
 
 // CreateCertificateInDap ---------------------------------------------------
 type CreateCertificateInDap struct {
-	Certificate    string `json:"certificate"`
-	Revoked        bool   `json:"revoked"`
-	ExpirationDate string `json:"expirationDate"`
-	SerialNumber   string `json:"serialNumber"`
+	Certificate          string `json:"certificate"`
+	Revoked              bool   `json:"revoked"`
+	RevocationDate       string `json:"revocationDate"`
+	RevocationReasonCode int    `json:"revocationReasonCode"`
+	ExpirationDate       string `json:"expirationDate"`
+	SerialNumber         string `json:"serialNumber"`
 }
 
 // PEMCertificate -----------------------------------------------------------------
@@ -114,4 +118,11 @@ type SubjectFields struct {
 type CABasicConstraints struct {
 	CA                bool `json:"ca,omitempty"`
 	PathLenConstraint int  `json:"pathLenConstraint,omitempty"`
+}
+
+// RevokedCertificate --------------------------------------------------------
+type RevokedCertificate struct {
+	serialNumber   string
+	reasonCode     int
+	revocationDate time.Time
 }
