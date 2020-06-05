@@ -195,12 +195,6 @@ func (c ConjurPki) CreateCertificate(cert types.CreateCertificateInDap) (*conjur
 	// replace template placeholders
 	newPolicy := bytes.NewReader([]byte(ReplaceCertificate(cert, c.templates.newCertificate)))
 
-	// cast the template stuct into json
-	certificateJSON, err := json.Marshal(cert)
-	if err != nil {
-		return nil, err
-	}
-
 	// Load policy to create the variable
 	response, err := c.client.LoadPolicy(
 		conjurapi.PolicyModePatch,
@@ -213,7 +207,7 @@ func (c ConjurPki) CreateCertificate(cert types.CreateCertificateInDap) (*conjur
 	}
 
 	// Set the Secret value
-	err = c.client.AddSecret(variableID, string(certificateJSON))
+	err = c.client.AddSecret(variableID, cert.Certificate)
 	return response, err
 }
 
@@ -257,16 +251,13 @@ func (c ConjurPki) ListCertificates() ([]*big.Int, error) {
 // GetCertificate ...
 func (c ConjurPki) GetCertificate(serialNumber *big.Int) (string, error) {
 	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
-	certificateJSON, err := c.client.RetrieveSecret(variableID)
+	value, err := c.client.RetrieveSecret(variableID)
 
 	if err != nil {
 		return "", fmt.Errorf("Failed to retrieve certificate with serial number '%s'. %s", variableID, err)
 	}
 
-	certificate := &types.CreateCertificateInDap{}
-	err = json.Unmarshal(certificateJSON, certificate)
-
-	return string(certificate.Certificate), err
+	return string(value), err
 }
 
 // DeleteCertificate ...
