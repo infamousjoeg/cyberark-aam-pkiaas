@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/conjur"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 )
 
 // Route struct
@@ -46,7 +46,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Successful GET /")
 }
 
-var backend := pki.Pki { Backend: new(conjur.ConjurPki) }
+var backend pki.Pki = pki.Pki{Backend: conjur.ConjurPki{}}
 
 var routes = Routes{
 	Route{
@@ -159,6 +159,27 @@ var routes = Routes{
 		strings.ToUpper("Put"),
 		"/template/manage",
 		backend.ManageTemplateHandler,
+	},
+
+	Route{
+		"GenerateIntermediateCSR",
+		strings.ToUpper("Post"),
+		"/ca/generate",
+		backend.GenerateIntermediateCSRHandler,
+	},
+
+	Route{
+		"SetIntermediateCertificate",
+		strings.ToUpper("Post"),
+		"/ca/set",
+		backend.SetIntermediateCertificateHandler,
+	},
+
+	Route{
+		"SetCAChain",
+		strings.ToUpper("Post"),
+		"/ca/chain/set",
+		backend.SetCAChainHandler,
 	},
 
 	// Route{
