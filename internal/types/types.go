@@ -51,6 +51,7 @@ type CreateCertificateInDap struct {
 	RevocationReasonCode int    `json:"revocationReasonCode"`
 	ExpirationDate       string `json:"expirationDate"`
 	SerialNumber         string `json:"serialNumber"`
+	InternalState        string `json:"internalState"`
 }
 
 // PEMCertificate -----------------------------------------------------------------
@@ -122,7 +123,7 @@ type CABasicConstraints struct {
 
 // RevokedCertificate --------------------------------------------------------
 type RevokedCertificate struct {
-	serialNumber   string
-	reasonCode     int
-	revocationDate time.Time
+	SerialNumber   string
+	ReasonCode     int
+	RevocationDate time.Time
 }
