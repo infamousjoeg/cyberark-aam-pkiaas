@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"io/ioutil"
-	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -23,7 +22,7 @@ import (
 )
 
 // SignCertHandler -------------------------------------------------------------
-func SignCertHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) SignCertHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Unable to read request body", http.StatusBadRequest)
@@ -48,7 +47,7 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	template, serialNumber, ttl, sigAlgo, caCert, signingKey, err := PrepareCertificateParameters(signReq.TemplateName, signReq.TTL)
+	template, serialNumber, ttl, sigAlgo, caCert, signingKey, err := p.PrepareCertificateParameters(signReq.TemplateName, signReq.TTL, p.Backend)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -147,7 +146,8 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 // Handler function invoked by the API endpoint 'CreateCert', which is responsible
 // for building a new certificate with the provided common name based upon the
 // provided template
-func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
+
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Unable to read request body", http.StatusBadRequest)
@@ -165,7 +165,7 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	template, serialNumber, ttl, sigAlgo, caCert, signingKey, err := PrepareCertificateParameters(certReq.TemplateName, certReq.TTL)
+	template, serialNumber, ttl, sigAlgo, caCert, signingKey, err := p.PrepareCertificateParameters(certReq.TemplateName, certReq.TTL, p.Backend)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -174,10 +174,12 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract all the necessary data from the template to be used in generating the new
 	// x509.Certificate object to be signed
 	certSubject, err := SetCertSubject(template.Subject, certReq.CommonName)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	keyUsage, err := ProcessKeyUsages(template.KeyUsages)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -274,7 +276,7 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetCertHandler --------------------------------------------------------------------
-func GetCertHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) GetCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	serialNumber := mux.Vars(r)["serialNumber"]
 
@@ -285,7 +287,7 @@ func GetCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	certificate, err := GetCertFromDAP(intSerialNumber)
+	certificate, err := p.Backend.GetCertificate(intSerialNumber)
 	if err != nil {
 		http.Error(w, "Unable to retrieve certificate matching requested serial number", http.StatusNotFound)
 		return
@@ -293,7 +295,7 @@ func GetCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	derCert, err := base64.StdEncoding.DecodeString(certificate)
 	if err != nil {
-		http.Error(w, "Unable to decode certificate returned from DAP: "+err.Error(), http.StatusNotFound)
+		http.Error(w, "Unable to decode certificate returned from backend: "+err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -306,8 +308,8 @@ func GetCertHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListCertsHandler ------------------------------------------------------------------
-func ListCertsHandler(w http.ResponseWriter, r *http.Request) {
-	serialNumberList, err := GetAllCertsFromDAP()
+func (p *Pki) ListCertsHandler(w http.ResponseWriter, r *http.Request) {
+	serialNumberList, err := p.Backend.ListCertificates()
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -316,16 +318,12 @@ func ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 
 	retSerialNumbers := []string{}
 	for _, serialNumber := range serialNumberList {
-		intSerialNumber := new(big.Int)
-		if intSerialNumber, success := intSerialNumber.SetString(serialNumber, 10); success {
-			strSerialNumber, err := ConvertSerialIntToOctetString(intSerialNumber)
-
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			retSerialNumbers = append(retSerialNumbers, strSerialNumber)
+		strSerialNumber, err := ConvertSerialIntToOctetString(serialNumber)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
+		retSerialNumbers = append(retSerialNumbers, strSerialNumber)
 	}
 
 	response := types.CertificateListResponse{
@@ -336,7 +334,7 @@ func ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // RevokeCertHandler -----------------------------------------------------------------
-func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Unable to read request body", http.StatusBadRequest)
@@ -393,7 +391,7 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	revokedCertList = append(revokedCertList, oldCRL...)
 	RevokeCertInDAP(intSerialNum, reasonCode, revokeTime)
 
-	encodedSigningKey, err := GetSigningKeyFromDAP()
+	encodedSigningKey, err := p.Backend.GetSigningKey()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -412,7 +410,7 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	encodedCACert, err := GetSigningCertFromDAP()
+	encodedCACert, err := p.Backend.GetSigningCert()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -435,5 +433,5 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	pemCRL := pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: newCRL})
 
-	WriteCRLToDAP(string(pemCRL))
+	p.Backend.WriteCRL(string(pemCRL))
 }

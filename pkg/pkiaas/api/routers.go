@@ -48,6 +48,8 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 var backend pki.Pki = pki.Pki{Backend: conjur.ConjurPki{}}
 
+var backend pki.Pki = pki.Pki{Backend: conjur.ConjurPki{}}
+
 var routes = Routes{
 	Route{
 		"Index",
@@ -112,12 +114,12 @@ var routes = Routes{
 		backend.SignCertHandler,
 	},
 
-	// Route{
-	// 	"GetCRL",
-	// 	strings.ToUpper("Get"),
-	// 	"/crl",
-	// 	backend.GetCRLHandler,
-	// },
+	Route{
+		"GetCRL",
+		strings.ToUpper("Get"),
+		"/crl",
+		pki.GetCRLHandler,
+	},
 
 	Route{
 		"PurgeCRL",

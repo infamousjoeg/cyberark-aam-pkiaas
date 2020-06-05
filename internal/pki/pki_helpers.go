@@ -24,8 +24,15 @@ import (
 	"strings"
 
 	"github.com/golang/gddo/httputil/header"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/conjur"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
+
+// Pki -----------------------------
+type Pki struct {
+	Backend    conjur.ConjurPki
+	AuthHeader string
+}
 
 // GenerateKeys ----------------------------------------------------------------------
 // Accepts a key algorithm and key bit size as arguments, and then generates the appropriate
@@ -81,13 +88,13 @@ func GenerateKeys(keyAlgo string, keySize string) (crypto.PrivateKey, crypto.Pub
 // GenerateSerialNumber ------------------------------------------------------------------
 // Generates a new serial number and validates it doesn't already exist in the certificate
 // store
-func GenerateSerialNumber() (*big.Int, error) {
+func (p *Pki) GenerateSerialNumber() (*big.Int, error) {
 	maxValue := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, maxValue)
 	if err != nil {
 		return big.NewInt(0), errors.New("Unable to generate a new serial number")
 	}
-	for _, err := GetCertFromDAP(serialNumber); err == nil; {
+	for _, err := p.Backend.GetCertificate(serialNumber); err == nil; {
 		serialNumber, err = rand.Int(rand.Reader, maxValue)
 		if err != nil {
 			return big.NewInt(0), errors.New("Unable to generate a new serial number")
@@ -328,13 +335,13 @@ func SetCertSubject(subject types.SubjectFields, commonName string) (pkix.Name, 
 }
 
 // PrepareCertificateParameters ---------------------------------------------------
-func PrepareCertificateParameters(templateName string, reqTTL int64) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
-	template, err := GetTemplateFromDAP(templateName)
+func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, backend conjur.ConjurPki) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
+	template, err := p.Backend.GetTemplate(templateName)
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, err
 	}
 
-	serialNumber, err := GenerateSerialNumber()
+	serialNumber, err := p.GenerateSerialNumber()
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, err
 	}
@@ -348,9 +355,10 @@ func PrepareCertificateParameters(templateName string, reqTTL int64) (types.Temp
 		ttl = template.MaxTTL
 	}
 
-	// Retrieve the intermediate CA certificate from DAP and go through the necessary steps
+	// Retrieve the intermediate CA certificate from backend and go through the necessary steps
 	// to convert it from a PEM-string to a usable x509.Certificate object
-	strCert, err := GetSigningCertFromDAP()
+	strCert, err := p.Backend.GetSigningCert()
+	//	strCert, err := backend.GetSigningCert()
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, err
 	}
@@ -363,9 +371,9 @@ func PrepareCertificateParameters(templateName string, reqTTL int64) (types.Temp
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, err
 	}
-	// Retrieve the signing key from DAP and calculate the signature algorithm for use in the
+	// Retrieve the signing key from backend and calculate the signature algorithm for use in the
 	// certificate generation
-	strKey, err := GetSigningKeyFromDAP()
+	strKey, err := p.Backend.GetSigningKey()
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, err
 	}
