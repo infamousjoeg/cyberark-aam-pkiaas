@@ -127,7 +127,6 @@ func (c ConjurPki) ListTemplates() ([]string, error) {
 	// Parse the template name for all of the template variables
 	for _, resource := range resources {
 		_, _, id := SplitConjurID(resource)
-		fmt.Printf("My id: %s", id)
 		parts := strings.Split(id, "/")
 		templatesRoot := parts[len(parts)-2]
 		if templatesRoot == "templates" {
