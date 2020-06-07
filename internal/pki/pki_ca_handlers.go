@@ -139,7 +139,7 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 		keyBytes = signPrivKey.(ed25519.PrivateKey)
 	}
 
-	err = p.Backend.WriteSigningCert(base64.StdEncoding.EncodeToString(keyBytes))
+	err = p.Backend.WriteSigningKey(base64.StdEncoding.EncodeToString(keyBytes))
 	if err != nil {
 		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Error while writing signing key to Conjur - conjur.WriteSigningKey returned: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -192,7 +192,7 @@ func (p *Pki) SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request)
 	switch certificate.SignatureAlgorithm {
 	case x509.SHA256WithRSA:
 		signingKey, err = x509.ParsePKCS1PrivateKey(byteSigningKey)
-		signingPublicKey, err := x509.MarshalPKIXPublicKey(signingKey.(rsa.PrivateKey).PublicKey)
+		signingPublicKey, err := x509.MarshalPKIXPublicKey(&signingKey.(*rsa.PrivateKey).PublicKey)
 		if err != nil {
 			http.Error(w, "Error parsing the public key from the signing key: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -293,20 +293,31 @@ func (p *Pki) SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	err = p.Backend.WriteCAChain(certBundle)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
 // GetCRLHandler ----------------------------------------------------
-func GetCRLHandler(w http.ResponseWriter, r *http.Request) {
-
+func (p *Pki) GetCRLHandler(w http.ResponseWriter, r *http.Request) {
+	encodedCRL, err := p.Backend.GetCRL()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	decodedCRL, err := base64.StdEncoding.DecodeString(encodedCRL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(decodedCRL)
 }
 
 // PurgeHandler -----------------------------------------------------
-func PurgeHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) PurgeHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
 // PurgeCRLHandler --------------------------------------------------
-func PurgeCRLHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) PurgeCRLHandler(w http.ResponseWriter, r *http.Request) {
 
 }
