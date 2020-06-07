@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
@@ -69,18 +71,18 @@ func NewConjurPki(client *conjurapi.Client, policyBranch string, templates Conju
 }
 
 // CreateTemplate ...
-func (c ConjurPki) CreateTemplate(template types.Template) (*conjurapi.PolicyResponse, error) {
+func (c ConjurPki) CreateTemplate(template types.Template) error {
 	variableID := c.getTemplatePolicyBranch() + "/" + template.TemplateName
 
 	// validate template does not exists
 	_, err := c.client.RetrieveSecret(variableID)
 	if err == nil {
-		return nil, fmt.Errorf("Template '%s' already exists", template.TemplateName)
+		return fmt.Errorf("Template '%s' already exists", template.TemplateName)
 	}
 
 	// Template name cannot contain a '/'
 	if strings.Contains(template.TemplateName, "/") {
-		return nil, fmt.Errorf("Template name '%s' is invalid because it contains a '/'", template.TemplateName)
+		return fmt.Errorf("Template name '%s' is invalid because it contains a '/'", template.TemplateName)
 	}
 
 	// replace template placeholders
@@ -90,7 +92,7 @@ func (c ConjurPki) CreateTemplate(template types.Template) (*conjurapi.PolicyRes
 	// cast the template stuct into json
 	templateJSON, err := json.Marshal(template)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Load policy to create the variable
@@ -100,12 +102,12 @@ func (c ConjurPki) CreateTemplate(template types.Template) (*conjurapi.PolicyRes
 		newTemplatePolicy,
 	)
 	if err != nil {
-		return response, err
+		return fmt.Errorf("Failed to create template when loading policy. Message '%v'. %s", response, err)
 	}
 
 	// Set the Secret value
 	err = c.client.AddSecret(variableID, string(templateJSON))
-	return response, err
+	return err
 }
 
 // ListTemplates ...
@@ -156,12 +158,12 @@ func (c ConjurPki) GetTemplate(templateName string) (types.Template, error) {
 }
 
 // DeleteTemplate ...
-func (c ConjurPki) DeleteTemplate(templateName string) (*conjurapi.PolicyResponse, error) {
+func (c ConjurPki) DeleteTemplate(templateName string) error {
 	// validate template resource exists
 	variableID := c.getTemplatePolicyBranch() + "/" + templateName
 	_, err := c.client.RetrieveSecret(variableID)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to retrieve template with id '%s'. %s", variableID, err)
+		return fmt.Errorf("Failed to retrieve template with id '%s'. %s", variableID, err)
 	}
 
 	// remove the template resource
@@ -176,30 +178,30 @@ func (c ConjurPki) DeleteTemplate(templateName string) (*conjurapi.PolicyRespons
 		deleteTemplatePolicy,
 	)
 	if err != nil {
-		return response, fmt.Errorf("Failed to delete template with id '%s'. %s", variableID, err)
+		return fmt.Errorf("Failed to delete template with id '%s'. Message: '%v'. %s", variableID, response, err)
 	}
 
-	return response, err
+	return err
 }
 
 // CreateCertificate ...
-func (c ConjurPki) CreateCertificate(cert types.CreateCertificateInDap) (*conjurapi.PolicyResponse, error) {
+func (c ConjurPki) CreateCertificate(cert types.CreateCertificateInDap) error {
 	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
 
 	// validate cert does not exists
 	_, err := c.client.RetrieveSecret(variableID)
 	if err == nil {
-		return nil, fmt.Errorf("Certificate '%s' already exists", cert.SerialNumber)
+		return fmt.Errorf("Certificate '%s' already exists", cert.SerialNumber)
 	}
+	return c.updateCertificate(cert)
 
+}
+
+func (c ConjurPki) updateCertificate(cert types.CreateCertificateInDap) error {
+
+	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
 	// replace template placeholders
 	newPolicy := bytes.NewReader([]byte(ReplaceCertificate(cert, c.templates.newCertificate)))
-
-	// cast the template stuct into json
-	certificateJSON, err := json.Marshal(cert)
-	if err != nil {
-		return nil, err
-	}
 
 	// Load policy to create the variable
 	response, err := c.client.LoadPolicy(
@@ -209,12 +211,16 @@ func (c ConjurPki) CreateCertificate(cert types.CreateCertificateInDap) (*conjur
 	)
 
 	if err != nil {
-		return response, err
+		return fmt.Errorf("Failed to load policy for creating certificate. Message '%v'. %s", response, err)
 	}
 
 	// Set the Secret value
-	err = c.client.AddSecret(variableID, string(certificateJSON))
-	return response, err
+	// If certificate value is not provided assume we are
+	// just updating the certificate variable annotations
+	if cert.Certificate != "" {
+		err = c.client.AddSecret(variableID, cert.Certificate)
+	}
+	return err
 }
 
 // ListCertificates ...
@@ -257,25 +263,22 @@ func (c ConjurPki) ListCertificates() ([]*big.Int, error) {
 // GetCertificate ...
 func (c ConjurPki) GetCertificate(serialNumber *big.Int) (string, error) {
 	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
-	certificateJSON, err := c.client.RetrieveSecret(variableID)
+	value, err := c.client.RetrieveSecret(variableID)
 
 	if err != nil {
 		return "", fmt.Errorf("Failed to retrieve certificate with serial number '%s'. %s", variableID, err)
 	}
 
-	certificate := &types.CreateCertificateInDap{}
-	err = json.Unmarshal(certificateJSON, certificate)
-
-	return string(certificate.Certificate), err
+	return string(value), err
 }
 
 // DeleteCertificate ...
-func (c ConjurPki) DeleteCertificate(serialNumber *big.Int) (*conjurapi.PolicyResponse, error) {
+func (c ConjurPki) DeleteCertificate(serialNumber *big.Int) error {
 	// validate template resource exists
 	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
 	_, err := c.client.RetrieveSecret(variableID)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to retrieve certificate with serial number '%s'. %s", variableID, err)
+		return fmt.Errorf("Failed to retrieve certificate with serial number '%s'. %s", variableID, err)
 	}
 
 	// remove the template resource
@@ -291,10 +294,10 @@ func (c ConjurPki) DeleteCertificate(serialNumber *big.Int) (*conjurapi.PolicyRe
 		deleteCertPolicy,
 	)
 	if err != nil {
-		return response, fmt.Errorf("Failed to delete template with id '%s'. %s", variableID, err)
+		return fmt.Errorf("Failed to delete template with id '%s'. Message: '%v'. %s", variableID, response, err)
 	}
 
-	return response, err
+	return err
 }
 
 // GetCAChain ...
@@ -402,4 +405,85 @@ func (c ConjurPki) WriteCRL(content string) error {
 	}
 
 	return nil
+}
+
+// RevokeCertificate ...
+func (c ConjurPki) RevokeCertificate(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error {
+
+	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
+	_, err := c.client.RetrieveSecret(variableID)
+
+	if err != nil {
+		return fmt.Errorf("Failed to revoked certificate with ID '%s'. %s", variableID, err)
+	}
+
+	certificateInDap := types.CreateCertificateInDap{
+		SerialNumber:         serialNumber.String(),
+		Revoked:              true,
+		RevocationDate:       fmt.Sprintf("%v", revocationDate.Unix()),
+		RevocationReasonCode: reasonCode,
+		InternalState:        "revoked",
+	}
+
+	err = c.updateCertificate(certificateInDap)
+
+	return err
+}
+
+// GetRevokedCerts ...
+func (c ConjurPki) GetRevokedCerts() ([]types.RevokedCertificate, error) {
+	filter := &conjurapi.ResourceFilter{
+		Kind:   "variable",
+		Search: "csasarevokedcsasa",
+	}
+
+	revokedCerts := []types.RevokedCertificate{}
+
+	resources, err := c.client.Resources(filter)
+	if err != nil {
+		err = fmt.Errorf("Failed to list resources when attempting to get revoked certificates. %s", err)
+		return revokedCerts, err
+	}
+
+	for _, resource := range resources {
+		id := resource["id"].(string)
+		_, _, id = SplitConjurID(id)
+		parts := strings.Split(id, "/")
+		templatesRoot := parts[len(parts)-2]
+
+		if templatesRoot == "certificates" {
+			serialNumberString := parts[len(parts)-1]
+			reasonCode, err := GetAnnotationValue(resource, "RevocationReasonCode")
+			if err != nil {
+				return revokedCerts, fmt.Errorf("Failed to retrieve RevocationReasonCode from certificate '%s'. %s", serialNumberString, err)
+			}
+
+			revocationDate, err := GetAnnotationValue(resource, "RevocationDate")
+			if err != nil {
+				return revokedCerts, fmt.Errorf("Failed to retrieve RevocationDate from certificate '%s'. %s", serialNumberString, err)
+			}
+
+			reasonCodeInt, err := strconv.Atoi(reasonCode)
+			if err != nil {
+				return revokedCerts, fmt.Errorf("Failed to cast RevocationReasonCode '%s' into an int", reasonCode)
+			}
+
+			revocationDateInt, err := strconv.Atoi(revocationDate)
+			if err != nil {
+				return revokedCerts, fmt.Errorf("Failed to cast RevocationDate '%s' into an int", revocationDate)
+			}
+
+			dateTime := time.Unix(int64(revocationDateInt), 0)
+
+			revokedCert := types.RevokedCertificate{
+				SerialNumber:   serialNumberString,
+				ReasonCode:     reasonCodeInt,
+				RevocationDate: dateTime,
+			}
+
+			revokedCerts = append(revokedCerts, revokedCert)
+		}
+	}
+
+	return revokedCerts, nil
 }

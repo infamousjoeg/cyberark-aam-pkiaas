@@ -64,3 +64,29 @@ func SplitConjurID(fullID string) (string, string, string) {
 	parts := strings.SplitN(fullID, ":", 3)
 	return parts[0], parts[1], parts[2]
 }
+
+// GetAnnotationValue ...
+// This method assumes that the key is on the given resource
+// If this annotation is not present on the resource an error will be returned
+// If the annotation is found but the value is empty than an empty string is returned and no error.
+func GetAnnotationValue(resource map[string]interface{}, key string) (string, error) {
+	annotations := resource["annotations"].([]interface{})
+	value := ""
+	keyFound := false
+
+	for _, annotation := range annotations {
+		a := annotation.(map[string]interface{})
+		keyName := a["name"].(string)
+		if keyName == key {
+			value = a["value"].(string)
+			keyFound = true
+			break
+		}
+	}
+
+	if !keyFound {
+		return value, fmt.Errorf("Failed to find annotation '%s' on resource '%v'", key, resource)
+	}
+
+	return value, nil
+}
