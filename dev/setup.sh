@@ -15,6 +15,8 @@ docker exec $CONTAINER_NAME evoke configure master --accept-eula --hostname $CON
 sleep 5
 
 # the environment variables
+ip_address=$(docker inspect conjur-master | jq .[0].NetworkSettings.Networks.conjur.IPAddress | tr -d \")
+echo "$ip_address    conjur-master" >> /etc/hosts
 export CONJUR_APPLIANCE_URL=https://conjur-master
 export CONJUR_AUTHN_LOGIN=admin
 export CONJUR_AUTHN_API_KEY="${ADMIN_PASSWORD}"

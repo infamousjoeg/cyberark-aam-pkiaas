@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/gorilla/mux"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/conjur"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
@@ -46,9 +47,70 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Successful GET /")
 }
 
-var backend pki.Pki = pki.Pki{Backend: conjur.ConjurPki{}}
+func defaultConjurClient() (*conjurapi.Client, error) {
+	config, err := conjurapi.LoadConfig()
+	if err != nil {
+		fmt.Printf("Failed to init config from environment variables. %s", err.Error())
+		return nil, fmt.Errorf("Failed to init config from environment variables. %s", err)
+	}
+	client, err := conjurapi.NewClientFromEnvironment(config)
+	if err != nil {
+		fmt.Printf("Failed to init client from config. %s", err.Error())
+		return nil, fmt.Errorf("Failed to init client from config. %s", err)
+	}
+	return client, err
+}
 
-var backend pki.Pki = pki.Pki{Backend: conjur.ConjurPki{}}
+func defaultTemplates() conjur.ConjurTemplates {
+	return conjur.NewTemplates(testCreateTemplate(), testDeleteTemplate(), testCreateCertificate(), testDeleteCertificate())
+}
+
+func defaultConjurPki() (conjur.ConjurPki, error) {
+	client, err := defaultConjurClient()
+	if err != nil {
+		return conjur.ConjurPki{}, err
+	}
+	templates := defaultTemplates()
+	return conjur.NewConjurPki(client, "pki", templates), err
+}
+
+func testCreateTemplate() string {
+	return `- !variable
+  id: <TemplateName>
+`
+}
+
+func testCreateCertificate() string {
+	return `- !variable
+  id: "<SerialNumber>"
+`
+}
+
+func testDeleteTemplate() string {
+	return `- !delete
+  record: !variable <TemplateName>
+`
+}
+
+func testDeleteCertificate() string {
+	return `- !delete
+  record: !variable <SerialNumber>
+`
+}
+
+func expectedPolicy() string {
+	return `- !variable
+  id: TestTemplate
+`
+}
+
+func init() {
+	pkiclient, _ := defaultConjurPki()
+	backend.Backend = pkiclient
+
+}
+
+var backend pki.Pki = pki.Pki{}
 
 var routes = Routes{
 	Route{
@@ -118,7 +180,7 @@ var routes = Routes{
 		"GetCRL",
 		strings.ToUpper("Get"),
 		"/crl",
-		pki.GetCRLHandler,
+		backend.GetCRLHandler,
 	},
 
 	Route{
@@ -174,7 +236,7 @@ var routes = Routes{
 		"SetIntermediateCertificate",
 		strings.ToUpper("Post"),
 		"/ca/set",
-		backend.SetIntermediateCertificateHandler,
+		backend.SetIntermediateCertHandler,
 	},
 
 	Route{

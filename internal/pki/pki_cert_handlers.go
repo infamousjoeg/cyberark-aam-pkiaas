@@ -241,7 +241,7 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Convert the certifcate objects into PEMs to be returned as strings
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derCert})
-	pemCA := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.RawTBSCertificate})
+	pemCA := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw})
 	var pemPrivKey []byte
 
 	// Generate the appropriate PEM type for the created private key
@@ -271,6 +271,13 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		LeaseDuration: ttl,
 	}
 
+	cert := types.CreateCertificateInDap{
+		SerialNumber:   serialNumber.String(),
+		Revoked:        false,
+		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).String(),
+		Certificate:    base64.StdEncoding.EncodeToString(derCert),
+	}
+	p.Backend.CreateCertificate(cert)
 	json.NewEncoder(w).Encode(response)
 
 }
@@ -389,7 +396,6 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	revokedCertList = append(revokedCertList, oldCRL...)
-	RevokeCertInDAP(intSerialNum, reasonCode, revokeTime)
 
 	encodedSigningKey, err := p.Backend.GetSigningKey()
 	if err != nil {
@@ -431,7 +437,6 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error while creating new CRL: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	pemCRL := pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: newCRL})
 
-	p.Backend.WriteCRL(string(pemCRL))
+	p.Backend.WriteCRL(base64.StdEncoding.EncodeToString(newCRL))
 }
