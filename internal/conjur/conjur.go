@@ -25,6 +25,7 @@ type ConjurPki struct {
 	client       *conjurapi.Client
 	policyBranch string
 	templates    ConjurTemplates
+	Access       Access
 }
 
 func (c ConjurPki) getTemplatePolicyBranch() string {
@@ -111,7 +112,9 @@ func NewFromDefaults() (ConjurPki, error) {
 		defaultCreateCertificatePolicy(),
 		defaultDeleteCertificatePolicy())
 
-	return NewConjurPki(conjurClient, defaultPolicyBranch(), policyTemplates), nil
+	access := NewAccessFromDefaults(conjurClient.GetConfig(), defaultPolicyBranch())
+
+	return NewConjurPki(conjurClient, defaultPolicyBranch(), policyTemplates, access), nil
 }
 
 // NewTemplates ...
@@ -125,11 +128,12 @@ func NewTemplates(newTemplate string, deleteTemplate string, newCertificate stri
 }
 
 // NewConjurPki ...
-func NewConjurPki(client *conjurapi.Client, policyBranch string, templates ConjurTemplates) ConjurPki {
+func NewConjurPki(client *conjurapi.Client, policyBranch string, templates ConjurTemplates, access Access) ConjurPki {
 	return ConjurPki{
 		client:       client,
 		policyBranch: policyBranch,
 		templates:    templates,
+		Access:       access,
 	}
 }
 
