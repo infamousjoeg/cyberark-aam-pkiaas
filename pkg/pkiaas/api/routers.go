@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/conjur"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/conjur"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 )
 

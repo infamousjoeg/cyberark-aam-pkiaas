@@ -63,7 +63,7 @@ func replacePrivilege(privilege string, key string, value string) string {
 }
 
 // Access ...
-type ConjurAccess struct {
+type AccessControl struct {
 	privileges   Privileges
 	policyBranch string
 	conjurConfig conjurapi.Config
@@ -71,8 +71,8 @@ type ConjurAccess struct {
 }
 
 // NewAccess ...
-func NewAccess(conjurConfig conjurapi.Config, policyBranch string, privileges Privileges, disabled bool) ConjurAccess {
-	return ConjurAccess{
+func NewAccess(conjurConfig conjurapi.Config, policyBranch string, privileges Privileges, disabled bool) AccessControl {
+	return AccessControl{
 		conjurConfig: conjurConfig,
 		policyBranch: policyBranch,
 		privileges:   privileges,
@@ -81,12 +81,12 @@ func NewAccess(conjurConfig conjurapi.Config, policyBranch string, privileges Pr
 }
 
 // NewAccessFromDefaults ...
-func NewAccessFromDefaults(conjurConfig conjurapi.Config, policyBranch string) ConjurAccess {
+func NewAccessFromDefaults(conjurConfig conjurapi.Config, policyBranch string) AccessControl {
 	return NewAccess(conjurConfig, policyBranch, NewDefaultPrivileges(), false)
 }
 
 // NewAccessFromDefaultsDisabled ...
-func NewAccessFromDefaultsDisabled(conjurConfig conjurapi.Config, policyBranch string) ConjurAccess {
+func NewAccessFromDefaultsDisabled(conjurConfig conjurapi.Config, policyBranch string) AccessControl {
 	return NewAccess(conjurConfig, policyBranch, NewDefaultPrivileges(), true)
 }
 
@@ -99,7 +99,7 @@ func parseAccessToken(accessToken string) (string, error) {
 }
 
 // Authenticate ...
-func (a ConjurAccess) Authenticate(accessToken string) error {
+func (a AccessControl) Authenticate(accessToken string) error {
 	authenticated, err := a.checkPermission(accessToken, a.privileges.Authenticate)
 	if err != nil {
 		return fmt.Errorf("Failed to authenticate as client. %s", err)
@@ -111,7 +111,7 @@ func (a ConjurAccess) Authenticate(accessToken string) error {
 }
 
 // ReadTemplates ...
-func (a ConjurAccess) ReadTemplates(accessToken string) error {
+func (a AccessControl) ReadTemplates(accessToken string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.Audit,
@@ -125,7 +125,7 @@ func (a ConjurAccess) ReadTemplates(accessToken string) error {
 }
 
 // ReadTemplate ...
-func (a ConjurAccess) ReadTemplate(accessToken string, templateName string) error {
+func (a AccessControl) ReadTemplate(accessToken string, templateName string) error {
 	err := a.ReadTemplates(accessToken)
 	if err == nil {
 		return nil
@@ -139,7 +139,7 @@ func (a ConjurAccess) ReadTemplate(accessToken string, templateName string) erro
 }
 
 // DeleteTemplate ..
-func (a ConjurAccess) DeleteTemplate(accessToken string, templateName string) error {
+func (a AccessControl) DeleteTemplate(accessToken string, templateName string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.TemplateAdmin,
@@ -152,7 +152,7 @@ func (a ConjurAccess) DeleteTemplate(accessToken string, templateName string) er
 }
 
 // ManageTemplate ...
-func (a ConjurAccess) ManageTemplate(accessToken string, templateName string) error {
+func (a AccessControl) ManageTemplate(accessToken string, templateName string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.TemplateAdmin,
@@ -165,7 +165,7 @@ func (a ConjurAccess) ManageTemplate(accessToken string, templateName string) er
 }
 
 // CreateTemplate ...
-func (a ConjurAccess) CreateTemplate(accessToken string) error {
+func (a AccessControl) CreateTemplate(accessToken string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.TemplateAdmin,
@@ -176,7 +176,7 @@ func (a ConjurAccess) CreateTemplate(accessToken string) error {
 }
 
 // Purge ...
-func (a ConjurAccess) Purge(accessToken string) error {
+func (a AccessControl) Purge(accessToken string) error {
 	// Should Template admins or Cert admins also be able to purge?
 	permissions := []string{
 		a.privileges.Admin,
@@ -187,7 +187,7 @@ func (a ConjurAccess) Purge(accessToken string) error {
 }
 
 // CRLPurge ...
-func (a ConjurAccess) CRLPurge(accessToken string) error {
+func (a AccessControl) CRLPurge(accessToken string) error {
 	// Should Template admins or Cert admins also be able to purge?
 	permissions := []string{
 		a.privileges.Admin,
@@ -199,7 +199,7 @@ func (a ConjurAccess) CRLPurge(accessToken string) error {
 }
 
 // CreateCertificate ...
-func (a ConjurAccess) CreateCertificate(accessToken string, templateName string) error {
+func (a AccessControl) CreateCertificate(accessToken string, templateName string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.CertificateAdmin,
@@ -211,7 +211,7 @@ func (a ConjurAccess) CreateCertificate(accessToken string, templateName string)
 }
 
 // RevokeCertificate ...
-func (a ConjurAccess) RevokeCertificate(accessToken string, templateName string) error {
+func (a AccessControl) RevokeCertificate(accessToken string, templateName string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.CertificateAdmin,
@@ -224,7 +224,7 @@ func (a ConjurAccess) RevokeCertificate(accessToken string, templateName string)
 }
 
 // SignCertificate ...
-func (a ConjurAccess) SignCertificate(accessToken string, templateName string) error {
+func (a AccessControl) SignCertificate(accessToken string, templateName string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.CertificateAdmin,
@@ -235,7 +235,7 @@ func (a ConjurAccess) SignCertificate(accessToken string, templateName string) e
 	return a.checkPermissions(accessToken, permissions)
 }
 
-func (a ConjurAccess) checkPermissions(accessToken string, permissions []string) error {
+func (a AccessControl) checkPermissions(accessToken string, permissions []string) error {
 	if a.disabled {
 		return nil
 	}
@@ -262,7 +262,7 @@ func (a ConjurAccess) checkPermissions(accessToken string, permissions []string)
 	return fmt.Errorf("Privileges '%s' were not found on resource '%s'", strings.Join(permissions, ", "), resourceID)
 }
 
-func (a ConjurAccess) checkPermission(accessToken string, permission string) (bool, error) {
+func (a AccessControl) checkPermission(accessToken string, permission string) (bool, error) {
 	if a.disabled {
 		return true, nil
 	}
