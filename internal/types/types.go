@@ -43,8 +43,8 @@ type CreateCertificateResponse struct {
 	LeaseDuration int64  `json:"leaseDuration"`
 }
 
-// CreateCertificateInDap ---------------------------------------------------
-type CreateCertificateInDap struct {
+// CreateCertificateData ---------------------------------------------------
+type CreateCertificateData struct {
 	Certificate          string `json:"certificate"`
 	Revoked              bool   `json:"revoked"`
 	RevocationDate       string `json:"revocationDate"`

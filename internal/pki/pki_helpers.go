@@ -22,16 +22,53 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang/gddo/httputil/header"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/conjur"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
+// StorageBackend -----------------------------------
+type StorageBackend interface {
+	CreateCertificate(certificateData types.CreateCertificateData) error
+	ListCertificates() ([]*big.Int, error)
+	GetCertificate(serialNumber *big.Int) (string, error)
+	RevokeCertificate(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error
+	CreateTemplate(template types.Template) error
+	ListTemplates() ([]string, error)
+	GetTemplate(templateName string) (types.Template, error)
+	DeleteTemplate(templateName string) error
+	WriteSigningCert(encodedCert string) error
+	GetSigningCert() (string, error)
+	WriteSigningKey(encodedKey string) error
+	GetSigningKey() (string, error)
+	WriteCRL(encodedCRL string) error
+	GetCRL() (string, error)
+	WriteCAChain(pemBundle []string) error
+	GetCAChain() ([]string, error)
+	GetRevokedCerts() ([]types.RevokedCertificate, error)
+
+	GetAccessControl() Access
+}
+
+// Access ------------------
+type Access interface {
+	Authenticate(accessToken string) error
+	ReadTemplates(accessToken string) error
+	ReadTemplate(accessToken string, templateName string) error
+	DeleteTemplate(accessToken string, templateName string) error
+	ManageTemplate(accessToken string, templateName string) error
+	CreateTemplate(accessToken string) error
+	Purge(accessToken string) error
+	CRLPurge(accessToken string) error
+	CreateCertificate(accessToken string, templateName string) error
+	RevokeCertificate(accessToken string, templateName string) error
+	SignCertificate(accessToken string, templateName string) error
+}
+
 // Pki -----------------------------
 type Pki struct {
-	Backend    conjur.ConjurPki
-	AuthHeader string
+	Backend StorageBackend
 }
 
 // GenerateKeys ----------------------------------------------------------------------
@@ -335,7 +372,7 @@ func SetCertSubject(subject types.SubjectFields, commonName string) (pkix.Name, 
 }
 
 // PrepareCertificateParameters ---------------------------------------------------
-func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, backend conjur.ConjurPki) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
+func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, backend StorageBackend) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
 	template, err := p.Backend.GetTemplate(templateName)
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, err

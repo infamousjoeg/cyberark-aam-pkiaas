@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -32,6 +33,14 @@ func (p *Pki) SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
+
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	var signReq types.SignRequest
 	err = json.Unmarshal(reqBody, &signReq)
 	if err != nil {
@@ -103,6 +112,9 @@ func (p *Pki) SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		KeyUsage:              keyUsage,
 		BasicConstraintsValid: false,
 		IsCA:                  false,
+		OCSPServer:            []string{"asdad"},
+		IssuingCertificateURL: []string{"asdada"},
+		CRLDistributionPoints: []string{"asdasds"},
 	}
 
 	if len(extKeyUsage) > 0 {
@@ -155,6 +167,13 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !ValidateContentType(r.Header, "application/json") {
 		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -271,7 +290,7 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		LeaseDuration: ttl,
 	}
 
-	cert := types.CreateCertificateInDap{
+	cert := types.CreateCertificateData{
 		SerialNumber:   serialNumber.String(),
 		Revoked:        false,
 		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).String(),
@@ -284,6 +303,12 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetCertHandler --------------------------------------------------------------------
 func (p *Pki) GetCertHandler(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	serialNumber := mux.Vars(r)["serialNumber"]
 
@@ -316,6 +341,13 @@ func (p *Pki) GetCertHandler(w http.ResponseWriter, r *http.Request) {
 
 // ListCertsHandler ------------------------------------------------------------------
 func (p *Pki) ListCertsHandler(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	serialNumberList, err := p.Backend.ListCertificates()
 
 	if err != nil {
@@ -352,6 +384,13 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	var crlReq = types.RevokeRequest{}
 
 	err = json.Unmarshal(reqBody, &crlReq)
@@ -367,14 +406,6 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	crlExtensions := []pkix.Extension{}
-	if reasonCode > 0 {
-		reasonExtension := pkix.Extension{
-			Id:    asn1.ObjectIdentifier{2, 5, 29, 21},
-			Value: []byte(strconv.Itoa(reasonCode)),
-		}
-		crlExtensions = append(crlExtensions, reasonExtension)
-	}
 
 	revokeTime := time.Now()
 	intSerialNum, err := ConvertSerialOctetStringToInt(crlReq.SerialNumber)
@@ -383,19 +414,32 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	revokedCert := pkix.RevokedCertificate{
-		SerialNumber:   intSerialNum,
-		RevocationTime: revokeTime,
-		Extensions:     crlExtensions,
-	}
+	err = p.Backend.RevokeCertificate(intSerialNum, reasonCode, revokeTime)
+	revokedCertificates, err := p.Backend.GetRevokedCerts()
 
-	revokedCertList := []pkix.RevokedCertificate{revokedCert}
-	oldCRL, err := GetRevokedCertsFromDAP()
+	revokedCertList := []pkix.RevokedCertificate{}
+	for _, revokedCertificate := range revokedCertificates {
+		crlExtensions := []pkix.Extension{}
+		if revokedCertificate.ReasonCode > 0 {
+			reasonExtension := pkix.Extension{
+				Id:    asn1.ObjectIdentifier{2, 5, 29, 21},
+				Value: []byte(strconv.Itoa(reasonCode)),
+			}
+			crlExtensions = append(crlExtensions, reasonExtension)
+		}
+		intSerialNum := new(big.Int)
+		intSerialNum.SetString(revokedCertificate.SerialNumber, 10)
+		crlEntry := pkix.RevokedCertificate{
+			SerialNumber:   intSerialNum,
+			RevocationTime: revokedCertificate.RevocationDate,
+			Extensions:     crlExtensions,
+		}
+		revokedCertList = append(revokedCertList, crlEntry)
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	revokedCertList = append(revokedCertList, oldCRL...)
 
 	encodedSigningKey, err := p.Backend.GetSigningKey()
 	if err != nil {

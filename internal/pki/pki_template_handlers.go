@@ -23,6 +23,13 @@ func (p *Pki) CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	var newTemplate types.Template
 	err = json.Unmarshal(reqBody, &newTemplate)
 	if err != nil {
@@ -71,6 +78,13 @@ func (p *Pki) ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !ValidateContentType(r.Header, "application/json") {
 		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -137,6 +151,13 @@ func (p *Pki) DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetTemplateHandler ----------------------------------------------------------
 func (p *Pki) GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	template, err := p.Backend.GetTemplate(mux.Vars(r)["templateName"])
 
 	if err != nil {
@@ -150,6 +171,13 @@ func (p *Pki) GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 // ListTemplatesHandler ---------------------------------------------------------
 func (p *Pki) ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	templates, err := p.Backend.ListTemplates()
 
 	if err != nil {

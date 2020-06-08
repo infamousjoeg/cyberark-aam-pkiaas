@@ -62,7 +62,7 @@ func replacePrivilege(privilege string, key string, value string) string {
 }
 
 // Access ...
-type Access struct {
+type ConjurAccess struct {
 	privileges   Privileges
 	policyBranch string
 	conjurConfig conjurapi.Config
@@ -70,8 +70,8 @@ type Access struct {
 }
 
 // NewAccess ...
-func NewAccess(conjurConfig conjurapi.Config, policyBranch string, privileges Privileges, disabled bool) Access {
-	return Access{
+func NewAccess(conjurConfig conjurapi.Config, policyBranch string, privileges Privileges, disabled bool) ConjurAccess {
+	return ConjurAccess{
 		conjurConfig: conjurConfig,
 		policyBranch: policyBranch,
 		privileges:   privileges,
@@ -80,17 +80,17 @@ func NewAccess(conjurConfig conjurapi.Config, policyBranch string, privileges Pr
 }
 
 // NewAccessFromDefaults ...
-func NewAccessFromDefaults(conjurConfig conjurapi.Config, policyBranch string) Access {
+func NewAccessFromDefaults(conjurConfig conjurapi.Config, policyBranch string) ConjurAccess {
 	return NewAccess(conjurConfig, policyBranch, NewDefaultPrivileges(), false)
 }
 
-// NewAccessFromDefaults ...
-func NewAccessFromDefaultsDisabled(conjurConfig conjurapi.Config, policyBranch string) Access {
+// NewAccessFromDefaultsDisabled ...
+func NewAccessFromDefaultsDisabled(conjurConfig conjurapi.Config, policyBranch string) ConjurAccess {
 	return NewAccess(conjurConfig, policyBranch, NewDefaultPrivileges(), true)
 }
 
 // Authenticate ...
-func (a Access) Authenticate(accessToken string) error {
+func (a ConjurAccess) Authenticate(accessToken string) error {
 	authenticated, err := a.checkPermission(accessToken, a.privileges.Authenticate)
 	if err != nil {
 		return fmt.Errorf("Failed to authenticate as client. %s", err)
@@ -102,7 +102,7 @@ func (a Access) Authenticate(accessToken string) error {
 }
 
 // ReadTemplates ...
-func (a Access) ReadTemplates(accessToken string) error {
+func (a ConjurAccess) ReadTemplates(accessToken string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.Audit,
@@ -116,7 +116,7 @@ func (a Access) ReadTemplates(accessToken string) error {
 }
 
 // ReadTemplate ...
-func (a Access) ReadTemplate(accessToken string, templateName string) error {
+func (a ConjurAccess) ReadTemplate(accessToken string, templateName string) error {
 	err := a.ReadTemplates(accessToken)
 	if err == nil {
 		return nil
@@ -130,7 +130,7 @@ func (a Access) ReadTemplate(accessToken string, templateName string) error {
 }
 
 // DeleteTemplate ..
-func (a Access) DeleteTemplate(accessToken string, templateName string) error {
+func (a ConjurAccess) DeleteTemplate(accessToken string, templateName string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.TemplateAdmin,
@@ -143,7 +143,7 @@ func (a Access) DeleteTemplate(accessToken string, templateName string) error {
 }
 
 // ManageTemplate ...
-func (a Access) ManageTemplate(accessToken string, templateName string) error {
+func (a ConjurAccess) ManageTemplate(accessToken string, templateName string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.TemplateAdmin,
@@ -156,7 +156,7 @@ func (a Access) ManageTemplate(accessToken string, templateName string) error {
 }
 
 // CreateTemplate ...
-func (a Access) CreateTemplate(accessToken string) error {
+func (a ConjurAccess) CreateTemplate(accessToken string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.TemplateAdmin,
@@ -167,7 +167,7 @@ func (a Access) CreateTemplate(accessToken string) error {
 }
 
 // Purge ...
-func (a Access) Purge(accessToken string) error {
+func (a ConjurAccess) Purge(accessToken string) error {
 	// Should Template admins or Cert admins also be able to purge?
 	permissions := []string{
 		a.privileges.Admin,
@@ -178,7 +178,7 @@ func (a Access) Purge(accessToken string) error {
 }
 
 // CRLPurge ...
-func (a Access) CRLPurge(accessToken string) error {
+func (a ConjurAccess) CRLPurge(accessToken string) error {
 	// Should Template admins or Cert admins also be able to purge?
 	permissions := []string{
 		a.privileges.Admin,
@@ -190,7 +190,7 @@ func (a Access) CRLPurge(accessToken string) error {
 }
 
 // CreateCertificate ...
-func (a Access) CreateCertificate(accessToken string, templateName string) error {
+func (a ConjurAccess) CreateCertificate(accessToken string, templateName string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.CertificateAdmin,
@@ -202,7 +202,7 @@ func (a Access) CreateCertificate(accessToken string, templateName string) error
 }
 
 // RevokeCertificate ...
-func (a Access) RevokeCertificate(accessToken string, templateName string) error {
+func (a ConjurAccess) RevokeCertificate(accessToken string, templateName string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.CertificateAdmin,
@@ -215,7 +215,7 @@ func (a Access) RevokeCertificate(accessToken string, templateName string) error
 }
 
 // SignCertificate ...
-func (a Access) SignCertificate(accessToken string, templateName string) error {
+func (a ConjurAccess) SignCertificate(accessToken string, templateName string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.CertificateAdmin,
@@ -226,7 +226,7 @@ func (a Access) SignCertificate(accessToken string, templateName string) error {
 	return a.checkPermissions(accessToken, permissions)
 }
 
-func (a Access) checkPermissions(accessToken string, permissions []string) error {
+func (a ConjurAccess) checkPermissions(accessToken string, permissions []string) error {
 	if a.disabled {
 		return nil
 	}
@@ -248,7 +248,7 @@ func (a Access) checkPermissions(accessToken string, permissions []string) error
 	return fmt.Errorf("Privileges '%s' were not found on resource '%s'", strings.Join(permissions, ", "), resourceID)
 }
 
-func (a Access) checkPermission(accessToken string, permission string) (bool, error) {
+func (a ConjurAccess) checkPermission(accessToken string, permission string) (bool, error) {
 	if a.disabled {
 		return true, nil
 	}
