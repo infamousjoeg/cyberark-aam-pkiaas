@@ -63,21 +63,30 @@ func replacePrivilege(privilege string, key string, value string) string {
 
 // Access ...
 type Access struct {
-	conjur     ConjurPki
-	privileges Privileges
+	privileges   Privileges
+	policyBranch string
+	conjurConfig conjurapi.Config
+	disabled     bool
 }
 
 // NewAccess ...
-func NewAccess(conjur ConjurPki, privileges Privileges) Access {
+func NewAccess(conjurConfig conjurapi.Config, policyBranch string, privileges Privileges, disabled bool) Access {
 	return Access{
-		conjur:     conjur,
-		privileges: privileges,
+		conjurConfig: conjurConfig,
+		policyBranch: policyBranch,
+		privileges:   privileges,
+		disabled:     disabled,
 	}
 }
 
 // NewAccessFromDefaults ...
-func NewAccessFromDefaults(conjur ConjurPki) Access {
-	return NewAccess(conjur, NewDefaultPrivileges())
+func NewAccessFromDefaults(conjurConfig conjurapi.Config, policyBranch string) Access {
+	return NewAccess(conjurConfig, policyBranch, NewDefaultPrivileges(), false)
+}
+
+// NewAccessFromDefaults ...
+func NewAccessFromDefaultsDisabled(conjurConfig conjurapi.Config, policyBranch string) Access {
+	return NewAccess(conjurConfig, policyBranch, NewDefaultPrivileges(), true)
 }
 
 // Authenticate ...
@@ -218,13 +227,17 @@ func (a Access) SignCertificate(accessToken string, templateName string) error {
 }
 
 func (a Access) checkPermissions(accessToken string, permissions []string) error {
-	config := a.conjur.client.GetConfig()
+	if a.disabled {
+		return nil
+	}
+
+	config := a.conjurConfig
 	conjur, err := conjurapi.NewClientFromToken(config, accessToken)
 	if err != nil {
 		return fmt.Errorf("Failed to init conjur client. %s", err)
 	}
 
-	resourceID := fmt.Sprintf("%s:%s:%s", config.Account, "webservice", a.conjur.policyBranch)
+	resourceID := fmt.Sprintf("%s:%s:%s", config.Account, "webservice", a.policyBranch)
 	for _, permission := range permissions {
 		privilege, _ := conjur.CheckPermission(resourceID, permission)
 		if privilege {
@@ -236,13 +249,17 @@ func (a Access) checkPermissions(accessToken string, permissions []string) error
 }
 
 func (a Access) checkPermission(accessToken string, permission string) (bool, error) {
-	config := a.conjur.client.GetConfig()
+	if a.disabled {
+		return true, nil
+	}
+
+	config := a.conjurConfig
 	conjur, err := conjurapi.NewClientFromToken(config, accessToken)
 	if err != nil {
 		return false, fmt.Errorf("Failed to init conjur client. %s", err)
 	}
 
-	resourceID := fmt.Sprintf("%s:%s:%s", config.Account, "webservice", a.conjur.policyBranch)
+	resourceID := fmt.Sprintf("%s:%s:%s", config.Account, "webservice", a.policyBranch)
 	allowed, err := conjur.CheckPermission(resourceID, a.privileges.Authenticate)
 	return allowed, err
 }
