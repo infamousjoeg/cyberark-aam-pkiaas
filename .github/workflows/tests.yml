@@ -1,0 +1,23 @@
+name: PKIaaS Tests
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Lint pkg dir
+        uses: Jerome1337/golint-action@v1.0.2
+        with:
+          golint-path: './pkg/...'
+      - name: Lint internal dir
+        uses: Jerome1337/golint-action@v1.0.2
+        with:
+          golint-path: './internal/...'
+      - name: Lint cmd dir
+        uses: Jerome1337/golint-action@v1.0.2
+        with:
+          golint-path: './cmd/...'
