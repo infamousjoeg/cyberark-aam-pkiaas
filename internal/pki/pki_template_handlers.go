@@ -57,7 +57,7 @@ func (p *Pki) CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = p.Backend.CreateTemplate(newTemplate)
+	err = p.Backend.CreateTemplate(newTemplate)
 }
 
 // ManageTemplateHandler -------------------------------------------------------
@@ -118,17 +118,17 @@ func (p *Pki) ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = p.Backend.DeleteTemplate(template.TemplateName)
+	err = p.Backend.DeleteTemplate(template.TemplateName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	_, err = p.Backend.CreateTemplate(template)
+	err = p.Backend.CreateTemplate(template)
 }
 
 // DeleteTemplateHandler -------------------------------------------------------
 func (p *Pki) DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	templateName := mux.Vars(r)["templateName"]
-	_, err := p.Backend.DeleteTemplate(templateName)
+	err := p.Backend.DeleteTemplate(templateName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
