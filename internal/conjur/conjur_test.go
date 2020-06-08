@@ -79,8 +79,9 @@ func defaultConjurPki() (conjur.ConjurPki, error) {
 	if err != nil {
 		return conjur.ConjurPki{}, err
 	}
+
 	templates := defaultTemplates()
-	return conjur.NewConjurPki(client, "pki", templates), err
+	return conjur.NewConjurPki(client, "pki", templates, conjur.NewAccessFromDefaults(client.GetConfig(), "pki")), err
 }
 
 func defaultTemplate() types.Template {
@@ -410,12 +411,12 @@ func TestWriteCAChain(t *testing.T) {
 func TestGetCAChainNonExistent(t *testing.T) {
 	client, _ := defaultConjurClient()
 	templates := defaultTemplates()
-	conjurPki := conjur.NewConjurPki(client, "not-pki", templates)
+	conjurPki := conjur.NewConjurPki(client, "not-pki", templates, conjur.NewAccessFromDefaults(client.GetConfig(), "pki"))
 
 	// Retrieve this chain
 	_, err := conjurPki.GetCAChain()
 	if err == nil {
-		t.Errorf("Retrieve the CA chain even though it does not exists!")
+		t.Errorf("Retrieved the CA chain even though it does not exists!")
 	}
 }
 
