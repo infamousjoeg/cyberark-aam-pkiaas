@@ -9,5 +9,15 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
-      - name: Lint source code
+      - name: Lint pkg dir
         uses: Jerome1337/golint-action@v1.0.2
+        with:
+          golint-path: './pkg/...'
+      - name: Lint internal dir
+        uses: Jerome1337/golint-action@v1.0.2
+        with:
+          golint-path: './internal/...'
+      - name: Lint cmd dir
+        uses: Jerome1337/golint-action@v1.0.2
+        with:
+          golint-path: './cmd/...'
