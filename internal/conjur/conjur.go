@@ -51,6 +51,69 @@ func (c ConjurPki) getCRLVariableID() string {
 	return c.policyBranch + "/crl"
 }
 
+func defaultConjurClient() (*conjurapi.Client, error) {
+	config, err := conjurapi.LoadConfig()
+	if err != nil {
+		fmt.Printf("Failed to init config from environment variables. %s", err.Error())
+		return nil, fmt.Errorf("Failed to init config from environment variables. %s", err)
+	}
+	client, err := conjurapi.NewClientFromEnvironment(config)
+	if err != nil {
+		fmt.Printf("Failed to init client from config. %s", err.Error())
+		return nil, fmt.Errorf("Failed to init client from config. %s", err)
+	}
+	return client, err
+}
+
+func defaultCreateTemplatePolicy() string {
+	return `- !variable
+  id: <TemplateName>
+`
+}
+
+func defaultCreateCertificatePolicy() string {
+	return `- !variable
+  id: "<SerialNumber>"
+  annotations:
+    Revoked: <Revoked>
+    RevocationDate: <RevocationDate>
+    RevocationReasonCode: <RevocationReasonCode>
+    ExpirationDate: <ExpirationDate>
+    InternalState: csasa<InternalState>csasa
+`
+}
+
+func defaultDeleteTemplatePolicy() string {
+	return `- !delete
+  record: !variable <TemplateName>
+`
+}
+
+func defaultDeleteCertificatePolicy() string {
+	return `- !delete
+  record: !variable <SerialNumber>
+`
+}
+
+func defaultPolicyBranch() string {
+	return "pki"
+}
+
+func NewFromDefaults() (ConjurPki, error) {
+	conjurClient, err := defaultConjurClient()
+	if err != nil {
+		return ConjurPki{}, fmt.Errorf("Failed to init Conjur client: %s", err)
+	}
+
+	policyTemplates := NewTemplates(
+		defaultCreateTemplatePolicy(),
+		defaultDeleteTemplatePolicy(),
+		defaultCreateCertificatePolicy(),
+		defaultDeleteCertificatePolicy())
+
+	return NewConjurPki(conjurClient, defaultPolicyBranch(), policyTemplates), nil
+}
+
 // NewTemplates ...
 func NewTemplates(newTemplate string, deleteTemplate string, newCertificate string, deleteCertificate string) ConjurTemplates {
 	return ConjurTemplates{
