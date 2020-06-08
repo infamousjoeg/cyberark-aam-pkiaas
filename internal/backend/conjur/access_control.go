@@ -62,7 +62,7 @@ func replacePrivilege(privilege string, key string, value string) string {
 	return strings.ReplaceAll(privilege, fmt.Sprintf("{%s}", key), value)
 }
 
-// Access ...
+// AccessControl ...
 type AccessControl struct {
 	privileges   Privileges
 	policyBranch string
