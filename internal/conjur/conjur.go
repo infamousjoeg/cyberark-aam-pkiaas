@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
+// ConjurTemplates ----
 // Content of the templates being used
 type ConjurTemplates struct {
 	newTemplate       string
@@ -21,11 +23,17 @@ type ConjurTemplates struct {
 	deleteCertificate string
 }
 
+// ConjurPki ----
 type ConjurPki struct {
 	client       *conjurapi.Client
 	policyBranch string
 	templates    ConjurTemplates
-	Access       Access
+	Access       ConjurAccess
+}
+
+// GetAccessControl -----
+func (c ConjurPki) GetAccessControl() pki.Access {
+	return pki.Access(c.Access)
 }
 
 func (c ConjurPki) getTemplatePolicyBranch() string {
@@ -100,6 +108,7 @@ func defaultPolicyBranch() string {
 	return "pki"
 }
 
+// NewFromDefaults ---
 func NewFromDefaults() (ConjurPki, error) {
 	conjurClient, err := defaultConjurClient()
 	if err != nil {
@@ -128,7 +137,7 @@ func NewTemplates(newTemplate string, deleteTemplate string, newCertificate stri
 }
 
 // NewConjurPki ...
-func NewConjurPki(client *conjurapi.Client, policyBranch string, templates ConjurTemplates, access Access) ConjurPki {
+func NewConjurPki(client *conjurapi.Client, policyBranch string, templates ConjurTemplates, access ConjurAccess) ConjurPki {
 	return ConjurPki{
 		client:       client,
 		policyBranch: policyBranch,
@@ -251,7 +260,7 @@ func (c ConjurPki) DeleteTemplate(templateName string) error {
 }
 
 // CreateCertificate ...
-func (c ConjurPki) CreateCertificate(cert types.CreateCertificateInDap) error {
+func (c ConjurPki) CreateCertificate(cert types.CreateCertificateData) error {
 	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
 
 	// validate cert does not exists
@@ -263,7 +272,7 @@ func (c ConjurPki) CreateCertificate(cert types.CreateCertificateInDap) error {
 
 }
 
-func (c ConjurPki) updateCertificate(cert types.CreateCertificateInDap) error {
+func (c ConjurPki) updateCertificate(cert types.CreateCertificateData) error {
 
 	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
 	// replace template placeholders
@@ -348,7 +357,7 @@ func (c ConjurPki) DeleteCertificate(serialNumber *big.Int) error {
 	}
 
 	// remove the template resource
-	certificate := types.CreateCertificateInDap{
+	certificate := types.CreateCertificateData{
 		SerialNumber: serialNumber.String(),
 	}
 	deleteCertPolicy := bytes.NewReader([]byte(
@@ -483,7 +492,7 @@ func (c ConjurPki) RevokeCertificate(serialNumber *big.Int, reasonCode int, revo
 		return fmt.Errorf("Failed to revoked certificate with ID '%s'. %s", variableID, err)
 	}
 
-	certificateInDap := types.CreateCertificateInDap{
+	certificateInDap := types.CreateCertificateData{
 		SerialNumber:         serialNumber.String(),
 		Revoked:              true,
 		RevocationDate:       fmt.Sprintf("%v", revocationDate.Unix()),

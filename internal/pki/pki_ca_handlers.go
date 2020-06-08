@@ -34,6 +34,13 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	var intermediateRequest types.IntermediateRequest
 	err = json.Unmarshal(reqBody, &intermediateRequest)
 	if err != nil {
@@ -161,6 +168,14 @@ func (p *Pki) SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
+
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	var signedCert types.PEMCertificate
 	err = json.Unmarshal(reqBody, &signedCert)
 	pemCert, rest := pem.Decode([]byte(signedCert.Certificate))
@@ -278,6 +293,13 @@ func (p *Pki) SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	var pemBundle types.PEMCertificateBundle
 	err = json.Unmarshal(reqBody, &pemBundle)
 	if err != nil {
@@ -314,10 +336,20 @@ func (p *Pki) GetCRLHandler(w http.ResponseWriter, r *http.Request) {
 
 // PurgeHandler -----------------------------------------------------
 func (p *Pki) PurgeHandler(w http.ResponseWriter, r *http.Request) {
-
+	authHeader := r.Header.Get("Authorization")
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
 }
 
 // PurgeCRLHandler --------------------------------------------------
 func (p *Pki) PurgeCRLHandler(w http.ResponseWriter, r *http.Request) {
-
+	authHeader := r.Header.Get("Authorization")
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
 }

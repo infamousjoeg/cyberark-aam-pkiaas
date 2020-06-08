@@ -301,7 +301,7 @@ func TestCreateCertificate(t *testing.T) {
 	}
 	serialNumber, _ := new(big.Int).SetString("9389830020029383", 10)
 	// Create template for this test case
-	cert := types.CreateCertificateInDap{
+	cert := types.CreateCertificateData{
 		Certificate:  "SomeDEREncodedBlob",
 		SerialNumber: "9389830020029383",
 	}
@@ -332,7 +332,7 @@ func TestCreateCertificateAlreadyExists(t *testing.T) {
 	}
 	serialNumber, _ := new(big.Int).SetString("12345543211234", 10)
 	// Create template for this test case
-	cert := types.CreateCertificateInDap{
+	cert := types.CreateCertificateData{
 		Certificate:  "SomeDEREncodedBlob",
 		SerialNumber: serialNumber.String(),
 	}
@@ -352,7 +352,7 @@ func TestDeleteCertificate(t *testing.T) {
 	}
 
 	serialNumber, _ := new(big.Int).SetString("838837738982929383", 10)
-	newCert := types.CreateCertificateInDap{
+	newCert := types.CreateCertificateData{
 		SerialNumber: serialNumber.String(),
 	}
 
@@ -427,7 +427,7 @@ func TestRevokeCertificate(t *testing.T) {
 	}
 	serialNumber, _ := new(big.Int).SetString("88349947748020022", 10)
 	// Create template for this test case
-	cert := types.CreateCertificateInDap{
+	cert := types.CreateCertificateData{
 		Certificate:  "SomeDEREncodedBlob",
 		SerialNumber: "88349947748020022",
 	}
@@ -470,7 +470,7 @@ func TestGetRevokedCertificates(t *testing.T) {
 	}
 	serialNumber, _ := new(big.Int).SetString("88349947748020022222222", 10)
 	// Create template for this test case
-	cert := types.CreateCertificateInDap{
+	cert := types.CreateCertificateData{
 		Certificate:  "SomeDEREncodedBlob",
 		SerialNumber: "88349947748020022222222",
 	}

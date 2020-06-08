@@ -1,4 +1,4 @@
-package pki
+package dummy
 
 import (
 	"crypto/x509/pkix"
@@ -8,8 +8,13 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
+
+// Dummy ------------------------
+type Dummy struct {
+}
 
 var dummySubject types.SubjectFields = types.SubjectFields{
 	Organization: "CyberArk",
@@ -50,7 +55,7 @@ Iw==`
 		return certificate, nil
 	}
 
-	octetSerialNumber, _ := ConvertSerialIntToOctetString(serialNumber)
+	octetSerialNumber, _ := pki.ConvertSerialIntToOctetString(serialNumber)
 	return "", errors.New("No certificate with requested serial number :" + octetSerialNumber + " was found")
 }
 

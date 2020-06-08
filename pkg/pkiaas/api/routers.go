@@ -52,6 +52,7 @@ func init() {
 }
 
 var backend pki.Pki = pki.Pki{}
+var access pki.Access
 
 var routes = Routes{
 	Route{

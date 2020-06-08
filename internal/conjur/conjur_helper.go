@@ -27,7 +27,7 @@ func ReplaceTemplate(template types.Template, templateContent string) string {
 }
 
 // ReplaceCertificate ...
-func ReplaceCertificate(cert types.CreateCertificateInDap, certificateContent string) string {
+func ReplaceCertificate(cert types.CreateCertificateData, certificateContent string) string {
 	newCertificate := certificateContent
 
 	e := reflect.ValueOf(&cert).Elem()
