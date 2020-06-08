@@ -1,6 +1,7 @@
 package conjur
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -87,6 +88,14 @@ func NewAccessFromDefaults(conjurConfig conjurapi.Config, policyBranch string) C
 // NewAccessFromDefaultsDisabled ...
 func NewAccessFromDefaultsDisabled(conjurConfig conjurapi.Config, policyBranch string) ConjurAccess {
 	return NewAccess(conjurConfig, policyBranch, NewDefaultPrivileges(), true)
+}
+
+func parseAccessToken(accessToken string) (string, error) {
+	accessToken = strings.ReplaceAll(accessToken, "Token token=\"", "")
+	accessToken = strings.Trim(accessToken, "\"")
+
+	accessTokenSlice, err := base64.StdEncoding.DecodeString(accessToken)
+	return string(accessTokenSlice), err
 }
 
 // Authenticate ...
@@ -231,6 +240,11 @@ func (a ConjurAccess) checkPermissions(accessToken string, permissions []string)
 		return nil
 	}
 
+	accessToken, err := parseAccessToken(accessToken)
+	if err != nil {
+		return fmt.Errorf("Failed to parse access token. %s", err)
+	}
+
 	config := a.conjurConfig
 	conjur, err := conjurapi.NewClientFromToken(config, accessToken)
 	if err != nil {
@@ -251,6 +265,11 @@ func (a ConjurAccess) checkPermissions(accessToken string, permissions []string)
 func (a ConjurAccess) checkPermission(accessToken string, permission string) (bool, error) {
 	if a.disabled {
 		return true, nil
+	}
+
+	accessToken, err := parseAccessToken(accessToken)
+	if err != nil {
+		return false, fmt.Errorf("Failed to parse access token. %s", err)
 	}
 
 	config := a.conjurConfig
