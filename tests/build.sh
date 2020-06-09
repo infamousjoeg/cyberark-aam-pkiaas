@@ -36,7 +36,7 @@ start_conjur () {
     docker-compose up -d
     rm -rf docker-compose.yml
     # Wait for Conjur container to report healthy status
-    until [ "$(docker inspect -f "{{.State.Status}}" "${REPO_NAME}_conjur_1)" == "running" ]; do
+    until [ "$(docker inspect -f "{{.State.Status}}" "${REPO_NAME}_conjur_1")" == "running" ]; do
         sleep 0.1;
     done;
 }
