@@ -12,7 +12,8 @@ verbose=$(conjur_verbose)
 function conjur_authenticate {
 	$util_defaults
     api_key=$(curl $verbose --fail -s -k --user "$CONJUR_AUTHN_LOGIN:$CONJUR_AUTHN_API_KEY" $CONJUR_APPLIANCE_URL/authn/$CONJUR_ACCOUNT/login)
-	session_token=$(curl $verbose --fail -s -k --data "$api_key" $CONJUR_APPLIANCE_URL/authn/$CONJUR_ACCOUNT/$CONJUR_AUTHN_LOGIN/authenticate)
+	urlLogin=$(echo "$CONJUR_AUTHN_LOGIN" | sed 's/\//%2F/g')
+	session_token=$(curl $verbose --fail -s -k --data "$api_key" $CONJUR_APPLIANCE_URL/authn/$CONJUR_ACCOUNT/$urlLogin/authenticate)
 	token=$(echo -n $session_token | base64 | tr -d '\r\n')
 	header="Authorization: Token token=\"$token\""
 	echo "$header"
