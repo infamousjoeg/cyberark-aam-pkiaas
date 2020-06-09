@@ -30,6 +30,12 @@ func (p *Pki) CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = p.Backend.GetAccessControl().CreateTemplate(authHeader)
+	if err != nil {
+		http.Error(w, "DAPKCT004: Not authorized to create new template - "+err.Error(), http.StatusForbidden)
+		return
+	}
+
 	var newTemplate types.Template
 	err = json.Unmarshal(reqBody, &newTemplate)
 	if err != nil {
@@ -92,6 +98,12 @@ func (p *Pki) ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(reqBody, &newTemplate)
 	if err != nil {
 		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = p.Backend.GetAccessControl().ManageTemplate(authHeader, newTemplate.TemplateName)
+	if err != nil {
+		http.Error(w, "DAPKMT005: Not authorized to manage template "+newTemplate.TemplateName+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -158,7 +170,15 @@ func (p *Pki) GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	template, err := p.Backend.GetTemplate(mux.Vars(r)["templateName"])
+	templateName := mux.Vars(r)["templateName"]
+
+	err = p.Backend.GetAccessControl().DeleteTemplate(authHeader, templateName)
+	if err != nil {
+		http.Error(w, "DAPKDT002: Not authorized to delete template "+templateName+" - "+err.Error(), http.StatusForbidden)
+		return
+	}
+
+	template, err := p.Backend.GetTemplate(templateName)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -175,6 +195,12 @@ func (p *Pki) ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
 	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	err = p.Backend.GetAccessControl().ReadTemplates(authHeader)
+	if err != nil {
+		http.Error(w, "DAPKLT002: Not authorized to list all templates - "+err.Error(), http.StatusForbidden)
 		return
 	}
 

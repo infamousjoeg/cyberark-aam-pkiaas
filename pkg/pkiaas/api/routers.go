@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/conjur"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/conjur"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 )
 
@@ -51,8 +51,7 @@ func init() {
 	backend.Backend = pkiclient
 }
 
-var backend pki.Pki = pki.Pki{}
-var access pki.Access
+var backend pki.Pki
 
 var routes = Routes{
 	Route{

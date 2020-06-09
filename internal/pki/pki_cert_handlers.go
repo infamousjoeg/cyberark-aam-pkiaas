@@ -48,6 +48,12 @@ func (p *Pki) SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = p.Backend.GetAccessControl().SignCertificate(authHeader, signReq.TemplateName)
+	if err != nil {
+		http.Error(w, "DAPKSC005: Not authorized to sign certificate with template "+signReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
+		return
+	}
+
 	// Extract the CSR from the request and process it to be converted to useful CertificateRequest object
 	pemCSR, _ := pem.Decode([]byte(signReq.CSR))
 	certReq, err := x509.ParseCertificateRequest(pemCSR.Bytes)
@@ -181,6 +187,12 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(reqBody, &certReq)
 	if err != nil {
 		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = p.Backend.GetAccessControl().CreateCertificate(authHeader, certReq.TemplateName)
+	if err != nil {
+		http.Error(w, "DAPKCC005: Not authorized to create certificate with template "+certReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -398,6 +410,13 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	err = p.Backend.GetAccessControl().RevokeCertificate(authHeader, crlReq.SerialNumber)
+	if err != nil {
+		http.Error(w, "DAPKSC005: Not authorized to revoke certificate with serial number "+crlReq.SerialNumber+" - "+err.Error(), http.StatusForbidden)
+		return
+	}
+
 	reasonCode := -1
 	if crlReq.Reason != "" {
 		reasonCode, err = ReturnReasonCode(crlReq.Reason)

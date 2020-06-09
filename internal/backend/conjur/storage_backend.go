@@ -10,53 +10,52 @@ import (
 	"time"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
-// ConjurTemplates ----
-// Content of the templates being used
-type ConjurTemplates struct {
+// PolicyTemplates ...
+type PolicyTemplates struct {
 	newTemplate       string
 	deleteTemplate    string
 	newCertificate    string
 	deleteCertificate string
 }
 
-// ConjurPki ----
-type ConjurPki struct {
+// StorageBackend ...
+type StorageBackend struct {
 	client       *conjurapi.Client
 	policyBranch string
-	templates    ConjurTemplates
-	Access       ConjurAccess
+	templates    PolicyTemplates
+	Access       AccessControl
 }
 
 // GetAccessControl -----
-func (c ConjurPki) GetAccessControl() pki.Access {
-	return pki.Access(c.Access)
+func (c StorageBackend) GetAccessControl() backend.Access {
+	return backend.Access(c.Access)
 }
 
-func (c ConjurPki) getTemplatePolicyBranch() string {
+func (c StorageBackend) getTemplatePolicyBranch() string {
 	return c.policyBranch + "/templates"
 }
 
-func (c ConjurPki) getCertificatePolicyBranch() string {
+func (c StorageBackend) getCertificatePolicyBranch() string {
 	return c.policyBranch + "/certificates"
 }
 
-func (c ConjurPki) getCAChainVariableID() string {
+func (c StorageBackend) getCAChainVariableID() string {
 	return c.policyBranch + "/ca/chain"
 }
 
-func (c ConjurPki) getSigningCertVariableID() string {
+func (c StorageBackend) getSigningCertVariableID() string {
 	return c.policyBranch + "/ca/cert"
 }
 
-func (c ConjurPki) getSigningKeyVariableID() string {
+func (c StorageBackend) getSigningKeyVariableID() string {
 	return c.policyBranch + "/ca/key"
 }
 
-func (c ConjurPki) getCRLVariableID() string {
+func (c StorageBackend) getCRLVariableID() string {
 	return c.policyBranch + "/crl"
 }
 
@@ -109,10 +108,10 @@ func defaultPolicyBranch() string {
 }
 
 // NewFromDefaults ---
-func NewFromDefaults() (ConjurPki, error) {
+func NewFromDefaults() (StorageBackend, error) {
 	conjurClient, err := defaultConjurClient()
 	if err != nil {
-		return ConjurPki{}, fmt.Errorf("Failed to init Conjur client: %s", err)
+		return StorageBackend{}, fmt.Errorf("Failed to init Conjur client: %s", err)
 	}
 
 	policyTemplates := NewTemplates(
@@ -127,8 +126,8 @@ func NewFromDefaults() (ConjurPki, error) {
 }
 
 // NewTemplates ...
-func NewTemplates(newTemplate string, deleteTemplate string, newCertificate string, deleteCertificate string) ConjurTemplates {
-	return ConjurTemplates{
+func NewTemplates(newTemplate string, deleteTemplate string, newCertificate string, deleteCertificate string) PolicyTemplates {
+	return PolicyTemplates{
 		newTemplate:       newTemplate,
 		deleteTemplate:    deleteTemplate,
 		newCertificate:    newCertificate,
@@ -137,8 +136,8 @@ func NewTemplates(newTemplate string, deleteTemplate string, newCertificate stri
 }
 
 // NewConjurPki ...
-func NewConjurPki(client *conjurapi.Client, policyBranch string, templates ConjurTemplates, access ConjurAccess) ConjurPki {
-	return ConjurPki{
+func NewConjurPki(client *conjurapi.Client, policyBranch string, templates PolicyTemplates, access AccessControl) StorageBackend {
+	return StorageBackend{
 		client:       client,
 		policyBranch: policyBranch,
 		templates:    templates,
@@ -147,7 +146,7 @@ func NewConjurPki(client *conjurapi.Client, policyBranch string, templates Conju
 }
 
 // CreateTemplate ...
-func (c ConjurPki) CreateTemplate(template types.Template) error {
+func (c StorageBackend) CreateTemplate(template types.Template) error {
 	variableID := c.getTemplatePolicyBranch() + "/" + template.TemplateName
 
 	// validate template does not exists
@@ -187,7 +186,7 @@ func (c ConjurPki) CreateTemplate(template types.Template) error {
 }
 
 // ListTemplates ...
-func (c ConjurPki) ListTemplates() ([]string, error) {
+func (c StorageBackend) ListTemplates() ([]string, error) {
 	filter := &conjurapi.ResourceFilter{
 		Kind:   "variable",
 		Search: "templates",
@@ -215,7 +214,7 @@ func (c ConjurPki) ListTemplates() ([]string, error) {
 }
 
 // GetTemplate ...
-func (c ConjurPki) GetTemplate(templateName string) (types.Template, error) {
+func (c StorageBackend) GetTemplate(templateName string) (types.Template, error) {
 	variableID := c.getTemplatePolicyBranch() + "/" + templateName
 	templateJSON, err := c.client.RetrieveSecret(variableID)
 	template := &types.Template{}
@@ -233,7 +232,7 @@ func (c ConjurPki) GetTemplate(templateName string) (types.Template, error) {
 }
 
 // DeleteTemplate ...
-func (c ConjurPki) DeleteTemplate(templateName string) error {
+func (c StorageBackend) DeleteTemplate(templateName string) error {
 	// validate template resource exists
 	variableID := c.getTemplatePolicyBranch() + "/" + templateName
 	_, err := c.client.RetrieveSecret(variableID)
@@ -260,7 +259,7 @@ func (c ConjurPki) DeleteTemplate(templateName string) error {
 }
 
 // CreateCertificate ...
-func (c ConjurPki) CreateCertificate(cert types.CreateCertificateData) error {
+func (c StorageBackend) CreateCertificate(cert types.CreateCertificateData) error {
 	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
 
 	// validate cert does not exists
@@ -272,7 +271,7 @@ func (c ConjurPki) CreateCertificate(cert types.CreateCertificateData) error {
 
 }
 
-func (c ConjurPki) updateCertificate(cert types.CreateCertificateData) error {
+func (c StorageBackend) updateCertificate(cert types.CreateCertificateData) error {
 
 	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
 	// replace template placeholders
@@ -299,7 +298,7 @@ func (c ConjurPki) updateCertificate(cert types.CreateCertificateData) error {
 }
 
 // ListCertificates ...
-func (c ConjurPki) ListCertificates() ([]*big.Int, error) {
+func (c StorageBackend) ListCertificates() ([]*big.Int, error) {
 	filter := &conjurapi.ResourceFilter{
 		Kind:   "variable",
 		Search: "certificates",
@@ -336,7 +335,7 @@ func (c ConjurPki) ListCertificates() ([]*big.Int, error) {
 }
 
 // GetCertificate ...
-func (c ConjurPki) GetCertificate(serialNumber *big.Int) (string, error) {
+func (c StorageBackend) GetCertificate(serialNumber *big.Int) (string, error) {
 	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
 	value, err := c.client.RetrieveSecret(variableID)
 
@@ -348,7 +347,7 @@ func (c ConjurPki) GetCertificate(serialNumber *big.Int) (string, error) {
 }
 
 // DeleteCertificate ...
-func (c ConjurPki) DeleteCertificate(serialNumber *big.Int) error {
+func (c StorageBackend) DeleteCertificate(serialNumber *big.Int) error {
 	// validate template resource exists
 	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
 	_, err := c.client.RetrieveSecret(variableID)
@@ -376,7 +375,7 @@ func (c ConjurPki) DeleteCertificate(serialNumber *big.Int) error {
 }
 
 // GetCAChain ...
-func (c ConjurPki) GetCAChain() ([]string, error) {
+func (c StorageBackend) GetCAChain() ([]string, error) {
 	variableID := c.getCAChainVariableID()
 	caChain := &[]string{}
 
@@ -394,7 +393,7 @@ func (c ConjurPki) GetCAChain() ([]string, error) {
 }
 
 // WriteCAChain ...
-func (c ConjurPki) WriteCAChain(certBundle []string) error {
+func (c StorageBackend) WriteCAChain(certBundle []string) error {
 	variableID := c.getCAChainVariableID()
 
 	certBundleJSON, err := json.Marshal(certBundle)
@@ -411,7 +410,7 @@ func (c ConjurPki) WriteCAChain(certBundle []string) error {
 }
 
 // GetSigningCert ...
-func (c ConjurPki) GetSigningCert() (string, error) {
+func (c StorageBackend) GetSigningCert() (string, error) {
 	variableID := c.getSigningCertVariableID()
 
 	value, err := c.client.RetrieveSecret(variableID)
@@ -423,7 +422,7 @@ func (c ConjurPki) GetSigningCert() (string, error) {
 }
 
 // WriteSigningCert ...
-func (c ConjurPki) WriteSigningCert(content string) error {
+func (c StorageBackend) WriteSigningCert(content string) error {
 	variableID := c.getSigningCertVariableID()
 
 	err := c.client.AddSecret(variableID, content)
@@ -435,7 +434,7 @@ func (c ConjurPki) WriteSigningCert(content string) error {
 }
 
 // GetSigningKey ...
-func (c ConjurPki) GetSigningKey() (string, error) {
+func (c StorageBackend) GetSigningKey() (string, error) {
 	variableID := c.getSigningKeyVariableID()
 
 	value, err := c.client.RetrieveSecret(variableID)
@@ -447,7 +446,7 @@ func (c ConjurPki) GetSigningKey() (string, error) {
 }
 
 // WriteSigningKey ...
-func (c ConjurPki) WriteSigningKey(content string) error {
+func (c StorageBackend) WriteSigningKey(content string) error {
 	variableID := c.getSigningKeyVariableID()
 
 	err := c.client.AddSecret(variableID, content)
@@ -459,7 +458,7 @@ func (c ConjurPki) WriteSigningKey(content string) error {
 }
 
 // GetCRL ...
-func (c ConjurPki) GetCRL() (string, error) {
+func (c StorageBackend) GetCRL() (string, error) {
 	variableID := c.getCRLVariableID()
 
 	value, err := c.client.RetrieveSecret(variableID)
@@ -471,7 +470,7 @@ func (c ConjurPki) GetCRL() (string, error) {
 }
 
 // WriteCRL ...
-func (c ConjurPki) WriteCRL(content string) error {
+func (c StorageBackend) WriteCRL(content string) error {
 	variableID := c.getCRLVariableID()
 
 	err := c.client.AddSecret(variableID, content)
@@ -483,7 +482,7 @@ func (c ConjurPki) WriteCRL(content string) error {
 }
 
 // RevokeCertificate ...
-func (c ConjurPki) RevokeCertificate(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error {
+func (c StorageBackend) RevokeCertificate(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error {
 
 	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
 	_, err := c.client.RetrieveSecret(variableID)
@@ -506,7 +505,7 @@ func (c ConjurPki) RevokeCertificate(serialNumber *big.Int, reasonCode int, revo
 }
 
 // GetRevokedCerts ...
-func (c ConjurPki) GetRevokedCerts() ([]types.RevokedCertificate, error) {
+func (c StorageBackend) GetRevokedCerts() ([]types.RevokedCertificate, error) {
 	filter := &conjurapi.ResourceFilter{
 		Kind:   "variable",
 		Search: "csasarevokedcsasa",

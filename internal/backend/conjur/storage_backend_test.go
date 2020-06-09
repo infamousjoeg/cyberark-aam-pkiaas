@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/conjur"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/conjur"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
@@ -70,14 +70,14 @@ func defaultConjurClient() (*conjurapi.Client, error) {
 	return client, err
 }
 
-func defaultTemplates() conjur.ConjurTemplates {
+func defaultTemplates() conjur.PolicyTemplates {
 	return conjur.NewTemplates(testCreateTemplate(), testDeleteTemplate(), testCreateCertificate(), testDeleteCertificate())
 }
 
-func defaultConjurPki() (conjur.ConjurPki, error) {
+func defaultConjurPki() (conjur.StorageBackend, error) {
 	client, err := defaultConjurClient()
 	if err != nil {
-		return conjur.ConjurPki{}, err
+		return conjur.StorageBackend{}, err
 	}
 
 	templates := defaultTemplates()
