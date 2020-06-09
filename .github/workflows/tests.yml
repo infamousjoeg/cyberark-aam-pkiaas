@@ -6,6 +6,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
@@ -21,3 +22,12 @@ jobs:
         uses: Jerome1337/golint-action@v1.0.2
         with:
           golint-path: './cmd/...'
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Run Setup of Conjur and PKIaaS
+        run: .\dev\setup.sh
