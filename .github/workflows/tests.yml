@@ -44,4 +44,4 @@ jobs:
           docker exec -i cyberark-aam-pkiaas_client_1 conjur authn whoami
       - name: Test PKIaaS Web Service
         run: |
-          curl -k -X GET https://localhost:3000/
+          curl -k -X GET http://localhost:3000/
