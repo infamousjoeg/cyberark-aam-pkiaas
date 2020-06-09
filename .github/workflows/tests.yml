@@ -29,5 +29,5 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
-      - name: Run Setup of Conjur and PKIaaS
-        run: docker ps
+      - name: Setup Conjur OSS
+        run: sh ./tests/build.sh
