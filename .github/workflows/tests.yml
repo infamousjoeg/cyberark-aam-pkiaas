@@ -36,7 +36,7 @@ jobs:
         run: ./tests/build.sh
       - name: Setup Conjur Configuration Environment
         run: |
-          echo "${CONJUR_INFO}"
+          printenv CONJUR_INFO
           export CONJUR_CERT_FILE="na"
       - name: Test Conjur OSS Status
         run: |
