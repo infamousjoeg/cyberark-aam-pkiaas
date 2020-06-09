@@ -30,7 +30,7 @@ import (
 
 // Pki -----------------------------
 type Pki struct {
-	Backend backend.StorageBackend
+	Backend backend.Storage
 }
 
 // GenerateKeys ----------------------------------------------------------------------
@@ -334,7 +334,7 @@ func SetCertSubject(subject types.SubjectFields, commonName string) (pkix.Name, 
 }
 
 // PrepareCertificateParameters ---------------------------------------------------
-func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, backend backend.StorageBackend) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
+func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, backend backend.Storage) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
 	template, err := p.Backend.GetTemplate(templateName)
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, err

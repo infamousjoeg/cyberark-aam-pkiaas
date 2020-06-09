@@ -140,7 +140,13 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 		intermediateResponse = types.PEMIntermediate{CSR: string(pemSignCSR)}
 
 	} else {
+		serialNumber, err := p.GenerateSerialNumber()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		certTemplate := x509.Certificate{
+			SerialNumber:          serialNumber,
 			SignatureAlgorithm:    sigAlgo,
 			Subject:               certSubject,
 			DNSNames:              dnsNames,
@@ -156,8 +162,8 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 			http.Error(w, "PKI: GenerateIntermediateCSRHandler: Error while generating new self signed cert - x509.CreateCertificateRequest returned: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		pemSignCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: signCert})
-		intermediateResponse = types.PEMIntermediate{CSR: string(pemSignCert)}
+		pemSignCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: signCert})
+		intermediateResponse = types.PEMIntermediate{SelfSignedCert: string(pemSignCert)}
 		p.Backend.WriteSigningCert(base64.StdEncoding.EncodeToString(signCert))
 	}
 

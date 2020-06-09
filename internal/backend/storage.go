@@ -8,7 +8,7 @@ import (
 )
 
 // StorageBackend -----------------------------------
-type StorageBackend interface {
+type Storage interface {
 	CreateCertificate(certificateData types.CreateCertificateData) error
 	ListCertificates() ([]*big.Int, error)
 	GetCertificate(serialNumber *big.Int) (string, error)
