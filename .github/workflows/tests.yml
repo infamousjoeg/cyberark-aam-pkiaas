@@ -37,15 +37,27 @@ jobs:
       - name: Test conjur_config Created
         run: |
           [ -n "conjur_config" ] && echo "Found" || exit 1
+      - name: Test Conjur OSS Status
+        run: |
+          docker exec -i cyberark-aam-pkiaas_client_1 conjur authn whoami
+      - name: Copy PKI Config Policy into Conjur CLI Client
+        run: |
+          docker cp ./tests/pki-config-policy.yml cyberark-aam-pkiaas_client_1:/root/pki-config-policy.yml
+      - name: Load PKI Config Policy
+        run: |
+          docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load --append root pki-config-policy.yml > pki_config
+      - name: Test pki_config Created
+        run: |
+          [ -n "pki_config" ] && echo "Found" || exit 1
+      - name: Parse pki_config
+        run: |
+          export CONJUR_AUTHN_API_KEY=$(cat pki_config | jq -r ".created_roles" | jq -r '.["conjur:host:pki-service"]' | jq -r .api_key)
       - name: Build PKIaaS Docker Image
         run: |
           docker build -t cyberark/pkiaas:test .
       - name: Deploy PKIaaS Docker Container
         run: |
-          docker run --name cpki-test -d -p 3000:8080 cyberark/pkiaas:test
-      - name: Test Conjur OSS Status
-        run: |
-          docker exec -i cyberark-aam-pkiaas_client_1 conjur authn whoami
+          docker run --name cpki-test -d -p 3000:8080 -e CONJUR_AUTHN_LOGIN="host/pki-service" -e CONJUR_AUTHN_API_KEY="${CONJUR_AUTHN_API_KEY}" cyberark/pkiaas:test
       - name: Test PKIaaS Web Service
         run: |
           curl -k -X GET http://localhost:3000/
