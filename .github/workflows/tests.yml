@@ -45,7 +45,7 @@ jobs:
           docker cp ./tests/pki-config-policy.yml cyberark-aam-pkiaas_client_1:/root/pki-config-policy.yml
       - name: Load PKI Config Policy
         run: |
-          docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load --append root pki-config-policy.yml > pki_config
+          docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load root pki-config-policy.yml > pki_config
       - name: Test pki_config Created
         run: |
           [ -n "pki_config" ] && echo "Found" || exit 1
