@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e pipefail
 
-$REPO_NAME='cyberark-aam-pkiaas'
+REPO_NAME='cyberark-aam-pkiaas'
 
 main () {
     download_conjur
