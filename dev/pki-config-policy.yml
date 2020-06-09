@@ -1,7 +1,7 @@
 - !host pki-service
 - !policy
   id: pki
-  owner: !host pki-service
+  owner: !user admin
   body:
   - !webservice
   - !variable ca/cert
