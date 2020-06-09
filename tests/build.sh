@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e pipefail
 
+$REPO_NAME='cyberark-aam-pkiaas'
+
 main () {
     download_conjur
     generate_masterkey
@@ -11,11 +13,6 @@ main () {
     conjur_authn
     report_info
     report_info > conjur_config
-}
-
-check_docker_compoe () {
-    echo command -v docker
-    echo command -v docker-compose
 }
 
 download_conjur () {
@@ -39,14 +36,14 @@ start_conjur () {
     docker-compose up -d
     rm -rf docker-compose.yml
     # Wait for Conjur container to report healthy status
-    until [ "$(docker inspect -f "{{.State.Status}}" "${USER}"_conjur_1)" == "running" ]; do
+    until [ "$(docker inspect -f "{{.State.Status}}" "${REPO_NAME}_conjur_1)" == "running" ]; do
         sleep 0.1;
     done;
 }
 
 conjur_createacct () {
     # Configure Conjur & create account
-    CONJUR_INFO=$(docker exec -i "${USER}"_conjur_1 conjurctl account create quick-start)
+    CONJUR_INFO=$(docker exec -i "${REPO_NAME}"_conjur_1 conjurctl account create quick-start)
     export CONJUR_INFO="${CONJUR_INFO}"
 }
 
@@ -54,12 +51,12 @@ conjur_init () {
     # Initialize Conjur
     API_KEY=$(echo "${CONJUR_INFO}" | awk 'FNR == 10 {print $5}')
     export CONJUR_API_KEY="${API_KEY}"
-    docker exec -i "${USER}"_client_1 conjur init -u conjur -a quick-start 
+    docker exec -i "${REPO_NAME}"_client_1 conjur init -u conjur -a quick-start 
 }
 
 conjur_authn () {
     # Login to Conjur from CLI (Client) container for Admin user
-    docker exec -i "${USER}"_client_1 conjur authn login -u admin <<< "${CONJUR_API_KEY}"
+    docker exec -i "${REPO_NAME}"_client_1 conjur authn login -u admin <<< "${CONJUR_API_KEY}"
 }
 
 report_info () {
