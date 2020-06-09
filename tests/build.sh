@@ -2,8 +2,6 @@
 set -e pipefail
 
 main () {
-    install_docker
-    install_dockercompose
     download_conjur
     generate_masterkey
     start_conjur
@@ -14,22 +12,9 @@ main () {
     report_info
 }
 
-install_docker () {
-    # Install Docker CE
-    curl -fsSL https://get.docker.com | sh
-    sudo usermod -aG docker "${USER}"
-    newgrp docker
-}
-
-install_dockercompose () {
-    # Install Docker Compose
-    sudo curl -L "https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
-}
-
 download_conjur () {
     # Download Conjur & pull Docker Images necessary
-    sudo curl -o docker-compose.yml https://raw.githubusercontent.com/infamousjoeg/conjur-install/master/docker-compose.yml
+    curl -o docker-compose.yml https://raw.githubusercontent.com/infamousjoeg/conjur-install/master/docker-compose.yml
     docker-compose pull
 }
 
