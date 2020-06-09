@@ -42,12 +42,14 @@ start_conjur () {
 conjur_createacct () {
     # Configure Conjur & create account
     CONJUR_INFO=$(docker exec -i "${REPO_NAME}"_conjur_1 conjurctl account create quick-start)
+    echo "${CONJUR_INFO}" > conjur_info
     export CONJUR_INFO="${CONJUR_INFO}"
 }
 
 conjur_init () {
     # Initialize Conjur
     API_KEY=$(echo "${CONJUR_INFO}" | awk 'FNR == 10 {print $5}')
+    echo "${API_KEY}" > admin_api_key
     export CONJUR_ADMIN_API_KEY="${API_KEY}"
     docker exec -i "${REPO_NAME}"_client_1 conjur init -u conjur -a quick-start 
 }
