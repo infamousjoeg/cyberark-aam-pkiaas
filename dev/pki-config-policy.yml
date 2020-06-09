@@ -3,6 +3,7 @@
   id: pki
   owner: !host pki-service
   body:
+  - !webservice
   - !variable ca/cert
   - !variable ca/key
   - !variable ca/cert-chain
