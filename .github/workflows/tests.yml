@@ -38,10 +38,10 @@ jobs:
           docker build -t cyberark/pkiaas:test .
       - name: Deploy PKIaaS Docker Container
         run: |
-          docker run --name cpki-test \
-            -d --restart always \
-            -p 8080:8080 \
-            cyberark/pkiaas:test
-      - name: Report Docker Containers Status
+          docker run --name cpki-test -d -p 3000:8080 cyberark/pkiaas:test
+      - name: Test Conjur OSS Status
         run: |
-          echo $(docker ps -a)
+          docker exec -i cyberark-aam-pkiaas_client_1 conjur authn whoami
+      - name: Test PKIaaS Web Service
+        run: |
+          curl -k -X GET https://localhost:3000/
