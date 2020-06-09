@@ -10,6 +10,7 @@ main () {
     conjur_init
     conjur_authn
     report_info
+    report_info > conjur_config
 }
 
 download_conjur () {
