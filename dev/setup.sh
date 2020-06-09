@@ -25,12 +25,16 @@ export CONJUR_CERT_FILE="$(pwd)/conjur.pem"
 openssl s_client -showcerts -connect $CONTAINER_NAME:443 < /dev/null 2> /dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > $CONJUR_CERT_FILE
 
 response=$(conjur_append_policy "root" ./pki-config-policy.yml)
-api_key=$(echo "${response}" | jq -r ".created_roles" | jq -r '.["conjur:host:pki-service"]' | jq -r .api_key)
-echo "API KEY: ${api_key}"
+pki_api_key=$(echo "${response}" | jq -r ".created_roles" | jq -r '.["conjur:host:pki-service"]' | jq -r .api_key)
+echo "pki-service API KEY: ${pki_api_key}"
+
+
+response=$(conjur_append_policy "root" ./pki-admin-policy.yml)
+echo $response
+api_key=$(echo "${response}" | jq -r ".created_roles" | jq -r '.["conjur:host:pki-admin"]' | jq -r .api_key)
+echo "pki-admin API KEY: ${api_key}"
 
 # switch to the pki-service host to perform the tests
 export CONJUR_AUTHN_LOGIN="host/pki-service"
-export CONJUR_AUTHN_API_KEY="${api_key}"
-
-
+export CONJUR_AUTHN_API_KEY="${pki_api_key}"
 

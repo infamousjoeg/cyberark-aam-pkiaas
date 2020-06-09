@@ -1,3 +1,4 @@
 bin/
 pkiaas
 conjur_config
+dev/conjur.pem*
