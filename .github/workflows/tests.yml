@@ -36,9 +36,8 @@ jobs:
         run: ./tests/build.sh
       - name: Setup Conjur Configuration Environment
         run: |
-          cat conjur_info
+          cat conjur_cert_file
           cat admin_api_key
-          export CONJUR_CERT_FILE="na"
       - name: Test Conjur OSS Status
         run: |
           docker exec -i cyberark-aam-pkiaas_client_1 conjur authn whoami
@@ -62,7 +61,7 @@ jobs:
             -e CONJUR_AUTHN_API_KEY="${CONJUR_AUTHN_API_KEY}" \
             -e CONJUR_APPLIANCE_URL="http://localhost:8080" \
             -e CONJUR_ACCOUNT="quick-start" \
-            -e CONJUR_CERT_FILE="${CONJUR_CERT_FILE}" \
+            -e CONJUR_CERT_FILE="$(cat conjur_cert_file)" \
             cyberark/pkiaas:test
       - name: Test PKIaaS Web Service
         run: |

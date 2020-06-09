@@ -43,6 +43,9 @@ conjur_createacct () {
     # Configure Conjur & create account
     CONJUR_INFO=$(docker exec -i "${REPO_NAME}"_conjur_1 conjurctl account create quick-start)
     echo "${CONJUR_INFO}" > conjur_info
+    echo "-----BEGIN PUBLIC KEY-----" > conjur_cert_file
+    < conjur_info awk 'NR >= 2 && NR < 9 {print $1}' >> conjur_cert_file
+    echo "-----END PUBLIC KEY-----" >> conjur_cert_file
     export CONJUR_INFO="${CONJUR_INFO}"
 }
 
