@@ -21,3 +21,31 @@ jobs:
         uses: Jerome1337/golint-action@v1.0.2
         with:
           golint-path: './cmd/...'
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: lint
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Setup Conjur OSS
+        run: ./tests/build.sh
+      - name: Test conjur_config Created
+        run: |
+          [ -n "conjur_config" ] && echo "Found" || exit 1
+      - name: Build PKIaaS Docker Image
+        run: |
+          docker build -t cyberark/pkiaas:test .
+      - name: Deploy PKIaaS Docker Container
+        run: |
+          docker run --name cpki-test -d -p 3000:8080 cyberark/pkiaas:test
+      - name: Test Conjur OSS Status
+        run: |
+          docker exec -i cyberark-aam-pkiaas_client_1 conjur authn whoami
+      - name: Test PKIaaS Web Service
+        run: |
+          curl -k -X GET http://localhost:3000/
