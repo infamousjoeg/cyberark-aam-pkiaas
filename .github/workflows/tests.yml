@@ -30,3 +30,18 @@ jobs:
         uses: actions/checkout@v2
       - name: Setup Conjur OSS
         run: ./tests/build.sh
+      - name: Test conjur_config Created
+        run: |
+          [ -n "conjur_config" ] && echo "Found" || exit 1
+      - name: Build PKIaaS Docker Image
+        run: |
+          docker build -t cyberark/pkiaas:test .
+      - name: Deploy PKIaaS Docker Container
+        run: |
+          docker run --name cpki-test \
+            -d --restart always \
+            -p 8080:8080 \
+            cyberark/pkiaas:test
+      - name: Report Docker Containers Status
+        run: |
+          echo $(docker ps -a)

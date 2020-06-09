@@ -11,7 +11,6 @@ main () {
     conjur_createacct
     conjur_init
     conjur_authn
-    report_info
     report_info > conjur_config
 }
 
@@ -74,9 +73,9 @@ report_info () {
     echo -e "${CONJUR_INFO}"
     echo -e "${GREEN}+++++++++++++++++++++++++++++++++++++++++++++++++++++"
     echo -e "+++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    echo -e "${NC}Your Conjur environment is running in Docker: ${CYAN}sudo docker ps${NC}"
+    echo -e "${NC}Your Conjur environment is running in Docker: ${CYAN}docker ps${NC}"
     docker ps
-    echo -e "Interact with it via Conjur CLI on ${USER}_client_1: ${CYAN}sudo docker exec -it ${USER}_client_1 bash${NC}"
+    echo -e "Interact with it via Conjur CLI on ${USER}_client_1: ${CYAN}docker exec -it ${REPO_NAME}_client_1 bash${NC}"
     echo -e "Once connected check your user: ${CYAN}conjur authn whoami"
     echo -e "${GREEN}+++++++++++++++++++++++++++++++++++++++++++++++++++++${NC}"
 }
