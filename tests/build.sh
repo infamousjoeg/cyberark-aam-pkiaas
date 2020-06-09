@@ -13,6 +13,11 @@ main () {
     report_info > conjur_config
 }
 
+check_docker_compoe () {
+    echo command -v docker
+    echo command -v docker-compose
+}
+
 download_conjur () {
     # Download Conjur & pull Docker Images necessary
     curl -o docker-compose.yml https://raw.githubusercontent.com/infamousjoeg/conjur-install/master/docker-compose.yml
