@@ -11,7 +11,6 @@ main () {
     conjur_createacct
     conjur_init
     conjur_authn
-    report_info > conjur_config
 }
 
 download_conjur () {
@@ -49,35 +48,13 @@ conjur_createacct () {
 conjur_init () {
     # Initialize Conjur
     API_KEY=$(echo "${CONJUR_INFO}" | awk 'FNR == 10 {print $5}')
-    export CONJUR_API_KEY="${API_KEY}"
+    export CONJUR_ADMIN_API_KEY="${API_KEY}"
     docker exec -i "${REPO_NAME}"_client_1 conjur init -u conjur -a quick-start 
 }
 
 conjur_authn () {
     # Login to Conjur from CLI (Client) container for Admin user
-    docker exec -i "${REPO_NAME}"_client_1 conjur authn login -u admin <<< "${CONJUR_API_KEY}"
-}
-
-report_info () {
-    # Report to STDOUT all pertinent info for Conjur
-    CYAN='\033[0;36m'
-    GREEN='\033[0;32m'
-    RED='\033[0;31m'
-    YELLOW='\033[1;33m'
-    NC='\033[0m' # No Color
-    echo -e "${GREEN}+++++++++++++++++++++++++++++++++++++++++++++++++++++${NC}"
-    echo -e "${RED}SAVE THESE VALUES IN A SAFE PLACE!${NC}"
-    echo -e "${GREEN}+++++++++++++++++++++++++++++++++++++++++++++++++++++${NC}"
-    echo -e "${CYAN}Conjur Data Key:${NC} ${YELLOW}${CONJUR_DATA_KEY}${NC}"
-    echo -e "${CYAN}Conjur Public SSL Certificate & Admin API Key:${YELLOW}"
-    echo -e "${CONJUR_INFO}"
-    echo -e "${GREEN}+++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    echo -e "+++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    echo -e "${NC}Your Conjur environment is running in Docker: ${CYAN}docker ps${NC}"
-    docker ps
-    echo -e "Interact with it via Conjur CLI on ${USER}_client_1: ${CYAN}docker exec -it ${REPO_NAME}_client_1 bash${NC}"
-    echo -e "Once connected check your user: ${CYAN}conjur authn whoami"
-    echo -e "${GREEN}+++++++++++++++++++++++++++++++++++++++++++++++++++++${NC}"
+    docker exec -i "${REPO_NAME}"_client_1 conjur authn login -u admin <<< "${CONJUR_ADMIN_API_KEY}"
 }
 
 main "$@"
