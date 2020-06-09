@@ -25,12 +25,12 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 	reqBody, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Unable to process HTTP request body - ioutil.ReadAll returned: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIGI001: Unable to process HTTP request body -  "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Invalid HTTP Content-Type header, expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "CPKIGI002: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 
 	err = p.Backend.GetAccessControl().AdminOnly(authHeader)
 	if err != nil {
-		http.Error(w, "DAPKGI004: Not authorized to generate intermediate CA CSR - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKIGI004: Not authorized to generate intermediate CA CSR - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -214,7 +214,7 @@ func (p *Pki) SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request)
 
 	err = p.Backend.GetAccessControl().AdminOnly(authHeader)
 	if err != nil {
-		http.Error(w, "DAPKSI004: Not authorized to set intermediate CA certificate - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKISI004: Not authorized to set intermediate CA certificate - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -344,7 +344,7 @@ func (p *Pki) SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = p.Backend.GetAccessControl().AdminOnly(authHeader)
 	if err != nil {
-		http.Error(w, "DAPKSC004: Not authorized to set CA chain - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKISC004: Not authorized to set CA chain - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -393,7 +393,7 @@ func (p *Pki) PurgeHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = p.Backend.GetAccessControl().Purge(authHeader)
 	if err != nil {
-		http.Error(w, "DAPKPU002: Not authorized to purge certificate repository - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKIPU002: Not authorized to purge certificate repository - "+err.Error(), http.StatusForbidden)
 		return
 	}
 }
@@ -409,7 +409,7 @@ func (p *Pki) PurgeCRLHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = p.Backend.GetAccessControl().CRLPurge(authHeader)
 	if err != nil {
-		http.Error(w, "DAPKPC002: Not authorized to purge CRL - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKIPC002: Not authorized to purge CRL - "+err.Error(), http.StatusForbidden)
 		return
 	}
 }
