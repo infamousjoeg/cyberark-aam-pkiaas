@@ -342,6 +342,12 @@ func (p *Pki) PurgeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
+
+	err = p.Backend.GetAccessControl().Purge(authHeader)
+	if err != nil {
+		http.Error(w, "DAPKPU002: Not authorized to purge certificate repository - "+err.Error(), http.StatusForbidden)
+		return
+	}
 }
 
 // PurgeCRLHandler --------------------------------------------------
@@ -350,6 +356,12 @@ func (p *Pki) PurgeCRLHandler(w http.ResponseWriter, r *http.Request) {
 	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	err = p.Backend.GetAccessControl().CRLPurge(authHeader)
+	if err != nil {
+		http.Error(w, "DAPKPC002: Not authorized to purge CRL - "+err.Error(), http.StatusForbidden)
 		return
 	}
 }
