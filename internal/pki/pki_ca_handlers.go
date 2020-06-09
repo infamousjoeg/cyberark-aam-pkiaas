@@ -158,6 +158,7 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 		}
 		pemSignCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: signCert})
 		intermediateResponse = types.PEMIntermediate{CSR: string(pemSignCert)}
+		p.Backend.WriteSigningCert(base64.StdEncoding.EncodeToString(signCert))
 	}
 
 	var keyBytes []byte
