@@ -235,6 +235,14 @@ func (a AccessControl) SignCertificate(accessToken string, templateName string) 
 	return a.checkPermissions(accessToken, permissions)
 }
 
+func (a AccessControl) AdminOnly(accessToken string) error {
+	permissions := []string{
+		a.privileges.Admin,
+	}
+
+	return a.checkPermissions(accessToken, permissions)
+}
+
 func (a AccessControl) checkPermissions(accessToken string, permissions []string) error {
 	if a.disabled {
 		return nil
