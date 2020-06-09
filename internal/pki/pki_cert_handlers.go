@@ -411,11 +411,11 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*	err = p.Backend.GetAccessControl().RevokeCertificate(authHeader)
-		if err != nil {
-			http.Error(w, "DAPKSC005: Not authorized to revoke certificate - "+err.Error(), http.StatusForbidden)
-			return
-		}*/
+	err = p.Backend.GetAccessControl().RevokeCertificate(authHeader, crlReq.SerialNumber)
+	if err != nil {
+		http.Error(w, "DAPKSC005: Not authorized to revoke certificate with serial number "+crlReq.SerialNumber+" - "+err.Error(), http.StatusForbidden)
+		return
+	}
 
 	reasonCode := -1
 	if crlReq.Reason != "" {

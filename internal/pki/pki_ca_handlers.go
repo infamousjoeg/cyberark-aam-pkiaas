@@ -41,6 +41,12 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	err = p.Backend.GetAccessControl().AdminOnly(authHeader)
+	if err != nil {
+		http.Error(w, "DAPKGI004: Not authorized to generate intermediate CA CSR - "+err.Error(), http.StatusForbidden)
+		return
+	}
+
 	var intermediateRequest types.IntermediateRequest
 	err = json.Unmarshal(reqBody, &intermediateRequest)
 	if err != nil {
@@ -176,6 +182,12 @@ func (p *Pki) SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	err = p.Backend.GetAccessControl().AdminOnly(authHeader)
+	if err != nil {
+		http.Error(w, "DAPKSI004: Not authorized to set intermediate CA certificate - "+err.Error(), http.StatusForbidden)
+		return
+	}
+
 	var signedCert types.PEMCertificate
 	err = json.Unmarshal(reqBody, &signedCert)
 	pemCert, rest := pem.Decode([]byte(signedCert.Certificate))
@@ -297,6 +309,12 @@ func (p *Pki) SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	err = p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	err = p.Backend.GetAccessControl().AdminOnly(authHeader)
+	if err != nil {
+		http.Error(w, "DAPKSC004: Not authorized to set CA chain - "+err.Error(), http.StatusForbidden)
 		return
 	}
 

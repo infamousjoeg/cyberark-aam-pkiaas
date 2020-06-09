@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
@@ -31,8 +31,8 @@ type StorageBackend struct {
 }
 
 // GetAccessControl -----
-func (c StorageBackend) GetAccessControl() pki.Access {
-	return pki.Access(c.Access)
+func (c StorageBackend) GetAccessControl() backend.Access {
+	return backend.Access(c.Access)
 }
 
 func (c StorageBackend) getTemplatePolicyBranch() string {
