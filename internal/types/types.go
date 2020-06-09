@@ -64,9 +64,10 @@ type PEMCertificateBundle struct {
 	CertBundle string `json:"certBundle"`
 }
 
-// PEMCSR -------------------------------------------------------------------------
-type PEMCSR struct {
-	CSR string `json:"csr"`
+// PEMIntermediate -------------------------------------------------------------------------
+type PEMIntermediate struct {
+	CSR            string `json:"csr,omitempty"`
+	SelfSignedCert string `json:"selfSignedCert,omitempty"`
 }
 
 // CertificateListResponse -----------------------------------------------------
@@ -96,6 +97,7 @@ type IntermediateRequest struct {
 	MaxTTL     int64         `json:"maxTTL"`
 	Subject    SubjectFields `json:"subject"`
 	AltNames   []string      `json:"altNames,omitempty"`
+	SelfSigned bool          `json:"selfSigned,omitempty"`
 }
 
 // RevokeRequest --------------------------------------------------------------

@@ -54,7 +54,7 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	signPrivKey, _, err := GenerateKeys(intermediateRequest.KeyAlgo, intermediateRequest.KeyBits)
+	signPrivKey, signPubKey, err := GenerateKeys(intermediateRequest.KeyAlgo, intermediateRequest.KeyBits)
 	if err != nil {
 		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Unable to generate signing key - pki.GenerateKeys returned: "+err.Error(), http.StatusBadRequest)
 		return
@@ -117,26 +117,48 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "PKI: GenerateIntermediateCSRHandler: No matching signature algorithm found in requested template", http.StatusInternalServerError)
 		return
 	}
+	var intermediateResponse types.PEMIntermediate
+	if !intermediateRequest.SelfSigned {
+		extraExtensions = append(extraExtensions, isCAExtension)
+		extraExtensions = append(extraExtensions, keyUsageExtension)
+		signRequest := x509.CertificateRequest{
+			SignatureAlgorithm: sigAlgo,
+			Subject:            certSubject,
+			DNSNames:           dnsNames,
+			EmailAddresses:     emailAddresses,
+			IPAddresses:        ipAddresses,
+			URIs:               URIs,
+			ExtraExtensions:    extraExtensions,
+		}
+		signCSR, err := x509.CreateCertificateRequest(rand.Reader, &signRequest, signPrivKey)
+		if err != nil {
+			http.Error(w, "PKI: GenerateIntermediateCSRHandler: Error while generating new CSR - x509.CreateCertificateRequest returned: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-	extraExtensions = append(extraExtensions, isCAExtension)
-	extraExtensions = append(extraExtensions, keyUsageExtension)
-	signRequest := x509.CertificateRequest{
-		SignatureAlgorithm: sigAlgo,
-		Subject:            certSubject,
-		DNSNames:           dnsNames,
-		EmailAddresses:     emailAddresses,
-		IPAddresses:        ipAddresses,
-		URIs:               URIs,
-		ExtraExtensions:    extraExtensions,
-	}
-	signCSR, err := x509.CreateCertificateRequest(rand.Reader, &signRequest, signPrivKey)
-	if err != nil {
-		http.Error(w, "PKI: GenerateIntermediateCSRHandler: Error while generating new CSR - x509.CreateCertificateRequest returned: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+		pemSignCSR := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: signCSR})
+		intermediateResponse = types.PEMIntermediate{CSR: string(pemSignCSR)}
 
-	pemSignCSR := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: signCSR})
-	csrResponse := types.PEMCSR{CSR: string(pemSignCSR)}
+	} else {
+		certTemplate := x509.Certificate{
+			SignatureAlgorithm:    sigAlgo,
+			Subject:               certSubject,
+			DNSNames:              dnsNames,
+			EmailAddresses:        emailAddresses,
+			IPAddresses:           ipAddresses,
+			URIs:                  URIs,
+			BasicConstraintsValid: true,
+			IsCA:                  true,
+			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		}
+		signCert, err := x509.CreateCertificate(rand.Reader, &certTemplate, &certTemplate, signPubKey, signPrivKey)
+		if err != nil {
+			http.Error(w, "PKI: GenerateIntermediateCSRHandler: Error while generating new self signed cert - x509.CreateCertificateRequest returned: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		pemSignCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: signCert})
+		intermediateResponse = types.PEMIntermediate{CSR: string(pemSignCert)}
+	}
 
 	var keyBytes []byte
 	switch intermediateRequest.KeyAlgo {
@@ -158,7 +180,8 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	json.NewEncoder(w).Encode(csrResponse)
+	json.NewEncoder(w).Encode(intermediateResponse)
+
 }
 
 // SetIntermediateCertHandler ----------------------------------------------
