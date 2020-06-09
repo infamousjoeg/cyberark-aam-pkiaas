@@ -211,13 +211,13 @@ func (a AccessControl) CreateCertificate(accessToken string, templateName string
 }
 
 // RevokeCertificate ...
-func (a AccessControl) RevokeCertificate(accessToken string, templateName string) error {
+func (a AccessControl) RevokeCertificate(accessToken string, serialNumber string) error {
 	permissions := []string{
 		a.privileges.Admin,
 		a.privileges.CertificateAdmin,
 		a.privileges.CertificateCreateAny,
 		a.privileges.CertificateRevokeAny,
-		replacePrivilege(a.privileges.CertificateRevokeSpecific, "templateName", templateName),
+		replacePrivilege(a.privileges.CertificateRevokeSpecific, "serialNumber", serialNumber),
 	}
 
 	return a.checkPermissions(accessToken, permissions)
