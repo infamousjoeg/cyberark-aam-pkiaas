@@ -50,7 +50,7 @@ func (p *Pki) SignCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = p.Backend.GetAccessControl().SignCertificate(authHeader, signReq.TemplateName)
 	if err != nil {
-		http.Error(w, "DAPKSC005: Not authorized to sign certificate with template "+signReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKISC005: Not authorized to sign certificate with template "+signReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -192,7 +192,7 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = p.Backend.GetAccessControl().CreateCertificate(authHeader, certReq.TemplateName)
 	if err != nil {
-		http.Error(w, "DAPKCC005: Not authorized to create certificate with template "+certReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKICC005: Not authorized to create certificate with template "+certReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -413,7 +413,7 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = p.Backend.GetAccessControl().RevokeCertificate(authHeader, crlReq.SerialNumber)
 	if err != nil {
-		http.Error(w, "DAPKSC005: Not authorized to revoke certificate with serial number "+crlReq.SerialNumber+" - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKISC005: Not authorized to revoke certificate with serial number "+crlReq.SerialNumber+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
