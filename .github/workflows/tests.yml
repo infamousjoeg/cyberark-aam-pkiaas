@@ -30,4 +30,4 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v2
       - name: Setup Conjur OSS
-        run: sh ./tests/build.sh
+        run: ./tests/build.sh
