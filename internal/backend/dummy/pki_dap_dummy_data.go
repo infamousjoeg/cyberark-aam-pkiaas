@@ -1,7 +1,6 @@
 package dummy
 
 import (
-	"crypto/x509/pkix"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,7 +32,7 @@ var dummyTemplate types.Template = types.Template{
 // GetCertFromDAP ----------------------------------------------------------------
 // Finds matching certificate matching serial number in DAP and returns it; Sends appropriate
 // error message as necessary
-func GetCertFromDAP(serialNumber *big.Int) (string, error) {
+func (d Dummy) GetCertFromDAP(serialNumber *big.Int) (string, error) {
 	if serialNumber.String() == "10351605685901192" {
 		certificate := `MIIDjTCCAnWgAwIBAgIUMC64a4mBmJHhpYBLknrCO8fTcQwwDQYJKoZIhvcNAQELBQAwVjELMAkG
 A1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMg
@@ -60,7 +59,7 @@ Iw==`
 }
 
 // GetCAChainFromDAP ------------------------------------------------------------------
-func GetCAChainFromDAP() ([]string, error) {
+func (d Dummy) GetCAChainFromDAP() ([]string, error) {
 	chain := []string{}
 	chain = append(chain, `MIIDjTCCAnWgAwIBAgIUMC64a4mBmJHhpYBLknrCO8fTcQwwDQYJKoZIhvcNAQELBQAwVjELMAkG
 A1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMg
@@ -83,12 +82,12 @@ Iw==`)
 }
 
 // GetAllCertsFromDAP ----------------------------------------------------------
-func GetAllCertsFromDAP() ([]string, error) {
+func (d Dummy) GetAllCertsFromDAP() ([]string, error) {
 	return []string{"10351605685901192"}, nil
 }
 
 // GetTemplateFromDAP ----------------------------------------------------------
-func GetTemplateFromDAP(templateName string) (types.Template, error) {
+func (d Dummy) GetTemplateFromDAP(templateName string) (types.Template, error) {
 	if templateName == "TestTemplate" {
 		return dummyTemplate, nil
 	}
@@ -96,7 +95,7 @@ func GetTemplateFromDAP(templateName string) (types.Template, error) {
 }
 
 // CreateTemplateInDAP ---------------------------------------------------------
-func CreateTemplateInDAP(newTemplate types.Template) error {
+func (d Dummy) CreateTemplateInDAP(newTemplate types.Template) error {
 	template, err := json.Marshal(newTemplate)
 	if err != nil {
 		return errors.New("Unable to import newly requested template data")
@@ -106,7 +105,7 @@ func CreateTemplateInDAP(newTemplate types.Template) error {
 }
 
 // DeleteTemplateFromDAP --------------------------------------------------------
-func DeleteTemplateFromDAP(templateName string) error {
+func (d Dummy) DeleteTemplateFromDAP(templateName string) error {
 	if templateName == "TestTemplate" {
 		fmt.Println("Successfully deleted TestTemplate")
 		return nil
@@ -115,12 +114,12 @@ func DeleteTemplateFromDAP(templateName string) error {
 }
 
 // GetAllTemplatesFromDAP ------------------------------------------------------
-func GetAllTemplatesFromDAP() ([]string, error) {
+func (d Dummy) GetAllTemplatesFromDAP() ([]string, error) {
 	return []string{"Template1", "Template2"}, nil
 }
 
 // GetSigningCertFromDAP -------------------------------------------------------
-func GetSigningCertFromDAP() (string, error) {
+func (d Dummy) GetSigningCertFromDAP() (string, error) {
 	return `MIIDjTCCAnWgAwIBAgIUMC64a4mBmJHhpYBLknrCO8fTcQwwDQYJKoZIhvcNAQELBQAwVjELMAkG
 A1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMg
 UHR5IEx0ZDEPMA0GA1UEAwwGQ0FDZXJ0MB4XDTIwMDYwMjAzNTY0NloXDTI0MDcxMTAzNTY0Nlow
@@ -141,7 +140,7 @@ Iw==`, nil
 }
 
 // GetSigningKeyFromDAP --------------------------------------------------------
-func GetSigningKeyFromDAP() (string, error) {
+func (d Dummy) GetSigningKeyFromDAP() (string, error) {
 	signingKey := `MIIEpgIBAAKCAQEA5W1pow1OKlb5OSiQsXb2aGkvxeQSrKQ62BUWM+b72SRQSJi4WeYKv+KKqx/s
 C75DItbWOwC7mKEOjAIlRlTfruc/Bv8Oxx0vt+DywaBdL/FHFQW+rXETtu2oLixBogr11poeg7Qo
 7cnS3o2mRN6ptUlVfnH3XZ0fD+YyriyLmymShoe+YKxQvCS3I28XHOt3X36GC0moQikZGUuCcJvc
@@ -166,31 +165,32 @@ drcJcTzQVTv7zbQ4NMfd8pThaEzOhS0J1Wn3j+rxZOCpHdKmdd2urD4pU4IQGg/O2AIYoftX`
 	return signingKey, nil
 }
 
-// GetRevokedCertsFromDAP ------------------------------------------------------
-func GetRevokedCertsFromDAP() ([]pkix.RevokedCertificate, error) {
+// GetRevokedCerts ------------------------------------------------------
+func (d Dummy) GetRevokedCerts() ([]types.RevokedCertificate, error) {
 	serialNumber := new(big.Int)
 	serialNumber.SetString("10351605685901192", 10)
-	return []pkix.RevokedCertificate{
+	return []types.RevokedCertificate{
 		{
-			SerialNumber:   serialNumber,
-			RevocationTime: time.Now(),
+			SerialNumber:   serialNumber.String(),
+			RevocationDate: time.Now(),
+			ReasonCode:     0,
 		}}, nil
 }
 
-// RevokeCertInDAP -------------------------------------------------------------
-func RevokeCertInDAP(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error {
+// RevokeCertificate -------------------------------------------------------------
+func (d Dummy) RevokeCertificate(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error {
 	fmt.Println("Revoked Cert\nSerial Number: " + serialNumber.String() + "\nReason Code: " + string(reasonCode) + "\nRevocation Date: " + revocationDate.String())
 	return nil
 }
 
-// WriteCRLToDAP ----------------------------------------------------------------
-func WriteCRLToDAP(newCRL string) error {
+// WriteCRL ----------------------------------------------------------------
+func (d Dummy) WriteCRL(newCRL string) error {
 	fmt.Println(newCRL)
 	return nil
 }
 
-// GetCRLFromDAP ---------------------------------------------------------------
-func GetCRLFromDAP() (string, error) {
+// GetCRL ---------------------------------------------------------------
+func (d Dummy) GetCRL() (string, error) {
 	crl := `MIIBrzCBmAIBATANBgkqhkiG9w0BAQsFADBWMQswCQYDVQQGEwJVUzETMBEGA1UECAwKU29tZS1T
 dGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMQ8wDQYDVQQDDAZDQUNlcnQX
 DTIwMDYwMjIwMjUzM1oXDTIwMDcwMjIwMjUzM1qgDjAMMAoGA1UdFAQDAgEBMA0GCSqGSIb3DQEB
@@ -202,22 +202,24 @@ r+wedff4yOk35vKRlq16vYevY9mppefT4mD9lO5ragxrLXw6`
 	return crl, nil
 }
 
-// WriteSigningCertToDAP --------------------------------------------------------
-func WriteSigningCertToDAP(newCert string) error {
+// WriteSigningCert --------------------------------------------------------
+func (d Dummy) WriteSigningCert(newCert string) error {
+	fmt.Println(newCert)
 	return nil
 }
 
-// WriteSigningKeyToDAP ---------------------------------------------------------
-func WriteSigningKeyToDAP(newKey string) error {
+// WriteSigningKey ---------------------------------------------------------
+func (d Dummy) WriteSigningKey(newKey string) error {
+	fmt.Println(newKey)
 	return nil
 }
 
-// WriteCAChainToDAP ------------------------------------------------------------
-func WriteCAChainToDAP(certBundle []string) error {
+// WriteCAChain ------------------------------------------------------------
+func (d Dummy) WriteCAChain(certBundle []string) error {
 	return nil
 }
 
 // DeleteCertificateFromDAP -----------------------------------------------------
-func DeleteCertificateFromDAP(serialNumber *big.Int) error {
+func (d Dummy) DeleteCertificateFromDAP(serialNumber *big.Int) error {
 	return nil
 }
