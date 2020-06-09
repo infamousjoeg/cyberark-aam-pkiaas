@@ -30,4 +30,4 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v2
       - name: Run Setup of Conjur and PKIaaS
-        run: ls -al
+        run: docker ps
