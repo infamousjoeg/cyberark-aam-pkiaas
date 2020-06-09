@@ -38,6 +38,7 @@ jobs:
         run: |
           docker cp ./tests/pki-config-policy.yml cyberark-aam-pkiaas_client_1:/root/pki-config-policy.yml
           docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load root /root/pki-config-policy.yml > pki_config
+          docker exec -i cyberark-aam-pkiaas_client_1 conjur list
       - name: Load PKI Admin Policy
         run: |
           docker cp ./tests/pki-admin-policy.yml cyberark-aam-pkiaas_client_1:/root/pki-admin-policy.yml
