@@ -7,7 +7,7 @@ import (
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
-// StorageBackend -----------------------------------
+// Storage -----------------------------------
 type Storage interface {
 	CreateCertificate(certificateData types.CreateCertificateData) error
 	ListCertificates() ([]*big.Int, error)
