@@ -11,11 +11,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -23,7 +23,7 @@ import (
 )
 
 // SignCertHandler -------------------------------------------------------------
-func SignCertHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) SignCertHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Unable to read request body", http.StatusBadRequest)
@@ -33,6 +33,14 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
+
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	var signReq types.SignRequest
 	err = json.Unmarshal(reqBody, &signReq)
 	if err != nil {
@@ -40,16 +48,23 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = p.Backend.GetAccessControl().SignCertificate(authHeader, signReq.TemplateName)
+	if err != nil {
+		http.Error(w, "CPKISC005: Not authorized to sign certificate with template "+signReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
+		return
+	}
+
 	// Extract the CSR from the request and process it to be converted to useful CertificateRequest object
 	pemCSR, _ := pem.Decode([]byte(signReq.CSR))
 	certReq, err := x509.ParseCertificateRequest(pemCSR.Bytes)
 	if err != nil {
-		http.Error(w, "The CSR provided in the request was not able to be successfully parsed", http.StatusInternalServerError)
+		http.Error(w, "The CSR provided in the request was not able to be successfully parsed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	template, err := GetTemplateFromDAP(signReq.TemplateName)
+
+	template, serialNumber, ttl, sigAlgo, caCert, signingKey, err := p.PrepareCertificateParameters(signReq.TemplateName, signReq.TTL, p.Backend)
 	if err != nil {
-		http.Error(w, "Unable to retrieve template "+signReq.TemplateName+" sent in request", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -65,12 +80,6 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	csrSubject.CommonName = signReq.CommonName
 
-	serialNumber, err := GenerateSerialNumber()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Retrieve the CSR extensions in order to parse out and validate the KeyUsages and ExtKeyUsages
 	extKeyUsage := []x509.ExtKeyUsage{}
 	var keyUsage x509.KeyUsage
@@ -79,7 +88,7 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		if extension.Id.Equal([]int{2, 5, 29, 15}) {
 			keyUsage, err = ValidateKeyUsageConstraints(extension.Value, template.KeyUsages)
 			if err != nil {
-				http.Error(w, err.Error()+"The CSR has requested key usages that are not permitted in the given template", http.StatusBadRequest)
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 		}
@@ -98,49 +107,6 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set the TTL value to either that which was request or the max TTL allowed by the template
-	// in the event that the requested TTL was greater
-	var ttl int64
-	if signReq.TTL < template.MaxTTL {
-		ttl = signReq.TTL
-	} else {
-		ttl = template.MaxTTL
-	}
-
-	// Retrieve the intermediate CA certificate from DAP and go through the necessary steps
-	// to convert it from a PEM-string to a usable x509.Certificate object
-	caCertPEM, err := GetSigningCertFromDAP()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	blockCaCert, _ := pem.Decode([]byte(caCertPEM))
-	derCaCert := blockCaCert.Bytes
-	caCert, err := x509.ParseCertificate(derCaCert)
-
-	// Retrieve the signing key from DAP and calculate the signature algorithm for use in the
-	// certificate generation
-	signingKey, err := GetSigningKeyFromDAP()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	keyType := fmt.Sprintf("%T", signingKey)
-
-	var sigAlgo x509.SignatureAlgorithm
-	switch keyType {
-	case "*rsa.PrivateKey":
-		sigAlgo = x509.SHA256WithRSA
-	case "*ecdsa.PrivateKey":
-		sigAlgo = x509.ECDSAWithSHA256
-	case "ed25519.PrivateKey":
-		sigAlgo = x509.PureEd25519
-	default:
-		http.Error(w, "No matching signature algorithm found in requested template", http.StatusInternalServerError)
-		return
-	}
-
 	// Still need to configure logic in new certificate for OCSPServer/IssuingCertificateURL/CRLDistributionPoints
 	newCert := x509.Certificate{
 		SerialNumber:          serialNumber,
@@ -150,14 +116,29 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		SignatureAlgorithm:    sigAlgo,
 		AuthorityKeyId:        caCert.SubjectKeyId,
 		KeyUsage:              keyUsage,
-		ExtKeyUsage:           extKeyUsage,
 		BasicConstraintsValid: false,
 		IsCA:                  false,
-		DNSNames:              certReq.DNSNames,
-		EmailAddresses:        certReq.EmailAddresses,
-		IPAddresses:           certReq.IPAddresses,
-		URIs:                  certReq.URIs,
+		OCSPServer:            []string{"asdad"},
+		IssuingCertificateURL: []string{"asdada"},
+		CRLDistributionPoints: []string{"asdasds"},
 	}
+
+	if len(extKeyUsage) > 0 {
+		newCert.ExtKeyUsage = extKeyUsage
+	}
+	if len(certReq.DNSNames) > 0 {
+		newCert.DNSNames = certReq.DNSNames
+	}
+	if len(certReq.EmailAddresses) > 0 {
+		newCert.EmailAddresses = certReq.EmailAddresses
+	}
+	if len(certReq.IPAddresses) > 0 {
+		newCert.IPAddresses = certReq.IPAddresses
+	}
+	if len(certReq.URIs) > 0 {
+		newCert.URIs = certReq.URIs
+	}
+
 	derCert, err := x509.CreateCertificate(rand.Reader, &newCert, caCert, certReq.PublicKey, signingKey)
 
 	// Convert the certifcate objects into PEMs to be returned as strings
@@ -183,7 +164,8 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 // Handler function invoked by the API endpoint 'CreateCert', which is responsible
 // for building a new certificate with the provided common name based upon the
 // provided template
-func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
+
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Unable to read request body", http.StatusBadRequest)
@@ -194,80 +176,41 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	var certReq types.CreateCertReq
 	err = json.Unmarshal(reqBody, &certReq)
 	if err != nil {
 		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	template, err := GetTemplateFromDAP(certReq.TemplateName)
+
+	err = p.Backend.GetAccessControl().CreateCertificate(authHeader, certReq.TemplateName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICC005: Not authorized to create certificate with template "+certReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
-	clientPrivKey, clientPubKey, err := GenerateKeys(template.KeyAlgo, template.KeyBits)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	serialNumber, err := GenerateSerialNumber()
+	template, serialNumber, ttl, sigAlgo, caCert, signingKey, err := p.PrepareCertificateParameters(certReq.TemplateName, certReq.TTL, p.Backend)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Set the TTL value to either that which was request or the max TTL allowed by the template
-	// in the event that the requested TTL was greater
-	var ttl int64
-	if certReq.TTL < template.MaxTTL {
-		ttl = certReq.TTL
-	} else {
-		ttl = template.MaxTTL
-	}
-
-	// Retrieve the intermediate CA certificate from DAP and go through the necessary steps
-	// to convert it from a PEM-string to a usable x509.Certificate object
-	caCertPEM, err := GetSigningCertFromDAP()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	blockCaCert, _ := pem.Decode([]byte(caCertPEM))
-	derCaCert := blockCaCert.Bytes
-	caCert, err := x509.ParseCertificate(derCaCert)
-
-	// Retrieve the signing key from DAP and calculate the signature algorithm for use in the
-	// certificate generation
-	signingKey, err := GetSigningKeyFromDAP()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	keyType := fmt.Sprintf("%T", signingKey)
-
-	var sigAlgo x509.SignatureAlgorithm
-	switch keyType {
-	case "*rsa.PrivateKey":
-		sigAlgo = x509.SHA256WithRSA
-	case "*ecdsa.PrivateKey":
-		sigAlgo = x509.ECDSAWithSHA256
-	case "ed25519.PrivateKey":
-		sigAlgo = x509.PureEd25519
-	default:
-		http.Error(w, "No matching signature algorithm found in requested template", http.StatusInternalServerError)
 		return
 	}
 
 	// Extract all the necessary data from the template to be used in generating the new
 	// x509.Certificate object to be signed
 	certSubject, err := SetCertSubject(template.Subject, certReq.CommonName)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	keyUsage, err := ProcessKeyUsages(template.KeyUsages)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -299,19 +242,37 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		SignatureAlgorithm:    sigAlgo,
 		AuthorityKeyId:        caCert.SubjectKeyId,
 		KeyUsage:              keyUsage,
-		ExtKeyUsage:           extKeyUsage,
 		BasicConstraintsValid: false,
 		IsCA:                  false,
-		DNSNames:              dnsNames,
-		EmailAddresses:        emailAddresses,
-		IPAddresses:           ipAddresses,
-		URIs:                  URIs,
 	}
+
+	if len(extKeyUsage) > 0 {
+		newCert.ExtKeyUsage = extKeyUsage
+	}
+	if len(dnsNames) > 0 {
+		newCert.DNSNames = dnsNames
+	}
+	if len(emailAddresses) > 0 {
+		newCert.EmailAddresses = emailAddresses
+	}
+	if len(ipAddresses) > 0 {
+		newCert.IPAddresses = ipAddresses
+	}
+	if len(URIs) > 0 {
+		newCert.URIs = URIs
+	}
+
+	clientPrivKey, clientPubKey, err := GenerateKeys(template.KeyAlgo, template.KeyBits)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	derCert, err := x509.CreateCertificate(rand.Reader, &newCert, caCert, clientPubKey, signingKey)
 
 	// Convert the certifcate objects into PEMs to be returned as strings
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derCert})
-	pemCA := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.RawTBSCertificate})
+	pemCA := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw})
 	var pemPrivKey []byte
 
 	// Generate the appropriate PEM type for the created private key
@@ -341,12 +302,25 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		LeaseDuration: ttl,
 	}
 
+	cert := types.CreateCertificateData{
+		SerialNumber:   serialNumber.String(),
+		Revoked:        false,
+		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).String(),
+		Certificate:    base64.StdEncoding.EncodeToString(derCert),
+	}
+	p.Backend.CreateCertificate(cert)
 	json.NewEncoder(w).Encode(response)
 
 }
 
 // GetCertHandler --------------------------------------------------------------------
-func GetCertHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) GetCertHandler(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	serialNumber := mux.Vars(r)["serialNumber"]
 
@@ -357,7 +331,7 @@ func GetCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	certificate, err := GetCertFromDAP(intSerialNumber)
+	certificate, err := p.Backend.GetCertificate(intSerialNumber)
 	if err != nil {
 		http.Error(w, "Unable to retrieve certificate matching requested serial number", http.StatusNotFound)
 		return
@@ -365,7 +339,7 @@ func GetCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	derCert, err := base64.StdEncoding.DecodeString(certificate)
 	if err != nil {
-		http.Error(w, "Unable to decode certificate returned from DAP: "+err.Error(), http.StatusNotFound)
+		http.Error(w, "Unable to decode certificate returned from backend: "+err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -378,8 +352,15 @@ func GetCertHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListCertsHandler ------------------------------------------------------------------
-func ListCertsHandler(w http.ResponseWriter, r *http.Request) {
-	serialNumberList, err := GetAllCertsFromDAP()
+func (p *Pki) ListCertsHandler(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	serialNumberList, err := p.Backend.ListCertificates()
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -388,16 +369,12 @@ func ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 
 	retSerialNumbers := []string{}
 	for _, serialNumber := range serialNumberList {
-		intSerialNumber := new(big.Int)
-		if intSerialNumber, success := intSerialNumber.SetString(serialNumber, 10); success {
-			strSerialNumber, err := ConvertSerialIntToOctetString(intSerialNumber)
-
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			retSerialNumbers = append(retSerialNumbers, strSerialNumber)
+		strSerialNumber, err := ConvertSerialIntToOctetString(serialNumber)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
+		retSerialNumbers = append(retSerialNumbers, strSerialNumber)
 	}
 
 	response := types.CertificateListResponse{
@@ -408,7 +385,7 @@ func ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // RevokeCertHandler -----------------------------------------------------------------
-func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Unable to read request body", http.StatusBadRequest)
@@ -419,6 +396,13 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	var crlReq = types.RevokeRequest{}
 
 	err = json.Unmarshal(reqBody, &crlReq)
@@ -426,6 +410,13 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	err = p.Backend.GetAccessControl().RevokeCertificate(authHeader, crlReq.SerialNumber)
+	if err != nil {
+		http.Error(w, "CPKISC005: Not authorized to revoke certificate with serial number "+crlReq.SerialNumber+" - "+err.Error(), http.StatusForbidden)
+		return
+	}
+
 	reasonCode := -1
 	if crlReq.Reason != "" {
 		reasonCode, err = ReturnReasonCode(crlReq.Reason)
@@ -433,14 +424,6 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-	}
-	crlExtensions := []pkix.Extension{}
-	if reasonCode > 0 {
-		reasonExtension := pkix.Extension{
-			Id:    asn1.ObjectIdentifier{2, 5, 29, 21},
-			Value: []byte(strconv.Itoa(reasonCode)),
-		}
-		crlExtensions = append(crlExtensions, reasonExtension)
 	}
 
 	revokeTime := time.Now()
@@ -450,37 +433,73 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	revokedCert := pkix.RevokedCertificate{
-		SerialNumber:   intSerialNum,
-		RevocationTime: revokeTime,
-		Extensions:     crlExtensions,
-	}
+	err = p.Backend.RevokeCertificate(intSerialNum, reasonCode, revokeTime)
+	revokedCertificates, err := p.Backend.GetRevokedCerts()
 
-	revokedCertList := []pkix.RevokedCertificate{revokedCert}
-	oldCRL, err := GetRevokedCertsFromDAP()
+	revokedCertList := []pkix.RevokedCertificate{}
+	for _, revokedCertificate := range revokedCertificates {
+		crlExtensions := []pkix.Extension{}
+		if revokedCertificate.ReasonCode > 0 {
+			reasonExtension := pkix.Extension{
+				Id:    asn1.ObjectIdentifier{2, 5, 29, 21},
+				Value: []byte(strconv.Itoa(reasonCode)),
+			}
+			crlExtensions = append(crlExtensions, reasonExtension)
+		}
+		intSerialNum := new(big.Int)
+		intSerialNum.SetString(revokedCertificate.SerialNumber, 10)
+		crlEntry := pkix.RevokedCertificate{
+			SerialNumber:   intSerialNum,
+			RevocationTime: revokedCertificate.RevocationDate,
+			Extensions:     crlExtensions,
+		}
+		revokedCertList = append(revokedCertList, crlEntry)
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	revokedCertList = append(revokedCertList, oldCRL...)
-	RevokeCertInDAP(intSerialNum, reasonCode, revokeTime)
 
-	signingKey, err := GetSigningKeyFromDAP()
+	encodedSigningKey, err := p.Backend.GetSigningKey()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	caCertPEM, err := GetSigningCertFromDAP()
+	decodedSigningKey, err := base64.StdEncoding.DecodeString(encodedSigningKey)
+	signingKey, err := x509.ParsePKCS8PrivateKey(decodedSigningKey)
+	if err != nil {
+		if strings.Contains(err.Error(), "ParsePKCS1PrivateKey") {
+			signingKey, err = x509.ParsePKCS1PrivateKey(decodedSigningKey)
+			if err != nil {
+				http.Error(w, "Unable to parse signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, "Unable to parse signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	encodedCACert, err := p.Backend.GetSigningCert()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	blockCaCert, _ := pem.Decode([]byte(caCertPEM))
-	derCaCert := blockCaCert.Bytes
-	caCert, err := x509.ParseCertificate(derCaCert)
+	derCACert, err := base64.StdEncoding.DecodeString(encodedCACert)
+	if err != nil {
+		http.Error(w, "Unable to decode encoded CA certificate: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	caCert, err := x509.ParseCertificate(derCACert)
+	if err != nil {
+		http.Error(w, "Unable to parse CA certificate: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	newCRL, err := caCert.CreateCRL(rand.Reader, signingKey, revokedCertList, revokeTime, revokeTime.Add(time.Hour*12))
+	if err != nil {
+		http.Error(w, "Error while creating new CRL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	pemCRL := pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: newCRL})
-
-	WriteCRLToDAP(string(pemCRL))
+	p.Backend.WriteCRL(base64.StdEncoding.EncodeToString(newCRL))
 }

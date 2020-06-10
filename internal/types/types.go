@@ -1,14 +1,15 @@
 package types
 
+import "time"
+
 // CreateCertReq ---------------------------------------------------------------
 // Structure representing the HTTP request POSTed to the CreateCert API endpoint
 type CreateCertReq struct {
 	TemplateName string   `json:"templateName"`
 	CommonName   string   `json:"commonName"`
-	EmailAddress string   `json:"emailAddress"`
-	AltNames     []string `json:"altNames"`
 	TTL          int64    `json:"ttl"`
-	Format       string   `json:"format"`
+	AltNames     []string `json:"altNames,omitempty"`
+	Format       string   `json:"format,omitempty"`
 }
 
 // Template --------------------------------------------------------------------
@@ -19,35 +20,38 @@ type Template struct {
 	KeyBits           string        `json:"keyBits"`
 	MaxTTL            int64         `json:"maxTTL"`
 	Subject           SubjectFields `json:"subject"`
-	KeyUsages         []string      `json:"keyUsages"`
-	ExtKeyUsages      []string      `json:"extKeyUsages"`
-	MaxPathLength     string        `json:"maxPathLength"`
-	PermDNSDomains    []string      `json:"permDNSDomains"`
-	ExclDNSDomains    []string      `json:"exclDNSDomains"`
-	PermIPRanges      []string      `json:"permIPRanges"`
-	ExclIPRanges      []string      `json:"exclIPRanges"`
-	PermEmails        []string      `json:"permEmails"`
-	ExclEmails        []string      `json:"exclEmails"`
-	PermURIDomains    []string      `json:"permURIDomains"`
-	ExclURIDomains    []string      `json:"exclURIDomains"`
-	PolicyIdentifiers []string      `json:"policyIdentifiers"`
+	KeyUsages         []string      `json:"keyUsages,omitempty"`
+	ExtKeyUsages      []string      `json:"extKeyUsages,omitempty"`
+	MaxPathLength     string        `json:"maxPathLength,omitempty"`
+	PermDNSDomains    []string      `json:"permDNSDomains,omitempty"`
+	ExclDNSDomains    []string      `json:"exclDNSDomains,omitempty"`
+	PermIPRanges      []string      `json:"permIPRanges,omitempty"`
+	ExclIPRanges      []string      `json:"exclIPRanges,omitempty"`
+	PermEmails        []string      `json:"permEmails,omitempty"`
+	ExclEmails        []string      `json:"exclEmails,omitempty"`
+	PermURIDomains    []string      `json:"permURIDomains,omitempty"`
+	ExclURIDomains    []string      `json:"exclURIDomains,omitempty"`
+	PolicyIdentifiers []string      `json:"policyIdentifiers,omitempty"`
 }
 
 // CreateCertificateResponse ---------------------------------------------------
 type CreateCertificateResponse struct {
 	Certificate   string `json:"certificate"`
-	PrivateKey    string `json:"privateKey"`
+	PrivateKey    string `json:"privateKey,omitempty"`
 	CACert        string `json:"caCertificate"`
 	SerialNumber  string `json:"serialNumber"`
 	LeaseDuration int64  `json:"leaseDuration"`
 }
 
-// CreateCertificateInDap ---------------------------------------------------
-type CreateCertificateInDap struct {
-	Certificate    string `json:"certificate"`
-	Revoked        bool   `json:"revoked"`
-	ExpirationDate string `json:"expirationDate"`
-	SerialNumber   string `json:"serialNumber"`
+// CreateCertificateData ---------------------------------------------------
+type CreateCertificateData struct {
+	Certificate          string `json:"certificate"`
+	Revoked              bool   `json:"revoked"`
+	RevocationDate       string `json:"revocationDate"`
+	RevocationReasonCode int    `json:"revocationReasonCode"`
+	ExpirationDate       string `json:"expirationDate"`
+	SerialNumber         string `json:"serialNumber"`
+	InternalState        string `json:"internalState"`
 }
 
 // PEMCertificate -----------------------------------------------------------------
@@ -60,9 +64,10 @@ type PEMCertificateBundle struct {
 	CertBundle string `json:"certBundle"`
 }
 
-// PEMCSR -------------------------------------------------------------------------
-type PEMCSR struct {
-	CSR string `json:"csr"`
+// PEMIntermediate -------------------------------------------------------------------------
+type PEMIntermediate struct {
+	CSR            string `json:"csr,omitempty"`
+	SelfSignedCert string `json:"selfSignedCert,omitempty"`
 }
 
 // CertificateListResponse -----------------------------------------------------
@@ -70,13 +75,18 @@ type CertificateListResponse struct {
 	Certificates []string `json:"certificates"`
 }
 
+// TemplateListResponse --------------------------------------------------------
+type TemplateListResponse struct {
+	Templates []string `json:"templates"`
+}
+
 // SignRequest -----------------------------------------------------------------
 type SignRequest struct {
 	CSR          string `json:"csr"`
 	CommonName   string `json:"commonName"`
 	TemplateName string `json:"templateName"`
-	TTL          int64  `json:"ttl"`
-	ReturnFormat string `json:"returnFormat"`
+	TTL          int64  `json:"ttl,omitempty"`
+	ReturnFormat string `json:"returnFormat,omitempty"`
 }
 
 // IntermediateRequest --------------------------------------------------------
@@ -86,28 +96,36 @@ type IntermediateRequest struct {
 	KeyBits    string        `json:"keyBits"`
 	MaxTTL     int64         `json:"maxTTL"`
 	Subject    SubjectFields `json:"subject"`
-	AltNames   []string      `json:"altNames"`
+	AltNames   []string      `json:"altNames,omitempty"`
+	SelfSigned bool          `json:"selfSigned,omitempty"`
 }
 
 // RevokeRequest --------------------------------------------------------------
 type RevokeRequest struct {
 	SerialNumber string `json:"serialNumber"`
-	Reason       string `json:"reason"`
+	Reason       string `json:"reason,omitempty"`
 }
 
 // SubjectFields -------------------------------------------------------------
 type SubjectFields struct {
-	Organization string `json:"organization"`
-	OrgUnit      string `json:"orgUnit"`
-	Country      string `json:"country"`
-	Locality     string `json:"locality"`
-	Province     string `json:"province"`
-	Address      string `json:"address"`
-	PostalCode   string `json:"postalCode"`
+	Organization string `json:"organization,omitempty"`
+	OrgUnit      string `json:"orgUnit,omitempty"`
+	Country      string `json:"country,omitempty"`
+	Locality     string `json:"locality,omitempty"`
+	Province     string `json:"province,omitempty"`
+	Address      string `json:"address,omitempty"`
+	PostalCode   string `json:"postalCode,omitempty"`
 }
 
 // CABasicConstraints --------------------------------------------------------
 type CABasicConstraints struct {
 	CA                bool `json:"ca,omitempty"`
 	PathLenConstraint int  `json:"pathLenConstraint,omitempty"`
+}
+
+// RevokedCertificate --------------------------------------------------------
+type RevokedCertificate struct {
+	SerialNumber   string
+	ReasonCode     int
+	RevocationDate time.Time
 }
