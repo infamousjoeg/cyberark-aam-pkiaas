@@ -178,6 +178,10 @@ func (p *Pki) ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 // from a URI variable
 func (p *Pki) DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
+
+	// Ensure that the requesting entity can both authenticate to the PKI service, then extract
+	// the template name from the URI and test that it has authorization to access the
+	// Delete Template endpoint for the requested template
 	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		http.Error(w, "CPKIDT001: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
@@ -202,6 +206,10 @@ func (p *Pki) DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 // Handler method to retrieve a template from the storage backend using a URI
 // variable and return its JSON representation
 func (p *Pki) GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
+
+	// Ensure that the requesting entity can both authenticate to the PKI service, then extract
+	// the template name from the URI and test that it has authorization to access the
+	// Get Template endpoint for the requested template
 	authHeader := r.Header.Get("Authorization")
 	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
@@ -237,6 +245,9 @@ func (p *Pki) GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 // and return its JSON representation
 func (p *Pki) ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
+
+	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
+	// has authorization to access the List Templates endpoint
 	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		http.Error(w, "CPKILT001: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
