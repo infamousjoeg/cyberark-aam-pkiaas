@@ -7,12 +7,14 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
 // Dummy ------------------------
 type Dummy struct {
+	Access AccessControl
 }
 
 var dummySubject types.SubjectFields = types.SubjectFields{
@@ -29,10 +31,10 @@ var dummyTemplate types.Template = types.Template{
 	ExtKeyUsages: []string{"serverAuth", "clientAuth", "codeSigning", "emailProtection", "ipsecEndSystem", "ipsecTunnel", "ipsecUser", "timeStamping", "OCSPSigning", "msSGC", "nsSGC", "msCodeCom"},
 }
 
-// GetCertFromDAP ----------------------------------------------------------------
+// GetCertificate ----------------------------------------------------------------
 // Finds matching certificate matching serial number in DAP and returns it; Sends appropriate
 // error message as necessary
-func (d Dummy) GetCertFromDAP(serialNumber *big.Int) (string, error) {
+func (d Dummy) GetCertificate(serialNumber *big.Int) (string, error) {
 	if serialNumber.String() == "10351605685901192" {
 		certificate := `MIIDjTCCAnWgAwIBAgIUMC64a4mBmJHhpYBLknrCO8fTcQwwDQYJKoZIhvcNAQELBQAwVjELMAkG
 A1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMg
@@ -58,8 +60,8 @@ Iw==`
 	return "", errors.New("No certificate with requested serial number :" + octetSerialNumber + " was found")
 }
 
-// GetCAChainFromDAP ------------------------------------------------------------------
-func (d Dummy) GetCAChainFromDAP() ([]string, error) {
+// GetCAChain ------------------------------------------------------------------
+func (d Dummy) GetCAChain() ([]string, error) {
 	chain := []string{}
 	chain = append(chain, `MIIDjTCCAnWgAwIBAgIUMC64a4mBmJHhpYBLknrCO8fTcQwwDQYJKoZIhvcNAQELBQAwVjELMAkG
 A1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMg
@@ -81,21 +83,22 @@ Iw==`)
 	return chain, nil
 }
 
-// GetAllCertsFromDAP ----------------------------------------------------------
-func (d Dummy) GetAllCertsFromDAP() ([]string, error) {
-	return []string{"10351605685901192"}, nil
+// ListCertificates ----------------------------------------------------------
+func (d Dummy) ListCertificates() ([]*big.Int, error) {
+	retVal := big.NewInt(12312313123)
+	return []*big.Int{retVal}, nil
 }
 
-// GetTemplateFromDAP ----------------------------------------------------------
-func (d Dummy) GetTemplateFromDAP(templateName string) (types.Template, error) {
+// GetTemplate ----------------------------------------------------------
+func (d Dummy) GetTemplate(templateName string) (types.Template, error) {
 	if templateName == "TestTemplate" {
 		return dummyTemplate, nil
 	}
 	return types.Template{}, errors.New("Unable to locate template with template name " + templateName)
 }
 
-// CreateTemplateInDAP ---------------------------------------------------------
-func (d Dummy) CreateTemplateInDAP(newTemplate types.Template) error {
+// CreateTemplate ---------------------------------------------------------
+func (d Dummy) CreateTemplate(newTemplate types.Template) error {
 	template, err := json.Marshal(newTemplate)
 	if err != nil {
 		return errors.New("Unable to import newly requested template data")
@@ -104,8 +107,8 @@ func (d Dummy) CreateTemplateInDAP(newTemplate types.Template) error {
 	return nil
 }
 
-// DeleteTemplateFromDAP --------------------------------------------------------
-func (d Dummy) DeleteTemplateFromDAP(templateName string) error {
+// DeleteTemplate --------------------------------------------------------
+func (d Dummy) DeleteTemplate(templateName string) error {
 	if templateName == "TestTemplate" {
 		fmt.Println("Successfully deleted TestTemplate")
 		return nil
@@ -113,13 +116,13 @@ func (d Dummy) DeleteTemplateFromDAP(templateName string) error {
 	return errors.New("No template matching " + templateName + " was found")
 }
 
-// GetAllTemplatesFromDAP ------------------------------------------------------
-func (d Dummy) GetAllTemplatesFromDAP() ([]string, error) {
+// ListTemplates ------------------------------------------------------
+func (d Dummy) ListTemplates() ([]string, error) {
 	return []string{"Template1", "Template2"}, nil
 }
 
-// GetSigningCertFromDAP -------------------------------------------------------
-func (d Dummy) GetSigningCertFromDAP() (string, error) {
+// GetSigningCert -------------------------------------------------------
+func (d Dummy) GetSigningCert() (string, error) {
 	return `MIIDjTCCAnWgAwIBAgIUMC64a4mBmJHhpYBLknrCO8fTcQwwDQYJKoZIhvcNAQELBQAwVjELMAkG
 A1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMg
 UHR5IEx0ZDEPMA0GA1UEAwwGQ0FDZXJ0MB4XDTIwMDYwMjAzNTY0NloXDTI0MDcxMTAzNTY0Nlow
@@ -139,8 +142,8 @@ SYiaan+03TI5KlBqIzWwY9Ww9HVZww+NFrnX9IrvXcgYkY1ZyxUZNmpOmOWWf8QBc8IIhNucxhvT
 Iw==`, nil
 }
 
-// GetSigningKeyFromDAP --------------------------------------------------------
-func (d Dummy) GetSigningKeyFromDAP() (string, error) {
+// GetSigningKey --------------------------------------------------------
+func (d Dummy) GetSigningKey() (string, error) {
 	signingKey := `MIIEpgIBAAKCAQEA5W1pow1OKlb5OSiQsXb2aGkvxeQSrKQ62BUWM+b72SRQSJi4WeYKv+KKqx/s
 C75DItbWOwC7mKEOjAIlRlTfruc/Bv8Oxx0vt+DywaBdL/FHFQW+rXETtu2oLixBogr11poeg7Qo
 7cnS3o2mRN6ptUlVfnH3XZ0fD+YyriyLmymShoe+YKxQvCS3I28XHOt3X36GC0moQikZGUuCcJvc
@@ -219,7 +222,17 @@ func (d Dummy) WriteCAChain(certBundle []string) error {
 	return nil
 }
 
-// DeleteCertificateFromDAP -----------------------------------------------------
-func (d Dummy) DeleteCertificateFromDAP(serialNumber *big.Int) error {
+// DeleteCertificate -----------------------------------------------------
+func (d Dummy) DeleteCertificate(serialNumber *big.Int) error {
 	return nil
+}
+
+// CreateCertificate --------------------------------------------------
+func (d Dummy) CreateCertificate(certificateData types.CreateCertificateData) error {
+	return nil
+}
+
+// GetAccessControl ----------------------------------
+func (d Dummy) GetAccessControl() backend.Access {
+	return backend.Access(d.Access)
 }

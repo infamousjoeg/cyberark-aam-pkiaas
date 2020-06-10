@@ -46,7 +46,6 @@ conjur_createacct () {
     echo "-----BEGIN PUBLIC KEY-----" > conjur_cert_file
     < conjur_info awk 'NR >= 2 && NR < 9 {print $1}' >> conjur_cert_file
     echo "-----END PUBLIC KEY-----" >> conjur_cert_file
-    export CONJUR_INFO="${CONJUR_INFO}"
 }
 
 conjur_init () {
