@@ -21,3 +21,48 @@ jobs:
         uses: Jerome1337/golint-action@v1.0.2
         with:
           golint-path: './cmd/...'
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: lint
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Setup Conjur OSS
+        run: ./tests/build.sh
+      - name: Load PKI Config Policy
+        run: |
+          docker cp ./tests/pki-config-policy.yml cyberark-aam-pkiaas_client_1:/root/pki-config-policy.yml
+          docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load root /root/pki-config-policy.yml > pki_config
+          docker exec -i cyberark-aam-pkiaas_client_1 conjur list
+      - name: Load PKI Admin Policy
+        run: |
+          docker cp ./tests/pki-admin-policy.yml cyberark-aam-pkiaas_client_1:/root/pki-admin-policy.yml
+          docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load root /root/pki-admin-policy.yml > pki_admin
+      - name: Parse pki_config
+        run: |
+          export CONJUR_AUTHN_API_KEY=$(cat pki_config | jq -r ".created_roles" | jq -r '.["conjur:host:pki-service"]' | jq -r .api_key)
+          rm -f pki_config
+      - name: Parse pki_admin
+        run: |
+          export CONJUR_ADMIN_API_KEY=$(cat pki_admin | jq -r ".created_roles" | jq -r '.["conjur:host:pki-service"]' | jq -r .api_key)
+          rm -f pki_admin
+      - name: Build PKIaaS Docker Image
+        run: |
+          docker build -t cyberark/pkiaas:test .
+      - name: Deploy PKIaaS Docker Container
+        run: |
+          docker run --name cpki-test -d -p 3000:8080 \
+            -e CONJUR_AUTHN_LOGIN="host/pki-service" \
+            -e CONJUR_AUTHN_API_KEY="${CONJUR_AUTHN_API_KEY}" \
+            -e CONJUR_APPLIANCE_URL="http://localhost:8080" \
+            -e CONJUR_ACCOUNT="quick-start" \
+            -e CONJUR_CERT_FILE="$(cat conjur_cert_file)" \
+            cyberark/pkiaas:test
+      - name: Test PKIaaS Web Service
+        run: |
+          curl -k -X GET http://localhost:3000/
