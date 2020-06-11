@@ -3,7 +3,8 @@ package types
 import "time"
 
 // CreateCertReq ---------------------------------------------------------------
-// Structure representing the HTTP request POSTed to the CreateCert API endpoint
+// Structure that represents an actual certificate request corresponding to the
+// JSON body from the '/certificate/create' endpoint
 type CreateCertReq struct {
 	TemplateName string   `json:"templateName"`
 	CommonName   string   `json:"commonName"`
@@ -13,7 +14,8 @@ type CreateCertReq struct {
 }
 
 // Template --------------------------------------------------------------------
-// Structure that represents a certificate request template
+// Structure that represents a certificate request template corresponding to the
+// JSON body from the '/template/create' and '/template/manage' endpoints
 type Template struct {
 	TemplateName      string        `json:"templateName"`
 	KeyAlgo           string        `json:"keyAlgo"`
@@ -35,6 +37,8 @@ type Template struct {
 }
 
 // CreateCertificateResponse ---------------------------------------------------
+// Structure that respresents the JSON response that is returned from the '/certificate/create'
+// and '/certificate/sign' endpoints
 type CreateCertificateResponse struct {
 	Certificate   string `json:"certificate"`
 	PrivateKey    string `json:"privateKey,omitempty"`
@@ -44,6 +48,8 @@ type CreateCertificateResponse struct {
 }
 
 // CreateCertificateData ---------------------------------------------------
+// Structure that correspond to all the new certificate data that is written
+// to the storage backend used by endpoints '/certificate/create' and 'certificate/sign'
 type CreateCertificateData struct {
 	Certificate          string `json:"certificate"`
 	Revoked              bool   `json:"revoked"`
@@ -55,32 +61,42 @@ type CreateCertificateData struct {
 }
 
 // PEMCertificate -----------------------------------------------------------------
+// Structure representing a single PEM-encoded X.509 certificate
 type PEMCertificate struct {
 	Certificate string `json:"certificate"`
 }
 
 // PEMCertificateBundle -----------------------------------------------------------
+// Structure representing a PEM-bundle of X.509 certificates
 type PEMCertificateBundle struct {
 	CertBundle string `json:"certBundle"`
 }
 
-// PEMIntermediate -------------------------------------------------------------------------
+// PEMIntermediate ----------------------------------------------------------------
+// Structure representing a new PEM-encoded intermediate response from the '/ca/generate'
+// endpoint. The CSR property will be set unless generating a self-signed CA
 type PEMIntermediate struct {
 	CSR            string `json:"csr,omitempty"`
 	SelfSignedCert string `json:"selfSignedCert,omitempty"`
 }
 
 // CertificateListResponse -----------------------------------------------------
+// A structure that contains a JSON representation of certificate serial number strings
+// returned as the response for endpoint '/certificates'
 type CertificateListResponse struct {
 	Certificates []string `json:"certificates"`
 }
 
 // TemplateListResponse --------------------------------------------------------
+// A structure that contains a JSON representation of template names returned as
+// the response for endpoint '/templates'
 type TemplateListResponse struct {
 	Templates []string `json:"templates"`
 }
 
 // SignRequest -----------------------------------------------------------------
+// Structure that represents a certificate request corresponding to the
+// JSON body from the '/certificate/sign' endpoint
 type SignRequest struct {
 	CSR          string `json:"csr"`
 	CommonName   string `json:"commonName"`
@@ -90,6 +106,8 @@ type SignRequest struct {
 }
 
 // IntermediateRequest --------------------------------------------------------
+// Structure that represents an intermediate CA certificate request corresponding to the
+// JSON body from the '/ca/generate' endpoint
 type IntermediateRequest struct {
 	CommonName string        `json:"commonName"`
 	KeyAlgo    string        `json:"keyAlgo"`
@@ -101,12 +119,16 @@ type IntermediateRequest struct {
 }
 
 // RevokeRequest --------------------------------------------------------------
+// Structure that represents a certificate revocation request corresponding to the
+// JSON body from the '/certificate/revoke' endpoint
 type RevokeRequest struct {
 	SerialNumber string `json:"serialNumber"`
 	Reason       string `json:"reason,omitempty"`
 }
 
 // SubjectFields -------------------------------------------------------------
+// A breakdown of subject fields corresponding to the pkix.Name object used by
+// template and certificate objects
 type SubjectFields struct {
 	Organization string `json:"organization,omitempty"`
 	OrgUnit      string `json:"orgUnit,omitempty"`
@@ -118,12 +140,16 @@ type SubjectFields struct {
 }
 
 // CABasicConstraints --------------------------------------------------------
+// Data structure used for marshaling CA specific information into a CSR
 type CABasicConstraints struct {
 	CA                bool `json:"ca,omitempty"`
 	PathLenConstraint int  `json:"pathLenConstraint,omitempty"`
 }
 
 // RevokedCertificate --------------------------------------------------------
+// Structure used to read data from write data to the storage backend related to
+// existing and new revoked certificates, and used in the '/certificate/revoke'
+// endpoint
 type RevokedCertificate struct {
 	SerialNumber   string
 	ReasonCode     int
