@@ -8,6 +8,9 @@ import (
 )
 
 // Storage -----------------------------------
+// Interface that defines the methods and associated
+// access control getter for a backend system's Storage
+// objects
 type Storage interface {
 	CreateCertificate(certificateData types.CreateCertificateData) error
 	ListCertificates() ([]*big.Int, error)

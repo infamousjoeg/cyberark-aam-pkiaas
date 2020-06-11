@@ -23,87 +23,104 @@ import (
 )
 
 // SignCertHandler -------------------------------------------------------------
+// Handler method to read a CSR from HTTP request and generate a CA-signed certificate
+// from it. Before being signed, the CSR's properties and extensions are compared
+// against a template
 func (p *Pki) SignCertHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Unable to read request body", http.StatusBadRequest)
+		http.Error(w, "CPKISG001: Unable to read request body - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "CPKISG002: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
+	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
+	// has authorization to access the Sign Certificate endpoint using the requested template
 	authHeader := r.Header.Get("Authorization")
 	err = p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKISG003: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
 		return
 	}
-
 	var signReq types.SignRequest
 	err = json.Unmarshal(reqBody, &signReq)
 	if err != nil {
-		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKISG004: Not able to unmarshal request body data - "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	err = p.Backend.GetAccessControl().SignCertificate(authHeader, signReq.TemplateName)
 	if err != nil {
-		http.Error(w, "CPKISC005: Not authorized to sign certificate with template "+signReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKISG005: Not authorized to sign certificate using "+signReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
 	// Extract the CSR from the request and process it to be converted to useful CertificateRequest object
 	pemCSR, _ := pem.Decode([]byte(signReq.CSR))
+	if pemCSR == nil {
+		http.Error(w, "CPKISG006: No valid PEM block was found in request", http.StatusBadRequest)
+	}
 	certReq, err := x509.ParseCertificateRequest(pemCSR.Bytes)
 	if err != nil {
-		http.Error(w, "The CSR provided in the request was not able to be successfully parsed: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKISG007: Error parsing the certificate request - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Retrieve data from the storage backend and set all necessary parameters required to sign the certifcate
 	template, serialNumber, ttl, sigAlgo, caCert, signingKey, err := p.PrepareCertificateParameters(signReq.TemplateName, signReq.TTL, p.Backend)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKISG008: Unable to set required parameters - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Setting subject data for template and CSR to validate that CSR is not out of bounds
+	// Setting Subject data for template and CSR
 	templateSubject, err := SetCertSubject(template.Subject, "")
-
+	if err != nil {
+		http.Error(w, "CPKISG009: Unable to set certificate Subject fields - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	csrSubject := certReq.Subject
 	csrSubject.CommonName = ""
 
+	// Validate that the certificate request subject fields match those required by the template
+	// TODO: Parameterize individual policies for each Subject field to specify whether they are optional matches or required
 	if templateSubject.String() != csrSubject.String() {
-		http.Error(w, "The subject of the CSR does not match the allowed format in the requested template", http.StatusBadRequest)
+		http.Error(w, "CPKISG010: CSR Subject does not match the Subject set in the template", http.StatusBadRequest)
 		return
 	}
 	csrSubject.CommonName = signReq.CommonName
 
 	// Retrieve the CSR extensions in order to parse out and validate the KeyUsages and ExtKeyUsages
+	// If the key usages are valid, set them to a x509.KeyUsage/x509.ExtendedKeyUsage object to be
+	// passed into the new Certificate object
 	extKeyUsage := []x509.ExtKeyUsage{}
 	var keyUsage x509.KeyUsage
 	requestExtensions := certReq.Extensions
 	for _, extension := range requestExtensions {
-		if extension.Id.Equal([]int{2, 5, 29, 15}) {
+		if extension.Id.Equal([]int{2, 5, 29, 15}) { // ASN.1 OID for key usages
 			keyUsage, err = ValidateKeyUsageConstraints(extension.Value, template.KeyUsages)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				http.Error(w, "CPKISG011: Key usage validation failed - "+err.Error(), http.StatusBadRequest)
 				return
 			}
 		}
-		if extension.Id.Equal([]int{2, 5, 29, 37}) {
+		if extension.Id.Equal([]int{2, 5, 29, 37}) { // ASN.1 OID for extended key usages
 			extKeyUsage, err = ValidateExtKeyUsageConstraints(extension.Value, template.ExtKeyUsages)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				http.Error(w, "CPKISG012: Extended key usage validation failed - "+err.Error(), http.StatusBadRequest)
 				return
 			}
 		}
 	}
 
+	// Validate that all the SANs from the HTTP request are either
+	// explicitly permitted by the template or NOT explicitly denied
+	// by the template
 	err = ValidateSubjectAltNames(certReq.DNSNames, certReq.EmailAddresses, certReq.IPAddresses, certReq.URIs, template)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKISG013: Subject Alternate Name validation failed - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -118,11 +135,12 @@ func (p *Pki) SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		KeyUsage:              keyUsage,
 		BasicConstraintsValid: false,
 		IsCA:                  false,
-		OCSPServer:            []string{"asdad"},
-		IssuingCertificateURL: []string{"asdada"},
-		CRLDistributionPoints: []string{"asdasds"},
+		OCSPServer:            ocspServer,
+		IssuingCertificateURL: issuingCertificateURL,
+		CRLDistributionPoints: crlDistributionPoints,
 	}
 
+	// Only add extended key usages and SAN fields if they exist
 	if len(extKeyUsage) > 0 {
 		newCert.ExtKeyUsage = extKeyUsage
 	}
@@ -140,15 +158,20 @@ func (p *Pki) SignCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	derCert, err := x509.CreateCertificate(rand.Reader, &newCert, caCert, certReq.PublicKey, signingKey)
+	if err != nil {
+		http.Error(w, "CPKISG014: Error while creating certificate - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Convert the certifcate objects into PEMs to be returned as strings
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derCert})
-	pemCA := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.RawTBSCertificate})
+	pemCA := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw})
 
 	w.Header().Set("Content-Type", "application/json")
 	strSerialNumber, err := ConvertSerialIntToOctetString(serialNumber)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKISG015: Error converting serial nubmer to octet string: - "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	response := types.CreateCertificateResponse{
 		Certificate:   string(pemCert),
@@ -157,83 +180,106 @@ func (p *Pki) SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		LeaseDuration: ttl,
 	}
 
-	json.NewEncoder(w).Encode(response)
+	// Object for the data to be written to the storage backend
+	cert := types.CreateCertificateData{
+		SerialNumber:   serialNumber.String(),
+		Revoked:        false,
+		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).String(),
+		Certificate:    base64.StdEncoding.EncodeToString(derCert),
+	}
+	err = p.Backend.CreateCertificate(cert)
+	if err != nil {
+		http.Error(w, "CPKISG016: Error writing certificate to storage backend - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "CPKICR017: Error writing HTTP response - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // CreateCertHandler -----------------------------------------------------------
-// Handler function invoked by the API endpoint 'CreateCert', which is responsible
-// for building a new certificate with the provided common name based upon the
-// provided template
+// Handler method used to build a new certificate with the provided common name
+// based upon the provided template
 func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Unable to read request body", http.StatusBadRequest)
+		http.Error(w, "CPKICC001: Unable to read request body - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "CPKICC002: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
+	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
+	// has authorization to access the Create Certificate endpoint using the requested template
 	authHeader := r.Header.Get("Authorization")
 	err = p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKICC003: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
 		return
 	}
-
 	var certReq types.CreateCertReq
 	err = json.Unmarshal(reqBody, &certReq)
 	if err != nil {
-		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICC004: Not able to unmarshal request body data - "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	err = p.Backend.GetAccessControl().CreateCertificate(authHeader, certReq.TemplateName)
 	if err != nil {
 		http.Error(w, "CPKICC005: Not authorized to create certificate with template "+certReq.TemplateName+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
+	// Retrieve data from the storage backend and set all necessary parameters required to sign the certifcate
 	template, serialNumber, ttl, sigAlgo, caCert, signingKey, err := p.PrepareCertificateParameters(certReq.TemplateName, certReq.TTL, p.Backend)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKICC006: Unable to set required parameters - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Extract all the necessary data from the template to be used in generating the new
-	// x509.Certificate object to be signed
+	// Create a pkix.Name object from the Subject data in the template to
+	// be used in the new Certificate object
 	certSubject, err := SetCertSubject(template.Subject, certReq.CommonName)
-
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKICC007: Unable to set certificate Subject fields - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Process the key usages stored in the requested template and return
+	// them in a x509.KeyUsage object
 	keyUsage, err := ProcessKeyUsages(template.KeyUsages)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKICC008: Error processing key usages - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Process the extended key usages stored in the requested template and return
+	// them in a x509.ExtendedKeyUsage object
 	extKeyUsage, err := ProcessExtKeyUsages(template.ExtKeyUsages)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKICC009: Error processing extended key usages - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Process the request's Subject Alternate Name fields into arrays specific to each
+	// type of SAN, then validate that the requested SANs are permitted/not excluded by
+	// the template
 	dnsNames, emailAddresses, ipAddresses, URIs, err := ProcessSubjectAltNames(certReq.AltNames)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICC010: Error processing Subject Alternate Names - "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	err = ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKISG013: Subject Alternate Name validation failed - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Still need to configure logic in new certificate for OCSPServer/IssuingCertificateURL/CRLDistributionPoints
 	newCert := x509.Certificate{
 		SerialNumber:          serialNumber,
 		Subject:               certSubject,
@@ -244,8 +290,12 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		KeyUsage:              keyUsage,
 		BasicConstraintsValid: false,
 		IsCA:                  false,
+		OCSPServer:            ocspServer,
+		IssuingCertificateURL: issuingCertificateURL,
+		CRLDistributionPoints: crlDistributionPoints,
 	}
 
+	// Only add extended key usages and SAN fields if they exist
 	if len(extKeyUsage) > 0 {
 		newCert.ExtKeyUsage = extKeyUsage
 	}
@@ -264,11 +314,15 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	clientPrivKey, clientPubKey, err := GenerateKeys(template.KeyAlgo, template.KeyBits)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKICC014: Error generating keys for certificate - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	derCert, err := x509.CreateCertificate(rand.Reader, &newCert, caCert, clientPubKey, signingKey)
+	if err != nil {
+		http.Error(w, "CPKICC015: Error while creating certificate - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Convert the certifcate objects into PEMs to be returned as strings
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derCert})
@@ -282,7 +336,7 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 	case "ECDSA":
 		ecKey, err := x509.MarshalECPrivateKey(clientPrivKey.(*ecdsa.PrivateKey))
 		if err != nil {
-			http.Error(w, "Unable to successfully marshal new ECDSA key into PEM format for return", http.StatusInternalServerError)
+			http.Error(w, "CPKICC016: Unable to marshal new ECDSA private key - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		pemPrivKey = pem.EncodeToMemory(&pem.Block{Type: "ECDSA PRIVATE KEY", Bytes: ecKey})
@@ -292,8 +346,10 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	strSerialNumber, err := ConvertSerialIntToOctetString(serialNumber)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKICC017: Error converting serial nubmer to octet string: - "+err.Error(), http.StatusInternalServerError)
 	}
+
+	// Object for HTTP response body to be returned
 	response := types.CreateCertificateResponse{
 		Certificate:   string(pemCert),
 		PrivateKey:    string(pemPrivKey),
@@ -301,69 +357,89 @@ func (p *Pki) CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		SerialNumber:  strSerialNumber,
 		LeaseDuration: ttl,
 	}
-
+	// Object for the data to be written to the storage backend
 	cert := types.CreateCertificateData{
 		SerialNumber:   serialNumber.String(),
 		Revoked:        false,
 		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).String(),
 		Certificate:    base64.StdEncoding.EncodeToString(derCert),
 	}
-	p.Backend.CreateCertificate(cert)
-	json.NewEncoder(w).Encode(response)
+	err = p.Backend.CreateCertificate(cert)
+	if err != nil {
+		http.Error(w, "CPKICC018: Error writing certificate to storage backend - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "CPKICC019: Error writing HTTP response - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // GetCertHandler --------------------------------------------------------------------
 func (p *Pki) GetCertHandler(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
+	serialNumber := mux.Vars(r)["serialNumber"]
+
+	// Ensure that the requesting entity can both authenticate to the PKI service, but there
+	// is no need for an authorization check as all authenticated entities will be allowed
+	// to retrieve public certificate data
 	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKICE001: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
 		return
 	}
-
-	serialNumber := mux.Vars(r)["serialNumber"]
 
 	// Convert the serial number into a format that is usable by the x509 library
 	intSerialNumber, err := ConvertSerialOctetStringToInt(serialNumber)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICE002: Error while converting serial number octet string - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// Retrieve base64 encoded certificate from backend, then decode and convert to PEM
 	certificate, err := p.Backend.GetCertificate(intSerialNumber)
 	if err != nil {
-		http.Error(w, "Unable to retrieve certificate matching requested serial number", http.StatusNotFound)
+		http.Error(w, "CPKICE003: Error retrieving certificate from storage backend - "+err.Error(), http.StatusNotFound)
 		return
 	}
-
 	derCert, err := base64.StdEncoding.DecodeString(certificate)
 	if err != nil {
-		http.Error(w, "Unable to decode certificate returned from backend: "+err.Error(), http.StatusNotFound)
+		http.Error(w, "CPKICE004: Error decoding returned certificate - "+err.Error(), http.StatusNotFound)
 		return
 	}
-
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derCert})
 	response := types.PEMCertificate{
 		Certificate: string(pemCert),
 	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "CPKICE005: Error writing HTTP response - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // ListCertsHandler ------------------------------------------------------------------
+// Handler method used to retrieve the serial number of all certificates currently
+// in the backend storage repository and return them
 func (p *Pki) ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
+
+	// Ensure that the requesting entity can both authenticate to the PKI service, but there
+	// is no need for an authorization check as all authenticated entities will be allowed
+	// to retrieve public certificate data
 	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKILC001: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	serialNumberList, err := p.Backend.ListCertificates()
-
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKILC002: Error retrieving certificate list from storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -371,7 +447,7 @@ func (p *Pki) ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 	for _, serialNumber := range serialNumberList {
 		strSerialNumber, err := ConvertSerialIntToOctetString(serialNumber)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKILC003: Error converting serial number to octet string - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		retSerialNumbers = append(retSerialNumbers, strSerialNumber)
@@ -381,73 +457,95 @@ func (p *Pki) ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 		Certificates: retSerialNumbers,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "CPKILC004: Error writing HTTP response - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // RevokeCertHandler -----------------------------------------------------------------
+// Handler method that updates to revoke a certificate for a specified, but optional,
+// reason code.  Updates the certificate object in the storage backend as well as generates
+// a new CRL
 func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Unable to read request body", http.StatusBadRequest)
+		http.Error(w, "CPKIRC001: Unable to read request body - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "Invalid content type: expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "CPKIRC002: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
+	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
+	// has authorization to access the Revoke Certificate endpoint for the specified serial number
 	authHeader := r.Header.Get("Authorization")
 	err = p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "Invalid authentication: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKIRC003: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
 		return
 	}
-
 	var crlReq = types.RevokeRequest{}
-
 	err = json.Unmarshal(reqBody, &crlReq)
 	if err != nil {
-		http.Error(w, "Unable to process request body data.  JSON Unmarshal returned error: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIRC004: Not able to unmarshal request body data - "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	err = p.Backend.GetAccessControl().RevokeCertificate(authHeader, crlReq.SerialNumber)
 	if err != nil {
-		http.Error(w, "CPKISC005: Not authorized to revoke certificate with serial number "+crlReq.SerialNumber+" - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKIRC005: Not authorized to revoke certificate with serial number "+crlReq.SerialNumber+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
+	// Capture the numeric reason code, certificate revocation time, and serial number
+	// used to generate the revocation entry
 	reasonCode := -1
 	if crlReq.Reason != "" {
 		reasonCode, err = ReturnReasonCode(crlReq.Reason)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "CPKIRC006: Error parsing revocation reason - "+err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
-
 	revokeTime := time.Now()
 	intSerialNum, err := ConvertSerialOctetStringToInt(crlReq.SerialNumber)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIRC007: Error converting serial number to integer value"+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	err = p.Backend.RevokeCertificate(intSerialNum, reasonCode, revokeTime)
-	revokedCertificates, err := p.Backend.GetRevokedCerts()
+	if err != nil {
+		http.Error(w, "CPKIRC008: Certificate revocation failed on storage backend - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	// Loop through all revoke certificates from the storage backend (including that being revoked by this method call)
+	// and generate a pkix.RevokedCertificates array to be used for the generation of a new
+	// CRL
+	revokedCertificates, err := p.Backend.GetRevokedCerts()
+	if err != nil {
+		http.Error(w, "CPKIRC009: Error retrieving revoked certificates list from storage backend - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	revokedCertList := []pkix.RevokedCertificate{}
 	for _, revokedCertificate := range revokedCertificates {
 		crlExtensions := []pkix.Extension{}
 		if revokedCertificate.ReasonCode > 0 {
 			reasonExtension := pkix.Extension{
-				Id:    asn1.ObjectIdentifier{2, 5, 29, 21},
+				Id:    asn1.ObjectIdentifier{2, 5, 29, 21}, // ASN.1 OID for CRL reason code
 				Value: []byte(strconv.Itoa(reasonCode)),
 			}
 			crlExtensions = append(crlExtensions, reasonExtension)
 		}
 		intSerialNum := new(big.Int)
-		intSerialNum.SetString(revokedCertificate.SerialNumber, 10)
+		intSerialNum, success := intSerialNum.SetString(revokedCertificate.SerialNumber, 10)
+		if !success {
+			http.Error(w, "CPKIRC010: Error converting serial number integer from string", http.StatusInternalServerError)
+			return
+		}
 		crlEntry := pkix.RevokedCertificate{
 			SerialNumber:   intSerialNum,
 			RevocationTime: revokedCertificate.RevocationDate,
@@ -455,51 +553,70 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		revokedCertList = append(revokedCertList, crlEntry)
 	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
+	// Retrieve the base64 encoded signing key from storage backend and decode it
 	encodedSigningKey, err := p.Backend.GetSigningKey()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIRC011: Error retrieving signing key from storage backend - "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	decodedSigningKey, err := base64.StdEncoding.DecodeString(encodedSigningKey)
+
+	// Try to parse the private key using PKCS8, and if it fails attempt to use the recommended
+	// parsing format from the PKCS8 error
 	signingKey, err := x509.ParsePKCS8PrivateKey(decodedSigningKey)
 	if err != nil {
 		if strings.Contains(err.Error(), "ParsePKCS1PrivateKey") {
 			signingKey, err = x509.ParsePKCS1PrivateKey(decodedSigningKey)
 			if err != nil {
-				http.Error(w, "Unable to parse signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+				http.Error(w, "CPKIRC012: Error parsing signing key - "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else {
-			http.Error(w, "Unable to parse signing key from DAP: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKIRC012: Error parsing signing key - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 
+	// Retrieve the base64 encoded signing key from storage backend and decode it
 	encodedCACert, err := p.Backend.GetSigningCert()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIRC013: Error retrieving CA certificate from storage backend: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	derCACert, err := base64.StdEncoding.DecodeString(encodedCACert)
 	if err != nil {
-		http.Error(w, "Unable to decode encoded CA certificate: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIRC014: Unable to decode encoded CA certificate - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	caCert, err := x509.ParseCertificate(derCACert)
 	if err != nil {
-		http.Error(w, "Unable to parse CA certificate: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIRC015: Unable to parse CA certificate - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	newCRL, err := caCert.CreateCRL(rand.Reader, signingKey, revokedCertList, revokeTime, revokeTime.Add(time.Hour*12))
 	if err != nil {
-		http.Error(w, "Error while creating new CRL: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKI016: Error while creating new CRL - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	p.Backend.WriteCRL(base64.StdEncoding.EncodeToString(newCRL))
+	err = p.Backend.WriteCRL(base64.StdEncoding.EncodeToString(newCRL))
+	if err != nil {
+		http.Error(w, "CPKI017: Error writing new CRL to storage backend - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
+
+/********************************************
+TODO:
+func HoldCertHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+******************************************/
+
+/********************************************
+TODO:
+func ReleaseCertHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+******************************************/

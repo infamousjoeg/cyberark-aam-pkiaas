@@ -1,6 +1,9 @@
 package backend
 
 // Access ------------------
+// Interface that defines all the methods that will be
+// required to develop a backend system's Access Control
+// objects
 type Access interface {
 	Authenticate(accessToken string) error
 	ReadTemplates(accessToken string) error

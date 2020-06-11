@@ -29,6 +29,9 @@ import (
 )
 
 var minRSASize = 2048
+var ocspServer = []string{"OCSPURLField"}
+var issuingCertificateURL = []string{"IssuingCertificateURL"}
+var crlDistributionPoints = []string{"CRLDistributionPoints"}
 
 // Pki --------------------------------------------------------------------------
 // A simple struct to house all the interfaces that are needed by the PKI service
