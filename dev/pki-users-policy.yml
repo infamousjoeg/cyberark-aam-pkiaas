@@ -1,0 +1,11 @@
+- &users
+  - !user andrew
+  - !user rob
+  - !user joe
+
+- !group pki-admins
+
+- !grant
+  role: !user admin
+  member: !group pki-admins
+
