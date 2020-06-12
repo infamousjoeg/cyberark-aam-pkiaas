@@ -266,6 +266,11 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 		SerialNumber:  strSerialNumber,
 		LeaseDuration: ttl,
 	}
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "CPKICC019: Error writing HTTP response - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	// Object for the data to be written to the storage backend
 	cert := types.CreateCertificateData{
 		SerialNumber:   serialNumber.String(),
@@ -273,9 +278,28 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).String(),
 		Certificate:    base64.StdEncoding.EncodeToString(derCert),
 	}
+<<<<<<< HEAD
 	err = backend.CreateCertificate(cert)
 	if err != nil {
 		return types.CreateCertificateResponse{}, httperror.CertWriteFail(err.Error())
+=======
+	err = p.Backend.CreateCertificate(cert)
+<<<<<<< HEAD
+	if err != nil {
+		http.Error(w, "CPKICC015: Error writing certificate to storage backend - "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+=======
+>>>>>>> Added panic for invalid initialization
+
+	if err != nil {
+<<<<<<< HEAD
+		http.Error(w, "CPKICC016: Error writing HTTP response - "+err.Error(), http.StatusInternalServerError)
+=======
+		http.Error(w, "CPKICC018: Error writing certificate to storage backend - "+err.Error(), http.StatusInternalServerError)
+>>>>>>> Added panic for invalid initialization
+		return
+>>>>>>> Added panic for invalid initialization
 	}
 	return response, httperror.HTTPError{}
 }

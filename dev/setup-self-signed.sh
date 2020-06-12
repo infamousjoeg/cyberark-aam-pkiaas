@@ -2,8 +2,14 @@
 set -e
 
 export CONJUR_AUTHN_LOGIN="host/pki-admin"
+<<<<<<< HEAD
 export CONJUR_AUTHN_API_KEY="${CONJUR_PKI_ADMIN_API_KEY}"
 export VERBOSE="-vvv"
+=======
+export CONJUR_CERT_FILE="$(pwd)/conjur.pem"
+export CONJUR_ACCOUNT="conjur"
+export CONJUR_AUTHN_API_KEY="18ybbxf2ytt4pr1j8tek739n3vsf34hxmpbw6fg8j1nqy15pp1nn5z"
+>>>>>>> Added panic for invalid initialization
 
 source conjur_utils.sh
 session_token=$(conjur_authenticate)
@@ -43,7 +49,11 @@ data='{
   "templateName": "andrewsTemplate",
   "ttl": 1
 }'
+<<<<<<< HEAD
 response=$(curl -s -H "Content-Type: application/json" \
+=======
+response=$(curl --fail -v -H "Content-Type: application/json" \
+>>>>>>> Added panic for invalid initialization
   -H "$session_token" \
   --data "$data" \
   $VERBOSE \
@@ -151,6 +161,7 @@ curl --fail -s \
 
 
 # re-create same template so I can test manually
+<<<<<<< HEAD
 # data='{
 #   "templateName": "testingTemplate",
 #   "keyAlgo": "RSA",
@@ -160,3 +171,14 @@ curl --fail -s \
 #   -H "$session_token" \
 #   --data "$data" \
 #   $pki_url/template/create
+=======
+data='{
+  "templateName": "testingTemplate",
+  "keyAlgo": "RSA",
+  "keyBits": "2048"
+}'
+curl --fail -H "Content-Type: application/json" \
+  -H "$session_token" \
+  --data "$data" \
+  http://localhost:8080/template/create
+>>>>>>> Added panic for invalid initialization
