@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/dummy"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/conjur"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 )
 
@@ -47,9 +47,12 @@ func Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func init() {
-	//	pkiclient, _ := conjur.NewFromDefaults()
-	//	backend.Backend = pkiclient
-	backend.Backend = dummy.Dummy{}
+	pkiclient, err := conjur.NewFromDefaults()
+	if err != nil {
+		panic("Error initializing PKI backend: " + err.Error())
+	}
+	backend.Backend = pkiclient
+	//backend.Backend = dummy.Dummy{}
 }
 
 var backend pki.Pki

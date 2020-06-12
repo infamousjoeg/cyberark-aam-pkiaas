@@ -334,18 +334,18 @@ func (p *Pki) SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request)
 func (p *Pki) GetCAHandler(w http.ResponseWriter, r *http.Request) {
 	encodedCA, err := p.Backend.GetSigningCert()
 	if err != nil {
-		http.Error(w, "PKIGC01: Error reading intermediate CA certificate from storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKICA01: Error reading intermediate CA certificate from storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	decodedCA, err := base64.StdEncoding.DecodeString(encodedCA)
 	if err != nil {
-		http.Error(w, "CPKIGC002: Error decoding signing key from storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKICA002: Error decoding signing key from storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	pemCA := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: decodedCA})
 	_, err = w.Write(pemCA)
 	if err != nil {
-		http.Error(w, "CPKIGC003: Error writing HTTP response - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKICA003: Error writing HTTP response - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
@@ -359,12 +359,12 @@ func (p *Pki) GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	// intermediate CA certificate
 	encodedCA, err := p.Backend.GetSigningCert()
 	if err != nil {
-		http.Error(w, "CPKICC01: Error reading intermediate CA certificate from storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIGC01: Error reading intermediate CA certificate from storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	decodedCA, err := base64.StdEncoding.DecodeString(encodedCA)
 	if err != nil {
-		http.Error(w, "CPKICC002: Error decoding signing key from storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIGC002: Error decoding signing key from storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	caChain := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: decodedCA}))
@@ -374,13 +374,13 @@ func (p *Pki) GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	// current CA chain
 	encodedBundle, err := p.Backend.GetCAChain()
 	if err != nil {
-		http.Error(w, "CPKICC003: Error reading CA chain from storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIGC003: Error reading CA chain from storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	for _, encodedCert := range encodedBundle {
 		derCert, err := base64.StdEncoding.DecodeString(encodedCert)
 		if err != nil {
-			http.Error(w, "CPKICC004: Error processing CA chain - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKIGC004: Error processing CA chain - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		pemCert := pem.Block{Type: "CERTIFICATE", Bytes: derCert}
@@ -392,7 +392,7 @@ func (p *Pki) GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewEncoder(w).Encode(caChainBundle)
 	if err != nil {
-		http.Error(w, "CPKICC005: Error encoding HTTP response - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIGC005: Error encoding HTTP response - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
@@ -504,3 +504,10 @@ func (p *Pki) PurgeCRLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+/********************************************
+TODO:
+func OSCPRespHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+******************************************/

@@ -197,7 +197,7 @@ func (p *Pki) DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = p.Backend.DeleteTemplate(templateName)
 	if err != nil {
-		http.Error(w, "CPKIDT003:  Error deleting template from storage backend - "+err.Error(), http.StatusNotFound)
+		http.Error(w, "CPKIDT003: Error deleting template from storage backend - "+err.Error(), http.StatusNotFound)
 		return
 	}
 }
