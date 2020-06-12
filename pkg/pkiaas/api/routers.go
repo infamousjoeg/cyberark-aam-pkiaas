@@ -47,7 +47,10 @@ func Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func init() {
-	pkiclient, _ := conjur.NewFromDefaults()
+	pkiclient, err := conjur.NewFromDefaults()
+	if err != nil {
+		panic("Error initializing PKI backend: " + err.Error())
+	}
 	backend.Backend = pkiclient
 	//backend.Backend = dummy.Dummy{}
 }
