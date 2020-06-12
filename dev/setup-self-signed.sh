@@ -4,7 +4,7 @@ export CONJUR_APPLIANCE_URL=https://conjur-master
 export CONJUR_AUTHN_LOGIN="host/pki-admin"
 export CONJUR_CERT_FILE="$(pwd)/conjur.pem"
 export CONJUR_ACCOUNT="conjur"
-export CONJUR_AUTHN_API_KEY="2rx82kr2ynspkf04d5h1b3sdnfwpv5gy3zdr8h028fvnv616nksn0"
+export CONJUR_AUTHN_API_KEY="3y455av3mxyns31kqxf692eyaw7212awnyf3z8syre3yz195w3afq2pe"
 
 source conjur_utils.sh
 session_token=$(conjur_authenticate)
