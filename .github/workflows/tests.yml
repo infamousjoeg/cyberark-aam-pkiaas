@@ -63,6 +63,9 @@ jobs:
             -e CONJUR_ACCOUNT="quick-start" \
             -e CONJUR_SSL_CERTIFICATE="$(cat conjur_cert_file)" \
             cyberark/pkiaas:test
+      - name: Report Docker Logs for PKIaaS Docker Container
+        run: |
+          docker log cpki-test
       - name: Test PKIaaS Web Service
         run: |
           curl -k -X GET http://localhost:3000/
