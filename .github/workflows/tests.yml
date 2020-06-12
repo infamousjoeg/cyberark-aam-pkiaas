@@ -1,6 +1,14 @@
 name: PKIaaS Tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - !master
+      - !dev
+  pull_request:
+    branches:
+      - master
+      - dev
 
 jobs:
   lint:
@@ -72,22 +80,22 @@ jobs:
             -e CONJUR_APPLIANCE_URL="http://localhost:8080" \
             -e CONJUR_ACCOUNT="quick-start" \
             cyberark/pkiaas:test
-      - name: Inspect PKIaaS Docker Container
-        run: |
-          docker inspect cpki-test > inspect_log
-      - name: Upload inspect_log Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: Docker Inspect Log
-          path: inspect_log
-      - name: Report Docker Logs for PKIaaS Docker Container
-        run: |
-          docker logs cpki-test > activity_log
-      - name: Upload activity_log Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: Docker Activity Log
-          path: activity_log
+      # - name: Inspect PKIaaS Docker Container
+      #   run: |
+      #     docker inspect cpki-test > inspect_log
+      # - name: Upload inspect_log Artifact
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: Docker Inspect Log
+      #     path: inspect_log
+      # - name: Report Docker Logs for PKIaaS Docker Container
+      #   run: |
+      #     docker logs cpki-test > activity_log
+      # - name: Upload activity_log Artifact
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: Docker Activity Log
+      #     path: activity_log
       - name: Test PKIaaS Web Service
         run: |
           curl -k -X GET http://localhost:3000/
