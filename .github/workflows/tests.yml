@@ -61,7 +61,7 @@ jobs:
             -e CONJUR_AUTHN_API_KEY="${CONJUR_AUTHN_API_KEY}" \
             -e CONJUR_APPLIANCE_URL="http://localhost:8080" \
             -e CONJUR_ACCOUNT="quick-start" \
-            -e CONJUR_CERT_FILE="$(cat conjur_cert_file)" \
+            -e CONJUR_SSL_CERTIFICATE="$(cat conjur_cert_file)" \
             cyberark/pkiaas:test
       - name: Test PKIaaS Web Service
         run: |
