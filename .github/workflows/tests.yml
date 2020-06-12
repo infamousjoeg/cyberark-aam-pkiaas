@@ -45,12 +45,12 @@ jobs:
           docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load root /root/pki-admin-policy.yml > pki_admin
       - name: Parse pki_config
         run: |
-          export CONJUR_AUTHN_API_KEY=$(cat pki_config | jq -r ".created_roles" | jq -r '.["conjur:host:pki-service"]' | jq -r .api_key)
+          ::set-env name=CONJUR_AUTHN_API_KEY::$(cat pki_config | jq -r ".created_roles" | jq -r '.["conjur:host:pki-service"]' | jq -r .api_key)
           echo $CONJUR_AUTHN_API_KEY
           rm -f pki_config
       - name: Parse pki_admin
         run: |
-          export CONJUR_ADMIN_API_KEY=$(cat pki_admin | jq -r ".created_roles" | jq -r '.["conjur:host:pki-service"]' | jq -r .api_key)
+          ::set-env name=CONJUR_ADMIN_API_KEY::$(cat pki_admin | jq -r ".created_roles" | jq -r '.["conjur:host:pki-service"]' | jq -r .api_key)
           echo $CONJUR_ADMIN_API_KEY
           rm -f pki_admin
       - name: Build PKIaaS Docker Image
