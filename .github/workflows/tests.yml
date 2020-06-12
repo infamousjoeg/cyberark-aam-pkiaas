@@ -39,10 +39,20 @@ jobs:
           docker cp ./tests/pki-config-policy.yml cyberark-aam-pkiaas_client_1:/root/pki-config-policy.yml
           docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load root /root/pki-config-policy.yml > pki_config
           docker exec -i cyberark-aam-pkiaas_client_1 conjur list
+      - name: Upload pki_config Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: pki_config
+          path: pki_config
       - name: Load PKI Admin Policy
         run: |
           docker cp ./tests/pki-admin-policy.yml cyberark-aam-pkiaas_client_1:/root/pki-admin-policy.yml
           docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load root /root/pki-admin-policy.yml > pki_admin
+      - name: Upload pki_admin Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: pki_admin
+          path: pki_admin
       - name: Parse pki_config
         run: |
           $(cat pki_config | jq -r ".created_roles" | jq -r '.["conjur:host:pki-service"]' | jq -r .api_key) > CONJUR_AUTHN_API_KEY
