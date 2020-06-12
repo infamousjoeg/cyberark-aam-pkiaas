@@ -46,11 +46,16 @@ func (p *Pki) CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, err = p.Backend.GetTemplate(newTemplate.TemplateName)
+	if err == nil {
+		http.Error(w, "CPKICT006: Template "+newTemplate.TemplateName+" already exists", http.StatusBadRequest)
+		return
+	}
 	// Validate and sanitize all input from HTTP request
 
 	err = ValidateKeyAlgoAndSize(newTemplate.KeyAlgo, newTemplate.KeyBits)
 	if err != nil {
-		http.Error(w, "CPKICT006: Invalid key algorithm or size - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT007: Invalid key algorithm or size - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -58,26 +63,26 @@ func (p *Pki) CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// to validate they are all presented in proper format
 	_, err = ProcessKeyUsages(newTemplate.KeyUsages)
 	if err != nil {
-		http.Error(w, "CPKICT007: Error validating key usages - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT008: Error validating key usages - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	_, err = ProcessExtKeyUsages(newTemplate.ExtKeyUsages)
 	if err != nil {
-		http.Error(w, "CPKICT008: Error validating extended key usages - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT009: Error validating extended key usages - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Validate any policy identifier OIDs that are sent in the request
 	_, err = ProcessPolicyIdentifiers(newTemplate.PolicyIdentifiers)
 	if err != nil {
-		http.Error(w, "CPKICT009: Error validating policy identifiers - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT010: Error validating policy identifiers - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Store the newly created template object in the backend
 	err = p.Backend.CreateTemplate(newTemplate)
 	if err != nil {
-		http.Error(w, "CPKICT010: Unable to store the new template - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT011: Unable to store the new template - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 }

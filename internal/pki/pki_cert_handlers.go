@@ -457,6 +457,7 @@ func (p *Pki) ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 		Certificates: retSerialNumbers,
 	}
 	w.Header().Set("Content-Type", "application/json")
+
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "CPKILC004: Error writing HTTP response - "+err.Error(), http.StatusInternalServerError)
@@ -469,33 +470,30 @@ func (p *Pki) ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 // reason code.  Updates the certificate object in the storage backend as well as generates
 // a new CRL
 func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
-	reqBody, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "CPKIRC001: Unable to read request body - "+err.Error(), http.StatusBadRequest)
-		return
-	}
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "CPKIRC002: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "CPKIRC001: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the Revoke Certificate endpoint for the specified serial number
 	authHeader := r.Header.Get("Authorization")
-	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "CPKIRC003: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKIRC002: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 	var crlReq = types.RevokeRequest{}
-	err = json.Unmarshal(reqBody, &crlReq)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&crlReq)
 	if err != nil {
-		http.Error(w, "CPKIRC004: Not able to unmarshal request body data - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIRC003: Not able to decode request JSON data - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	err = p.Backend.GetAccessControl().RevokeCertificate(authHeader, crlReq.SerialNumber)
 	if err != nil {
-		http.Error(w, "CPKIRC005: Not authorized to revoke certificate with serial number "+crlReq.SerialNumber+" - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKIRC004: Not authorized to revoke certificate with serial number "+crlReq.SerialNumber+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -505,20 +503,20 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	if crlReq.Reason != "" {
 		reasonCode, err = ReturnReasonCode(crlReq.Reason)
 		if err != nil {
-			http.Error(w, "CPKIRC006: Error parsing revocation reason - "+err.Error(), http.StatusBadRequest)
+			http.Error(w, "CPKIRC005: Error parsing revocation reason - "+err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
 	revokeTime := time.Now()
 	intSerialNum, err := ConvertSerialOctetStringToInt(crlReq.SerialNumber)
 	if err != nil {
-		http.Error(w, "CPKIRC007: Error converting serial number to integer value"+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIRC006: Error converting serial number to integer value"+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	err = p.Backend.RevokeCertificate(intSerialNum, reasonCode, revokeTime)
 	if err != nil {
-		http.Error(w, "CPKIRC008: Certificate revocation failed on storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIRC007: Certificate revocation failed on storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -527,7 +525,7 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	// CRL
 	revokedCertificates, err := p.Backend.GetRevokedCerts()
 	if err != nil {
-		http.Error(w, "CPKIRC009: Error retrieving revoked certificates list from storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIRC008: Error retrieving revoked certificates list from storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	revokedCertList := []pkix.RevokedCertificate{}
@@ -543,7 +541,7 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		intSerialNum := new(big.Int)
 		intSerialNum, success := intSerialNum.SetString(revokedCertificate.SerialNumber, 10)
 		if !success {
-			http.Error(w, "CPKIRC010: Error converting serial number integer from string", http.StatusInternalServerError)
+			http.Error(w, "CPKIRC009: Error converting serial number integer from string", http.StatusInternalServerError)
 			return
 		}
 		crlEntry := pkix.RevokedCertificate{
@@ -557,7 +555,7 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the base64 encoded signing key from storage backend and decode it
 	encodedSigningKey, err := p.Backend.GetSigningKey()
 	if err != nil {
-		http.Error(w, "CPKIRC011: Error retrieving signing key from storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIRC010: Error retrieving signing key from storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	decodedSigningKey, err := base64.StdEncoding.DecodeString(encodedSigningKey)
@@ -569,11 +567,11 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "ParsePKCS1PrivateKey") {
 			signingKey, err = x509.ParsePKCS1PrivateKey(decodedSigningKey)
 			if err != nil {
-				http.Error(w, "CPKIRC012: Error parsing signing key - "+err.Error(), http.StatusInternalServerError)
+				http.Error(w, "CPKIRC011: Error parsing signing key - "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else {
-			http.Error(w, "CPKIRC012: Error parsing signing key - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKIRC011: Error parsing signing key - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -581,28 +579,28 @@ func (p *Pki) RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the base64 encoded signing key from storage backend and decode it
 	encodedCACert, err := p.Backend.GetSigningCert()
 	if err != nil {
-		http.Error(w, "CPKIRC013: Error retrieving CA certificate from storage backend: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIRC012: Error retrieving CA certificate from storage backend: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	derCACert, err := base64.StdEncoding.DecodeString(encodedCACert)
 	if err != nil {
-		http.Error(w, "CPKIRC014: Unable to decode encoded CA certificate - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIRC013: Unable to decode encoded CA certificate - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	caCert, err := x509.ParseCertificate(derCACert)
 	if err != nil {
-		http.Error(w, "CPKIRC015: Unable to parse CA certificate - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIRC014: Unable to parse CA certificate - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	newCRL, err := caCert.CreateCRL(rand.Reader, signingKey, revokedCertList, revokeTime, revokeTime.Add(time.Hour*12))
 	if err != nil {
-		http.Error(w, "CPKI016: Error while creating new CRL - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKI015: Error while creating new CRL - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	err = p.Backend.WriteCRL(base64.StdEncoding.EncodeToString(newCRL))
 	if err != nil {
-		http.Error(w, "CPKI017: Error writing new CRL to storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKI016: Error writing new CRL to storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }

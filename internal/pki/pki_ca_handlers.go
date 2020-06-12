@@ -257,7 +257,7 @@ func (p *Pki) SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request)
 	derCert := pemCert.Bytes
 	certificate, err := x509.ParseCertificate(derCert)
 	if err != nil {
-		http.Error(w, "CPKSISI007: Error parsing the signed certificate - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKISI007: Error parsing the signed certificate - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
