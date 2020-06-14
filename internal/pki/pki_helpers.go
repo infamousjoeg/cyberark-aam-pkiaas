@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang/gddo/httputil/header"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
@@ -409,6 +410,12 @@ func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, ba
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Error parsing decoded signing certificate: " + err.Error())
 	}
+
+	// Validate that requested certificate is within validity period of CA certificate
+	if caCert.NotAfter.Sub(time.Now().Add(time.Minute*time.Duration(ttl))) < 0 {
+		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Requested certificate validity period is greater than the CA validity period")
+	}
+
 	// Retrieve the signing key from backend and calculate the signature algorithm for use in the
 	// certificate generation
 	strKey, err := p.Backend.GetSigningKey()
@@ -452,31 +459,35 @@ func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, ba
 // ProcessSubjectAltNames ---------------------------------------------------------
 func ProcessSubjectAltNames(altNames []string) ([]string, []string, []net.IP, []*url.URL, error) {
 	dnsNames, emailAddresses, ipAddresses, URIs := []string{}, []string{}, []net.IP{}, []*url.URL{}
+	// Regex to match email address formats
+	var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 	for _, altName := range altNames {
 		if !strings.Contains(altName, ":") {
-			return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Improperly formatted SAN present in request")
+			return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Improperly formatted SAN present in request: " + altName)
 		}
 		switch strings.Split(altName, ":")[0] {
 		case "IP":
 			tempIP := net.ParseIP(strings.Split(altName, ":")[1])
 			if tempIP == nil {
-				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Invalid IP address SAN present in request")
+				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Invalid IP address SAN present in request: " + strings.Split(altName, ":")[1])
 			}
 			ipAddresses = append(ipAddresses, tempIP)
 		case "DNS":
-
 			dnsNames = append(dnsNames, strings.Split(altName, ":")[1])
 		case "email":
+			if !rxEmail.MatchString(strings.Split(altName, ":")[1]) {
+				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Invalid email address SAN present in request: " + strings.Split(altName, ":")[1])
+			}
 			emailAddresses = append(emailAddresses, strings.Split(altName, ":")[1])
 		case "URI":
-			tempURI, err := url.ParseRequestURI(strings.Split(altName, ":")[1])
+			tempURI, err := url.ParseRequestURI(strings.Split(altName, "RI:")[1])
 			if err != nil {
-				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Invalid URI SAN present in request")
+				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Invalid URI SAN present in request: " + err.Error())
 			}
 			URIs = append(URIs, tempURI)
 		default:
-			return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Improperly formatted SAN present in request")
+			return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Improperly formatted SAN present in request: " + altName)
 		}
 	}
 	return dnsNames, emailAddresses, ipAddresses, URIs, nil

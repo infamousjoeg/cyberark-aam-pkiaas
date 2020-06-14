@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math/bits"
 	"net/http"
 
@@ -27,53 +26,48 @@ import (
 // new certificate generation. Alternatively, if the 'selfSigned' property is passed in
 // the request as true, it will generate and return a self-signed CA certificate
 func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
-	reqBody, err := ioutil.ReadAll(r.Body)
-
-	if err != nil {
-		http.Error(w, "CPKIGI001: Unable to read request body -  "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "CPKIGI002: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "CPKIGI001: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
 	authHeader := r.Header.Get("Authorization")
-	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "CPKIGI003: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKIGI002: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	err = p.Backend.GetAccessControl().AdminOnly(authHeader)
 	if err != nil {
-		http.Error(w, "CPKIGI004: Not authorized to generate intermediate CA CSR - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKIGI003: Not authorized to generate intermediate CA CSR - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
 	var intermediateRequest types.IntermediateRequest
-	err = json.Unmarshal(reqBody, &intermediateRequest)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&intermediateRequest)
 	if err != nil {
-		http.Error(w, "CPKIGI005: Not able to unmarshal request body data - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIGI004: Not able to decode request JSON data - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	signPrivKey, signPubKey, err := GenerateKeys(intermediateRequest.KeyAlgo, intermediateRequest.KeyBits)
 	if err != nil {
-		http.Error(w, "CPKIGI006: Error generating signing key - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIGI005: Error generating signing key - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	certSubject, err := SetCertSubject(intermediateRequest.Subject, intermediateRequest.CommonName)
 	if err != nil {
-		http.Error(w, "CPKIGI007: Error processing signing certificate subject - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIGI006: Error processing signing certificate subject - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	dnsNames, emailAddresses, ipAddresses, URIs, err := ProcessSubjectAltNames(intermediateRequest.AltNames)
 	if err != nil {
-		http.Error(w, "CPKIGI008: Error processing SANs - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIGI007: Error processing SANs - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -85,7 +79,7 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 	// Convert extension type to ASN.1 format to be added to certificate request
 	encodedCaConstraint, err := asn1.Marshal(caConstraint)
 	if err != nil {
-		http.Error(w, "CPKIGI009: Unable to marshal CA basic constraints to ASN.1 format - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIGI008: Unable to marshal CA basic constraints to ASN.1 format - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	isCAExtension := pkix.Extension{
@@ -107,7 +101,7 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 	bsKeyUsage.Bytes = []byte{byte(0xff & (keyUsage >> 8)), byte(0xff & keyUsage)}
 	encodedKeyUsage, err := asn1.Marshal(bsKeyUsage)
 	if err != nil {
-		http.Error(w, "CPKIGI010: Unable to marshal CA key usages to ASN.1 format - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIGI009: Unable to marshal CA key usages to ASN.1 format - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	keyUsageExtension := pkix.Extension{
@@ -127,7 +121,7 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 	case "ed25519.PrivateKey":
 		sigAlgo = x509.PureEd25519
 	default:
-		http.Error(w, "CPKIGI011: No matching signature algorithm found in requested template", http.StatusInternalServerError)
+		http.Error(w, "CPKIGI010: No matching signature algorithm found in requested template", http.StatusInternalServerError)
 		return
 	}
 	var intermediateResponse types.PEMIntermediate
@@ -146,7 +140,7 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 		}
 		signCSR, err := x509.CreateCertificateRequest(rand.Reader, &signRequest, signPrivKey)
 		if err != nil {
-			http.Error(w, "CPKIGI012: Error while generating new CSR - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKIGI011: Error while generating new CSR - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -156,7 +150,7 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 	} else { // Generate a self-signed CA certificate
 		serialNumber, err := p.GenerateSerialNumber()
 		if err != nil {
-			http.Error(w, "CPKIGI013: Error generating serial number - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKIGI012: Error generating serial number - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		certTemplate := x509.Certificate{
@@ -173,14 +167,14 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 		}
 		signCert, err := x509.CreateCertificate(rand.Reader, &certTemplate, &certTemplate, signPubKey, signPrivKey)
 		if err != nil {
-			http.Error(w, "CPKIGI014: Error while generating new self signed cert - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKIGI013: Error while generating new self signed cert - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		pemSignCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: signCert})
 		intermediateResponse = types.PEMIntermediate{SelfSignedCert: string(pemSignCert)}
 		err = p.Backend.WriteSigningCert(base64.StdEncoding.EncodeToString(signCert))
 		if err != nil {
-			http.Error(w, "CPKIGI015: Error writing self-signed CA certificate to backend storage - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKIGI014: Error writing self-signed CA certificate to backend storage - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -193,7 +187,7 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 	case "ECDSA":
 		keyBytes, err = x509.MarshalECPrivateKey(signPrivKey.(*ecdsa.PrivateKey))
 		if err != nil {
-			http.Error(w, "CPKIGI016: Unable to marshal new ECDSA private key - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKIGI015: Unable to marshal new ECDSA private key - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "ED25519":
@@ -202,13 +196,13 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 
 	err = p.Backend.WriteSigningKey(base64.StdEncoding.EncodeToString(keyBytes))
 	if err != nil {
-		http.Error(w, "CPKIGI017: Error while writing signing key to Conjur - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIGI016: Error while writing signing key to Conjur - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(intermediateResponse)
 	if err != nil {
-		http.Error(w, "CPKIGI018: Error encoding intermediate CA/CSR response - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKIGI017: Error encoding intermediate CA/CSR response - "+err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -217,65 +211,60 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 // by the enterprise root CA (or another intermediate CA in the chain) and sets it
 // as the "signing certificate" for the PKI service
 func (p *Pki) SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
-	reqBody, err := ioutil.ReadAll(r.Body)
-
-	if err != nil {
-		http.Error(w, "CPKISI001: Unable to read request body - "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "CPKISI002: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "CPKISI001: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
 	authHeader := r.Header.Get("Authorization")
-	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "CPKISI003: Invalid authentication from header -  "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKISI002: Invalid authentication from header -  "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	err = p.Backend.GetAccessControl().AdminOnly(authHeader)
 	if err != nil {
-		http.Error(w, "CPKISI004: Not authorized to set intermediate CA certificate - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKISI003: Not authorized to set intermediate CA certificate - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
 	var signedCert types.PEMCertificate
-	err = json.Unmarshal(reqBody, &signedCert)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&signedCert)
 	if err != nil {
-		http.Error(w, "CPKISI005: Not able to unmarshal request body data - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKISI004: Not able to decode request JSON data - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	pemCert, rest := pem.Decode([]byte(signedCert.Certificate))
 	if len(rest) > 0 {
-		http.Error(w, "CPKISI006: The signed certificate is not in valid PEM format", http.StatusBadRequest)
+		http.Error(w, "CPKISI005: The signed certificate is not in valid PEM format", http.StatusBadRequest)
 		return
 	}
 	derCert := pemCert.Bytes
 	certificate, err := x509.ParseCertificate(derCert)
 	if err != nil {
-		http.Error(w, "CPKISI007: Error parsing the signed certificate - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKISI006: Error parsing the signed certificate - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	certificatePublicKey, err := x509.MarshalPKIXPublicKey(certificate.PublicKey)
 	if err != nil {
-		http.Error(w, "CPKISI008: Error parsing the public key from certificate - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKISI007: Error parsing the public key from certificate - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	strSigningKey, err := p.Backend.GetSigningKey()
 	if err != nil {
-		http.Error(w, "CPKISI009: Error reading signing key from storage backend - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKISI008: Error reading signing key from storage backend - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	byteSigningKey, err := base64.StdEncoding.DecodeString(strSigningKey)
 	if err != nil {
-		http.Error(w, "CPKISI010: Error decoding signing key from storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKISI009: Error decoding signing key from storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var signingKey crypto.PrivateKey
@@ -283,47 +272,47 @@ func (p *Pki) SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request)
 	case x509.SHA256WithRSA:
 		signingKey, err = x509.ParsePKCS1PrivateKey(byteSigningKey)
 		if err != nil {
-			http.Error(w, "CPKISI011: Error parsing the signing key - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKISI010: Error parsing the signing key - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		signingPublicKey, err := x509.MarshalPKIXPublicKey(&signingKey.(*rsa.PrivateKey).PublicKey)
 		if err != nil {
-			http.Error(w, "CPKISI012: Error parsing the public key from the signing key - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKISI011: Error parsing the public key from the signing key - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if string(signingPublicKey) != string(certificatePublicKey) {
-			http.Error(w, "CPKISI013: Certificate public key does not match the signing key", http.StatusBadRequest)
+			http.Error(w, "CPKISI012: Certificate public key does not match the signing key", http.StatusBadRequest)
 			return
 		}
 	case x509.ECDSAWithSHA256:
 		signingKey, err = x509.ParseECPrivateKey(byteSigningKey)
 		if err != nil {
-			http.Error(w, "CPKISI011: Error parsing the signing key - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKISI010: Error parsing the signing key - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		signingPublicKey, err := x509.MarshalPKIXPublicKey(signingKey.(ecdsa.PrivateKey).PublicKey)
 		if err != nil {
-			http.Error(w, "CPKISI012: Error parsing the public key from the signing key - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKISI011: Error parsing the public key from the signing key - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if string(signingPublicKey) != string(certificatePublicKey) {
-			http.Error(w, "CPKISI013: Certificate public key does not match the signing key", http.StatusBadRequest)
+			http.Error(w, "CPKISI012: Certificate public key does not match the signing key", http.StatusBadRequest)
 			return
 		}
 	case x509.PureEd25519:
 		signingPublicKey, err := x509.MarshalPKIXPublicKey(ed25519.PrivateKey(byteSigningKey).Public())
 		if err != nil {
-			http.Error(w, "CPKISI012: Error parsing the public key from the signing key - "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "CPKISI011: Error parsing the public key from the signing key - "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if string(signingPublicKey) != string(certificatePublicKey) {
-			http.Error(w, "CPKISI013: Certificate public key does not match the signing key", http.StatusBadRequest)
+			http.Error(w, "CPKISI012: Certificate public key does not match the signing key", http.StatusBadRequest)
 			return
 		}
 	}
 	err = p.Backend.WriteSigningCert(base64.StdEncoding.EncodeToString(derCert))
 	if err != nil {
-		http.Error(w, "CPKISI014: Error writing the intermediate CA certificate to storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKISI013: Error writing the intermediate CA certificate to storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
@@ -402,35 +391,30 @@ func (p *Pki) GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 // into individual DER certificates. Each of these certificates are stored in base64
 // format in the storage backend
 func (p *Pki) SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
-	reqBody, err := ioutil.ReadAll(r.Body)
-
-	if err != nil {
-		http.Error(w, "CPKISC001: Unable to read request body - "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "CPKISC002: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "CPKISC001: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
 	authHeader := r.Header.Get("Authorization")
-	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "CPKISC003: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKISC002: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	err = p.Backend.GetAccessControl().AdminOnly(authHeader)
 	if err != nil {
-		http.Error(w, "CPKISC004: Not authorized to set CA chain - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKISC003: Not authorized to set CA chain - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
 	var pemBundle types.PEMCertificateBundle
-	err = json.Unmarshal(reqBody, &pemBundle)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&pemBundle)
 	if err != nil {
-		http.Error(w, "CPKISC005: Not able to unmarshal request body data - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKISC004: Not able to decode request JSON data - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	var certBundle []string
@@ -443,7 +427,7 @@ func (p *Pki) SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = p.Backend.WriteCAChain(certBundle)
 	if err != nil {
-		http.Error(w, "CPKISC006: Error writing CA chain to storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CPKISC005: Error writing CA chain to storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
