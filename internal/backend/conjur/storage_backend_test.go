@@ -433,9 +433,13 @@ func TestRevokeCertificate(t *testing.T) {
 	serialNumber, _ := new(big.Int).SetString("88349947748020022", 10)
 	// Create template for this test case
 	cert := types.CreateCertificateData{
-		Certificate:  "SomeDEREncodedBlob",
-		SerialNumber: "88349947748020022",
+		Certificate:    "SomeDEREncodedBlob",
+		SerialNumber:   "88349947748020022",
+		InternalState:  "active",
+		ExpirationDate: "7748020022",
 	}
+
+	_ = conjurPki.DeleteCertificate(serialNumber)
 
 	err = conjurPki.CreateCertificate(cert)
 	if err != nil {
@@ -445,11 +449,6 @@ func TestRevokeCertificate(t *testing.T) {
 	err = conjurPki.RevokeCertificate(serialNumber, 1, time.Now())
 	if err != nil {
 		t.Errorf("Failed to revoked certficiate even though it should be revokable. %s", err)
-	}
-
-	err = conjurPki.DeleteCertificate(serialNumber)
-	if err != nil {
-		t.Errorf("Failed to delete certificate even though it should exist. %s", err)
 	}
 }
 
