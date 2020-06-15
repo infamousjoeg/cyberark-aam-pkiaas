@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+
 export CONJUR_APPLIANCE_URL=https://conjur-master
 export CONJUR_AUTHN_LOGIN="host/pki-admin"
 export CONJUR_CERT_FILE="$(pwd)/conjur.pem"
@@ -8,6 +9,8 @@ export CONJUR_AUTHN_API_KEY="3y455av3mxyns31kqxf692eyaw7212awnyf3z8syre3yz195w3a
 
 source conjur_utils.sh
 session_token=$(conjur_authenticate)
+pki_url="http://localhost:8080"
+
 export session_token="$session_token"
 
 # create the self signed certificate
@@ -20,31 +23,30 @@ data='{
 curl --fail -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
-  http://localhost:8080/ca/generate
-  
+  $pki_url/ca/generate
 
 # create a test template
 data='{
-  "templateName": "testingTemplate",
+  "templateName": "andrewsTemplate",
   "keyAlgo": "RSA",
   "keyBits": "2048"
 }'
 curl --fail -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
-  http://localhost:8080/template/create
+  $pki_url/template/create
 
 
 # create a test certificate
 data='{
   "commonName": "subdomain.example.com",
-  "templateName": "testingTemplate",
+  "templateName": "andrewsTemplate",
   "timeToLive": 3600
 }'
 response=$(curl --fail -s -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
-  http://localhost:8080/certificate/create)
+  $pki_url/certificate/create)
 
 
 # parse the result and get the certificate serial number
@@ -53,7 +55,7 @@ certificateResponse=$(echo "$response" | jq -r .certificate)
 
 response=$(curl --fail -s -H "Content-Type: application/json" \
   -H "$session_token" \
-  http://localhost:8080/certificate/$serialNumber)
+  $pki_url/certificate/$serialNumber)
 
 certificateReturned=$(echo "$response" | jq -r .certificate)
 
@@ -73,13 +75,13 @@ response=$(curl --fail -s -H "Content-Type: application/json" \
   -X POST \
   --data "$data" \
   -H "$session_token" \
-  http://localhost:8080/certificate/revoke)
+  $pki_url/certificate/revoke)
 
 
 # certificate list
 response=$(curl --fail -s -H "Content-Type: application/json" \
   -H "$session_token" \
-  http://localhost:8080/certificates)
+  $pki_url/certificates)
 echo "All your certifiates: $response"
 
 
@@ -90,13 +92,13 @@ for serialNumber in $(echo "${response}" | jq '.["certificates"]' | jq -r -c '.[
 		-X POST \
 		--data "$data" \
 		-H "$session_token" \
-		http://localhost:8080/certificate/revoke)
+		$pki_url/certificate/revoke)
 	echo "revoked $serialNumber and response was $response"
 done
 
 # Lets look at the CRL
 response=$(curl --fail -s \
-  http://localhost:8080/crl)
+  $pki_url/crl)
 if [[ -z $response ]]; then
   echo "ERROR: CRL Should have content"
   return 1
@@ -125,7 +127,7 @@ curl --fail -s \
 # list the templates
 response=$(curl --fail -s \
 	-H "$session_token" \
-	http://localhost:8080/templates)
+	$pki_url/templates)
 
 # parse first template name (Should be only)
 templateName=$(echo "$response" | jq  '.["templates"]' | jq -r '.[0]')
@@ -133,13 +135,13 @@ templateName=$(echo "$response" | jq  '.["templates"]' | jq -r '.[0]')
 # get a specific template
 curl --fail -s \
 	-H "$session_token" \
-	"http://localhost:8080/template/$templateName"
+	"$pki_url/template/$templateName"
 
 # delete that same template we just examined
 curl --fail -s \
 	-H "$session_token" \
 	-X "DELETE" \
-	"http://localhost:8080/template/delete/$templateName"
+	"$pki_url/template/delete/$templateName"
 
 
 # re-create same template so I can test manually
@@ -151,4 +153,5 @@ data='{
 curl --fail -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
-  http://localhost:8080/template/create
+
+$pki_url/template/create
