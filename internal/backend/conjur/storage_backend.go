@@ -19,6 +19,7 @@ type PolicyTemplates struct {
 	deleteTemplate    string
 	newCertificate    string
 	deleteCertificate string
+	revokeCertificate string
 }
 
 // StorageBackend ...
@@ -90,6 +91,17 @@ func defaultCreateCertificatePolicy() string {
 `
 }
 
+func defaultRevokeCertificatePolicy() string {
+	return `- !variable
+  id: "<SerialNumber>"
+  annotations:
+    Revoked: <Revoked>
+    RevocationDate: <RevocationDate>
+    RevocationReasonCode: <RevocationReasonCode>
+    InternalState: csasa<InternalState>csasa
+`
+}
+
 func defaultDeleteTemplatePolicy() string {
 	return `- !delete
   record: !variable <TemplateName>
@@ -117,7 +129,8 @@ func NewFromDefaults() (StorageBackend, error) {
 		defaultCreateTemplatePolicy(),
 		defaultDeleteTemplatePolicy(),
 		defaultCreateCertificatePolicy(),
-		defaultDeleteCertificatePolicy())
+		defaultDeleteCertificatePolicy(),
+		defaultRevokeCertificatePolicy())
 
 	access := NewAccessFromDefaults(conjurClient.GetConfig(), defaultPolicyBranch())
 
@@ -125,12 +138,13 @@ func NewFromDefaults() (StorageBackend, error) {
 }
 
 // NewTemplates ...
-func NewTemplates(newTemplate string, deleteTemplate string, newCertificate string, deleteCertificate string) PolicyTemplates {
+func NewTemplates(newTemplate string, deleteTemplate string, newCertificate string, deleteCertificate string, revokedCertificate string) PolicyTemplates {
 	return PolicyTemplates{
 		newTemplate:       newTemplate,
 		deleteTemplate:    deleteTemplate,
 		newCertificate:    newCertificate,
 		deleteCertificate: deleteCertificate,
+		revokeCertificate: revokedCertificate,
 	}
 }
 
@@ -266,16 +280,16 @@ func (c StorageBackend) CreateCertificate(cert types.CreateCertificateData) erro
 	if err == nil {
 		return fmt.Errorf("Certificate '%s' already exists", cert.SerialNumber)
 	}
-	return c.updateCertificate(cert)
+	return c.updateCertificate(cert, c.templates.newCertificate)
 
 }
 
-func (c StorageBackend) updateCertificate(cert types.CreateCertificateData) error {
+func (c StorageBackend) updateCertificate(cert types.CreateCertificateData, policyTemplate string) error {
 
 	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
 
 	// replace template placeholders
-	newPolicy := bytes.NewReader([]byte(ReplaceCertificate(cert, c.templates.newCertificate)))
+	newPolicy := bytes.NewReader([]byte(ReplaceCertificate(cert, policyTemplate)))
 
 	// Load policy to create the variable
 	response, err := c.client.LoadPolicy(
@@ -499,7 +513,7 @@ func (c StorageBackend) RevokeCertificate(serialNumber *big.Int, reasonCode int,
 		InternalState:        "revoked",
 	}
 
-	err = c.updateCertificate(certificateInDap)
+	err = c.updateCertificate(certificateInDap, c.templates.revokeCertificate)
 
 	return err
 }
