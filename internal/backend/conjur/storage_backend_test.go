@@ -411,7 +411,7 @@ func TestWriteCAChain(t *testing.T) {
 func TestGetCAChainNonExistent(t *testing.T) {
 	client, _ := defaultConjurClient()
 	templates := defaultTemplates()
-	conjurPki := conjur.NewConjurPki(client, "not-pki", templates, conjur.NewAccessFromDefaults(client.GetConfig(), "pki"))
+	conjurPki := conjur.NewConjurPki(client, "not-pki", templates, conjur.NewAccessFromDefaults(client.GetConfig(), "not-pki"))
 
 	// Retrieve this chain
 	_, err := conjurPki.GetCAChain()
