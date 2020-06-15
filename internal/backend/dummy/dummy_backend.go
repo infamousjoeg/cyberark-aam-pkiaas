@@ -23,7 +23,6 @@ var dummySubject types.SubjectFields = types.SubjectFields{
 }
 var dummyTemplate types.Template = types.Template{
 	TemplateName: "TestTemplate",
-	Subject:      dummySubject,
 	KeyAlgo:      "RSA",
 	KeyBits:      "2048",
 	MaxTTL:       115200,

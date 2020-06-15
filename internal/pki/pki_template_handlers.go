@@ -2,7 +2,6 @@ package pki
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -14,48 +13,44 @@ import (
 // into a types.Template object. Data from the request is validated and then
 // stored in backend
 func (p *Pki) CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
-	reqBody, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "CPKICT001: Unable to read request body - "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "CPKICT002: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "CPKICT001: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the Create Template endpoint
 	authHeader := r.Header.Get("Authorization")
-	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "CPKICT003: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKICT002: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 	err = p.Backend.GetAccessControl().CreateTemplate(authHeader)
 	if err != nil {
-		http.Error(w, "CPKICT004: Not authorized to create new template - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKICT003: Not authorized to create new template - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
 	var newTemplate types.Template
-	err = json.Unmarshal(reqBody, &newTemplate)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&newTemplate)
 	if err != nil {
-		http.Error(w, "CPKICT005: Not able to unmarshal request body data - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT004: Not able to decode request JSON data - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	_, err = p.Backend.GetTemplate(newTemplate.TemplateName)
 	if err == nil {
-		http.Error(w, "CPKICT006: Template "+newTemplate.TemplateName+" already exists", http.StatusBadRequest)
+		http.Error(w, "CPKICT005: Template "+newTemplate.TemplateName+" already exists", http.StatusBadRequest)
 		return
 	}
 	// Validate and sanitize all input from HTTP request
 
 	err = ValidateKeyAlgoAndSize(newTemplate.KeyAlgo, newTemplate.KeyBits)
 	if err != nil {
-		http.Error(w, "CPKICT007: Invalid key algorithm or size - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT006: Invalid key algorithm or size - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -63,26 +58,26 @@ func (p *Pki) CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// to validate they are all presented in proper format
 	_, err = ProcessKeyUsages(newTemplate.KeyUsages)
 	if err != nil {
-		http.Error(w, "CPKICT008: Error validating key usages - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT007: Error validating key usages - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	_, err = ProcessExtKeyUsages(newTemplate.ExtKeyUsages)
 	if err != nil {
-		http.Error(w, "CPKICT009: Error validating extended key usages - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT008: Error validating extended key usages - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Validate any policy identifier OIDs that are sent in the request
 	_, err = ProcessPolicyIdentifiers(newTemplate.PolicyIdentifiers)
 	if err != nil {
-		http.Error(w, "CPKICT010: Error validating policy identifiers - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT009: Error validating policy identifiers - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Store the newly created template object in the backend
 	err = p.Backend.CreateTemplate(newTemplate)
 	if err != nil {
-		http.Error(w, "CPKICT011: Unable to store the new template - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKICT010: Unable to store the new template - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 }
@@ -92,15 +87,8 @@ func (p *Pki) CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 // into a types.Template object. Retrieves existing template from backend and
 // updates its properties with the new request and overwrites the old template.
 func (p *Pki) ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
-	reqBody, err := ioutil.ReadAll(r.Body)
-
-	if err != nil {
-		http.Error(w, "CPKIMT001: Unable to read request body - "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	if !ValidateContentType(r.Header, "application/json") {
-		http.Error(w, "CPKIMT002: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, "CPKIMT001: Invalid HTTP Content-Type header - expected application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
@@ -108,39 +96,43 @@ func (p *Pki) ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// request body first in order to get template name for authorization check to ensure the requstor
 	// has authorization to access the Manage Template endpoint as well as the specific template
 	authHeader := r.Header.Get("Authorization")
-	err = p.Backend.GetAccessControl().Authenticate(authHeader)
+	err := p.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
-		http.Error(w, "CPKIMT003: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "CPKIMT002: Invalid authentication from header - "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 	var newTemplate types.Template
-	err = json.Unmarshal(reqBody, &newTemplate)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&newTemplate)
 	if err != nil {
-		http.Error(w, "CPKIMT004: Not able to unmarshal request body data - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIMT003: Not able to decode request JSON data - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	err = p.Backend.GetAccessControl().ManageTemplate(authHeader, newTemplate.TemplateName)
 	if err != nil {
-		http.Error(w, "CPKIMT005: Not authorized to manage template "+newTemplate.TemplateName+" - "+err.Error(), http.StatusForbidden)
+		http.Error(w, "CPKIMT004: Not authorized to manage template "+newTemplate.TemplateName+" - "+err.Error(), http.StatusForbidden)
 		return
 	}
 
 	template, err := p.Backend.GetTemplate(newTemplate.TemplateName)
 	if err != nil {
-		http.Error(w, "CPKIMT006: Unable to retrieve template from storage backend - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIMT005: Unable to retrieve template from storage backend - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	template.Subject = newTemplate.Subject
-	err = json.Unmarshal(reqBody, &template)
+	decoder = json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&template)
 	if err != nil {
-		http.Error(w, "CPKIMT007: Not able to unmarshal stored template data - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIMT006: Not able to decode request JSON data - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Validate and sanitize all input from HTTP request
 	err = ValidateKeyAlgoAndSize(template.KeyAlgo, template.KeyBits)
 	if err != nil {
-		http.Error(w, "CPKIMT008: Invalid key algorithm or size - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CPKIMT007: Invalid key algorithm or size - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -148,19 +140,19 @@ func (p *Pki) ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// to validate they are all presented in proper format
 	_, err = ProcessKeyUsages(template.KeyUsages)
 	if err != nil {
-		http.Error(w, "CKPIMT009: Error validating key usages - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CKPIMT008: Error validating key usages - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	_, err = ProcessExtKeyUsages(template.ExtKeyUsages)
 	if err != nil {
-		http.Error(w, "CKPIMT010: Error validating extended key usages - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CKPIMT009: Error validating extended key usages - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Validate permitted/excluded data
 	_, err = ProcessPolicyIdentifiers(template.PolicyIdentifiers)
 	if err != nil {
-		http.Error(w, "CKPIMT011: Error validating policy identifiers - "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "CKPIMT010: Error validating policy identifiers - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -168,12 +160,12 @@ func (p *Pki) ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// same name
 	err = p.Backend.DeleteTemplate(template.TemplateName)
 	if err != nil {
-		http.Error(w, "CKPIMT012: Error deleting template from storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CKPIMT011: Error deleting template from storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	err = p.Backend.CreateTemplate(template)
 	if err != nil {
-		http.Error(w, "CKPIMT013: Error creating new template in storage backend - "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "CKPIMT012: Error creating new template in storage backend - "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
