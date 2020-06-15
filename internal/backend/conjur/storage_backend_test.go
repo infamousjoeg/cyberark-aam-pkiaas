@@ -31,6 +31,17 @@ func testCreateCertificate() string {
 `
 }
 
+func testRevokeCertificatePolicy() string {
+	return `- !variable
+  id: "<SerialNumber>"
+  annotations:
+    Revoked: <Revoked>
+    RevocationDate: <RevocationDate>
+    RevocationReasonCode: <RevocationReasonCode>
+    InternalState: csasa<InternalState>csasa
+`
+}
+
 func testDeleteTemplate() string {
 	return `- !delete
   record: !variable <TemplateName>
@@ -71,17 +82,11 @@ func defaultConjurClient() (*conjurapi.Client, error) {
 }
 
 func defaultTemplates() conjur.PolicyTemplates {
-	return conjur.NewTemplates(testCreateTemplate(), testDeleteTemplate(), testCreateCertificate(), testDeleteCertificate())
+	return conjur.NewTemplates(testCreateTemplate(), testDeleteTemplate(), testCreateCertificate(), testDeleteCertificate(), testRevokeCertificatePolicy())
 }
 
 func defaultConjurPki() (conjur.StorageBackend, error) {
-	client, err := defaultConjurClient()
-	if err != nil {
-		return conjur.StorageBackend{}, err
-	}
-
-	templates := defaultTemplates()
-	return conjur.NewConjurPki(client, "pki", templates, conjur.NewAccessFromDefaults(client.GetConfig(), "pki")), err
+	return conjur.NewFromDefaults()
 }
 
 func defaultTemplate() types.Template {
