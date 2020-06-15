@@ -25,16 +25,16 @@ curl --fail -H "Content-Type: application/json" \
   $pki_url/ca/generate
 
 # create a test template
-# data='{
-#   "templateName": "andrewsTemplate",
-#   "keyAlgo": "RSA",
-#   "keyBits": "2048"
-# }'
-# curl --fail -H "Content-Type: application/json" \
-#   -H "$session_token" \
-#   --data "$data" \
-#   $VERBOSE \
-#   $pki_url/template/create
+data='{
+  "templateName": "andrewsTemplate",
+  "keyAlgo": "RSA",
+  "keyBits": "2048"
+}'
+curl --fail -H "Content-Type: application/json" \
+  -H "$session_token" \
+  --data "$data" \
+  $VERBOSE \
+  $pki_url/template/create
 
 
 # create a test certificate
