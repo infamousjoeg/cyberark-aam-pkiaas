@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"math/bits"
 	"net/http"
+	"time"
 
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
@@ -157,6 +158,8 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 			SerialNumber:          serialNumber,
 			SignatureAlgorithm:    sigAlgo,
 			Subject:               certSubject,
+			NotBefore:             time.Now(),
+			NotAfter:              time.Now().Add(time.Hour * 87600),
 			DNSNames:              dnsNames,
 			EmailAddresses:        emailAddresses,
 			IPAddresses:           ipAddresses,
