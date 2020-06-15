@@ -161,6 +161,8 @@ func (p *Pki) GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Requ
 			NotBefore:             time.Now(),
 			NotAfter:              time.Now().Add(time.Hour * 87600),
 			DNSNames:              dnsNames,
+			NotBefore:             time.Now(),
+			NotAfter:              time.Now().Add(time.Hour * 87600),
 			EmailAddresses:        emailAddresses,
 			IPAddresses:           ipAddresses,
 			URIs:                  URIs,
