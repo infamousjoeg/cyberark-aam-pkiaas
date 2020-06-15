@@ -3,7 +3,7 @@ set -e
 
 export CONJUR_AUTHN_LOGIN="host/pki-admin"
 export CONJUR_AUTHN_API_KEY="${CONJUR_PKI_ADMIN_API_KEY}"
-export VERBOSE="-vvv"
+export VERBOSE=""
 
 source conjur_utils.sh
 session_token=$(conjur_authenticate)
@@ -43,7 +43,7 @@ data='{
   "templateName": "andrewsTemplate",
   "ttl": 1
 }'
-response=$(curl -s -H "Content-Type: application/json" \
+response=$(curl -s --fail -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
   $VERBOSE \
@@ -133,6 +133,7 @@ curl --fail -s \
 # list the templates
 response=$(curl --fail -s \
 	-H "$session_token" \
+	$VERBOSE \
 	$pki_url/templates)
 
 # parse first template name (Should be only)
@@ -141,13 +142,15 @@ templateName=$(echo "$response" | jq  '.["templates"]' | jq -r '.[0]')
 # get a specific template
 curl --fail -s \
 	-H "$session_token" \
+	$VERBOSE \
 	"$pki_url/template/$templateName"
 
 # delete that same template we just examined
 curl --fail -s \
 	-H "$session_token" \
 	-X "DELETE" \
-	"$pki_url/template/delete/$templateName"
+	$VERBOSE \
+	"$pki_url/template/delete/andrewsTemplate"
 
 
 # re-create same template so I can test manually
