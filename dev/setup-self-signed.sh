@@ -1,11 +1,9 @@
 #!/bin/bash
 set -e
 
-export CONJUR_APPLIANCE_URL=https://conjur-master
 export CONJUR_AUTHN_LOGIN="host/pki-admin"
-export CONJUR_CERT_FILE="$(pwd)/conjur.pem"
-export CONJUR_ACCOUNT="conjur"
-export CONJUR_AUTHN_API_KEY="3y455av3mxyns31kqxf692eyaw7212awnyf3z8syre3yz195w3afq2pe"
+export CONJUR_AUTHN_API_KEY="${CONJUR_PKI_ADMIN_API_KEY}"
+export VERBOSE="-vvv"
 
 source conjur_utils.sh
 session_token=$(conjur_authenticate)
@@ -23,30 +21,35 @@ data='{
 curl --fail -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
+  $VERBOSE \
   $pki_url/ca/generate
 
 # create a test template
-data='{
-  "templateName": "andrewsTemplate",
-  "keyAlgo": "RSA",
-  "keyBits": "2048"
-}'
-curl --fail -H "Content-Type: application/json" \
-  -H "$session_token" \
-  --data "$data" \
-  $pki_url/template/create
+# data='{
+#   "templateName": "andrewsTemplate",
+#   "keyAlgo": "RSA",
+#   "keyBits": "2048"
+# }'
+# curl --fail -H "Content-Type: application/json" \
+#   -H "$session_token" \
+#   --data "$data" \
+#   $VERBOSE \
+#   $pki_url/template/create
 
 
 # create a test certificate
 data='{
   "commonName": "subdomain.example.com",
   "templateName": "andrewsTemplate",
-  "timeToLive": 3600
+  "ttl": 1
 }'
-response=$(curl --fail -s -H "Content-Type: application/json" \
+response=$(curl -s -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
+  $VERBOSE \
   $pki_url/certificate/create)
+
+echo "Response:::::::::: $response"
 
 
 # parse the result and get the certificate serial number
@@ -55,6 +58,7 @@ certificateResponse=$(echo "$response" | jq -r .certificate)
 
 response=$(curl --fail -s -H "Content-Type: application/json" \
   -H "$session_token" \
+  $VERBOSE \
   $pki_url/certificate/$serialNumber)
 
 certificateReturned=$(echo "$response" | jq -r .certificate)
@@ -75,6 +79,7 @@ response=$(curl --fail -s -H "Content-Type: application/json" \
   -X POST \
   --data "$data" \
   -H "$session_token" \
+  $VERBOSE \
   $pki_url/certificate/revoke)
 
 
@@ -92,6 +97,7 @@ for serialNumber in $(echo "${response}" | jq '.["certificates"]' | jq -r -c '.[
 		-X POST \
 		--data "$data" \
 		-H "$session_token" \
+    $VERBOSE \
 		$pki_url/certificate/revoke)
 	echo "revoked $serialNumber and response was $response"
 done
@@ -108,17 +114,17 @@ fi
 curl --fail -s -H "Content-Type: application/json" \
 	-X POST \
 	-H "$session_token" \
-	http://localhost:8080/purge
+	$pki_url/purge
 
 
 # Lets get our CA Certificate
 curl --fail -s \
-	http://localhost:8080/ca/certificate
+	$pki_url/ca/certificate
 
 # Lets get the CA chain
 # TODO CURRENTLY THIS IS RETURNING A 500
 # response=$(curl --fail -s \
-# 	http://localhost:8080/ca/chain)
+# 	$pki_url/ca/chain)
 # echo "CA CHAIN"
 # echo "$response"
 
@@ -145,12 +151,12 @@ curl --fail -s \
 
 
 # re-create same template so I can test manually
-data='{
-  "templateName": "testingTemplate",
-  "keyAlgo": "RSA",
-  "keyBits": "2048"
-}'
-curl --fail -H "Content-Type: application/json" \
-  -H "$session_token" \
-  --data "$data" \
-  $pki_url/template/create
+# data='{
+#   "templateName": "testingTemplate",
+#   "keyAlgo": "RSA",
+#   "keyBits": "2048"
+# }'
+# curl --fail -H "Content-Type: application/json" \
+#   -H "$session_token" \
+#   --data "$data" \
+#   $pki_url/template/create
