@@ -153,5 +153,4 @@ data='{
 curl --fail -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
-
-$pki_url/template/create
+  $pki_url/template/create
