@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"time"
 
@@ -274,6 +273,7 @@ func (c StorageBackend) CreateCertificate(cert types.CreateCertificateData) erro
 func (c StorageBackend) updateCertificate(cert types.CreateCertificateData) error {
 
 	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
+
 	// replace template placeholders
 	newPolicy := bytes.NewReader([]byte(ReplaceCertificate(cert, c.templates.newCertificate)))
 
@@ -510,9 +510,7 @@ func (c StorageBackend) GetRevokedCerts() ([]types.RevokedCertificate, error) {
 		Kind:   "variable",
 		Search: "csasarevokedcsasa",
 	}
-
 	revokedCerts := []types.RevokedCertificate{}
-
 	resources, err := c.client.Resources(filter)
 	if err != nil {
 		err = fmt.Errorf("Failed to list resources when attempting to get revoked certificates. %s", err)
@@ -520,44 +518,27 @@ func (c StorageBackend) GetRevokedCerts() ([]types.RevokedCertificate, error) {
 	}
 
 	for _, resource := range resources {
-		id := resource["id"].(string)
-		_, _, id = SplitConjurID(id)
-		parts := strings.Split(id, "/")
-		templatesRoot := parts[len(parts)-2]
-
-		if templatesRoot == "certificates" {
-			serialNumberString := parts[len(parts)-1]
-			reasonCode, err := GetAnnotationValue(resource, "RevocationReasonCode")
-			if err != nil {
-				return revokedCerts, fmt.Errorf("Failed to retrieve RevocationReasonCode from certificate '%s'. %s", serialNumberString, err)
-			}
-
-			revocationDate, err := GetAnnotationValue(resource, "RevocationDate")
-			if err != nil {
-				return revokedCerts, fmt.Errorf("Failed to retrieve RevocationDate from certificate '%s'. %s", serialNumberString, err)
-			}
-
-			reasonCodeInt, err := strconv.Atoi(reasonCode)
-			if err != nil {
-				return revokedCerts, fmt.Errorf("Failed to cast RevocationReasonCode '%s' into an int", reasonCode)
-			}
-
-			revocationDateInt, err := strconv.Atoi(revocationDate)
-			if err != nil {
-				return revokedCerts, fmt.Errorf("Failed to cast RevocationDate '%s' into an int", revocationDate)
-			}
-
-			dateTime := time.Unix(int64(revocationDateInt), 0)
-
-			revokedCert := types.RevokedCertificate{
-				SerialNumber:   serialNumberString,
-				ReasonCode:     reasonCodeInt,
-				RevocationDate: dateTime,
-			}
-
-			revokedCerts = append(revokedCerts, revokedCert)
+		revokedCert, err := ParseRevokedCertificate(resource)
+		if err != nil {
+			return revokedCerts, err
 		}
+		revokedCerts = append(revokedCerts, revokedCert)
 	}
 
 	return revokedCerts, nil
+}
+
+// CertificateRevoked Return the types.RevokedCertifcate repersented by the certificate
+// If the certificate is not revoked, and empty types.RevokedCertificate is returned
+func (c StorageBackend) CertificateRevoked(serialNumber *big.Int) (types.RevokedCertificate, error) {
+	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
+
+	// Retrieve the specific resource, if not found return error
+	resourceID := GetFullResourceID(c.client.GetConfig().Account, "variable", variableID)
+	resource, err := c.client.Resource(resourceID)
+	if err != nil {
+		return types.RevokedCertificate{}, fmt.Errorf("Failed to retrieve certificate with ID '%s'. %s", variableID, err)
+	}
+
+	return ParseRevokedCertificate(resource)
 }
