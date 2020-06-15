@@ -359,6 +359,7 @@ func TestDeleteCertificate(t *testing.T) {
 	serialNumber, _ := new(big.Int).SetString("838837738982929383", 10)
 	newCert := types.CreateCertificateData{
 		SerialNumber: serialNumber.String(),
+		Certificate:  "someCertificateEncodedStuff",
 	}
 
 	conjurPki.CreateCertificate(newCert)
@@ -497,8 +498,10 @@ func TestGetRevokedCertificates(t *testing.T) {
 	}
 
 	for _, revokedCert := range revokedCerts {
-		if revokedCert.SerialNumber != cert.SerialNumber {
-			t.Errorf("Revoked certificate '%s' is not '%s'", revokedCert.SerialNumber, cert.SerialNumber)
+		if revokedCert.SerialNumber == cert.SerialNumber {
+			return
 		}
 	}
+
+	t.Errorf("Revoked certificate is not '%s'", cert.SerialNumber)
 }

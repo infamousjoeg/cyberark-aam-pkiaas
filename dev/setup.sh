@@ -33,6 +33,7 @@ response=$(conjur_append_policy "root" ./pki-admin-policy.yml)
 echo $response
 api_key=$(echo "${response}" | jq -r ".created_roles" | jq -r '.["conjur:host:pki-admin"]' | jq -r .api_key)
 echo "pki-admin API KEY: ${api_key}"
+export CONJUR_PKI_ADMIN_API_KEY="${api_key}"
 
 # switch to the pki-service host to perform the tests
 export CONJUR_AUTHN_LOGIN="host/pki-service"

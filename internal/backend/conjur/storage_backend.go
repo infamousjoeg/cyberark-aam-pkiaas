@@ -38,7 +38,7 @@ func (c StorageBackend) getCertificatePolicyBranch() string {
 }
 
 func (c StorageBackend) getCAChainVariableID() string {
-	return c.policyBranch + "/ca/chain"
+	return c.policyBranch + "/ca/cert-chain"
 }
 
 func (c StorageBackend) getSigningCertVariableID() string {
