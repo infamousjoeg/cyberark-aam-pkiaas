@@ -29,6 +29,7 @@ type Storage interface {
 	WriteCAChain(pemBundle []string) error
 	GetCAChain() ([]string, error)
 	GetRevokedCerts() ([]types.RevokedCertificate, error)
+	CertificateRevoked(serialNumber *big.Int) (types.RevokedCertificate, error)
 
 	GetAccessControl() Access
 }
