@@ -187,5 +187,59 @@ Updating specific annotations is the only requirement when revoked certificates 
 As you see the `ExpirationDate` is not present in the policy. This is done on purpose because when a policy PATCH is executed the provided annotations will be updated however the non-provided annotations will remain untouched.
 
 
+### Certificate Deletion
+When a certificate is deleted. We must make sure to delete all of the groups that are associated with this certificate:
+```yaml
+- !delete
+  records: 
+  - !variable certificates/<SerialNumber>
+  - !group certificates/<SerialNumber>-read
+  - !group certificates/<SerialNumber>-revoke
+```
 
+
+## Templates
+### Create
+When creating a template in the PKI service. The following policy will be loaded. 3 groups are being created with the template: `read`, `manage` and `delete`:
+```yaml
+- !variable
+  id: templates/<TemplateName>
+
+# groups related to the privileges
+- !group templates/<TemplateName>-read
+- !group templates/<TemplateName>-manage
+- !group templates/<TemplateName>-delete
+
+# assign the privileges to the groups above
+- !permit
+  role: !group templates/<TemplateName>-read
+  resource: !webservice pki
+  privileges:
+  - read-template-<TemplateName>
+
+- !permit
+  role: !group templates/<TemplateName>-manage
+  resource: !webservice pki
+  privileges:
+  - manage-template-<TemplateName>
+
+- !permit
+  role: !group templates/<TemplateName>-delete
+  resource: !webservice pki
+  privileges:
+  - delete-template-<TemplateName>
+
+# grant the groups accordingly
+- !grant
+  role: !group templates/<TemplateName>-read
+  member: !group read-templates
+
+- !grant
+  role: !group templates/<TemplateName>-manage
+  member: !group manage-templates
+
+- !grant
+  role: !group templates/<TemplateName>-delete
+  member: !group delete-templates
+```  
 
