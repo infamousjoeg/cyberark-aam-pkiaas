@@ -12,6 +12,7 @@ import (
 // access control getter for a backend system's Storage
 // objects
 type Storage interface {
+	InitConfig() error
 	CreateCertificate(certificateData types.CreateCertificateData) error
 	ListCertificates() ([]*big.Int, error)
 	GetCertificate(serialNumber *big.Int) (string, error)
