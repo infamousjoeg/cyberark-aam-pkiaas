@@ -102,32 +102,32 @@ Lastly are the grants, this is where the admin groups become members to a bunch 
 The audit is unique as it only has the ability to list and read certificates and templates
 ```yaml
 - !grant
-roles: *templates
-member: !group templates-admin
+  roles: *templates
+  member: !group templates-admin
 
 - !grant
-roles: *certificates
-member: !group certificates-admin
+  roles: *certificates
+  member: !group certificates-admin
 
 - !grant
-roles: *purge
-member: !group purge-admins
+  roles: *purge
+  member: !group purge-admins
 
 - !grant
-roles: *ca
-member: !group ca-admins
+  roles: *ca
+  member: !group ca-admins
 
 - !grant
-roles: *admins
-member: !group admin
+  roles: *admins
+  member: !group admin
 
 - !grant
-roles:
-- !group list-templates
-- !group list-certificates
-- !group read-templates
-- !group read-certificates
-member: !group audit
+  roles:
+  - !group list-templates
+  - !group list-certificates
+  - !group read-templates
+  - !group read-certificates
+  member: !group audit
 ```
 
 
@@ -174,7 +174,7 @@ You will see 2 groups are created when a certificate is created `certificates/<S
 ```
 
 ### Certificate Revocation
-Updating specific annotations is the only requirement when revoked certificates because all metadata of a certificate is stored as annotations. Below is the policy that is loaded when Revoking a certificate:
+Updating specific annotations is the only requirement when certificates are revoked. All metadata of a certificate is stored as annotations. Below is the policy that is loaded when revoking a certificate:
 ```yaml
 - !variable
   id: "<SerialNumber>"
@@ -200,7 +200,7 @@ When a certificate is deleted. We must make sure to delete all of the groups tha
 
 ## Templates
 ### Create
-When creating a template in the PKI service. The following policy will be loaded. 3 groups are being created with the template: `read`, `manage` and `delete`:
+When a template is created by the PKI service all metadata is stored as a json string as the !variable's secret value. The following policy will be loaded. 3 groups are being created with the template: `read`, `manage` and `delete`:
 ```yaml
 - !variable
   id: templates/<TemplateName>
@@ -243,3 +243,16 @@ When creating a template in the PKI service. The following policy will be loaded
   member: !group delete-templates
 ```  
 
+## Manage
+When a Template is managed no policy is loaded. Except the secret value of the templates !variable is updated to reflect the change.
+
+## Delete
+When a Template is deleted, the template !variable and its 3 corresponding !groups will be deleted. This is the policy that is loaded when a Template is deleted by the PKI service:
+```yaml
+- !delete
+  records: 
+  - !variable templates/<TemplateName>
+  - !group templates/<TemplateName>-read
+  - !group templates/<TemplateName>-managed
+  - !group templates/<TemplateName>-delete
+```
