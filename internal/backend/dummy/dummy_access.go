@@ -6,8 +6,8 @@ type AccessControl struct{}
 // Authenticate -----
 func (a AccessControl) Authenticate(accessToken string) error { return nil }
 
-// ReadTemplates ----
-func (a AccessControl) ReadTemplates(accessToken string) error { return nil }
+// ListTemplates ----
+func (a AccessControl) ListTemplates(accessToken string) error { return nil }
 
 // ReadTemplate ----
 func (a AccessControl) ReadTemplate(accessToken string, templateName string) error { return nil }
