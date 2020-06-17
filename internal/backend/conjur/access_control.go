@@ -85,7 +85,7 @@ func (a AccessControl) Authenticate(accessToken string) error {
 	return a.checkPermission(accessToken, a.privileges.Authenticate)
 }
 
-// ReadTemplates ...
+// ListTemplates ...
 func (a AccessControl) ListTemplates(accessToken string) error {
 	return a.checkPermission(accessToken, a.privileges.ListTemplates)
 }
@@ -138,11 +138,6 @@ func (a AccessControl) SignCertificate(accessToken string, templateName string) 
 // AdminOnly ...
 func (a AccessControl) AdminOnly(accessToken string) error {
 	return fmt.Errorf("Admin should no longer work!!!")
-}
-
-func (a AccessControl) checkPermissionWithPlaceholder(accessToken string, permission string, placeholder string, replaceValue string) error {
-	permission = replacePrivilege(permission, placeholder, replaceValue)
-	return a.checkPermission(accessToken, permission)
 }
 
 func (a AccessControl) checkPermission(accessToken string, permission string) error {
