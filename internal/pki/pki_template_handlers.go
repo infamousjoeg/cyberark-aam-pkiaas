@@ -251,7 +251,7 @@ func (p *Pki) ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = p.Backend.GetAccessControl().ReadTemplates(authHeader)
+	err = p.Backend.GetAccessControl().ListTemplates(authHeader)
 	if err != nil {
 		http.Error(w, "CPKILT002: Not authorized to list all templates - "+err.Error(), http.StatusForbidden)
 		return
