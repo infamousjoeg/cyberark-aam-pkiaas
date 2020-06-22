@@ -38,3 +38,12 @@ func (a AccessControl) SignCertificate(accessToken string, templateName string) 
 
 // AdminOnly ------
 func (a AccessControl) AdminOnly(accessToken string) error { return nil }
+
+// GenerateIntermediateCSR ...
+func (a AccessControl) GenerateIntermediateCSR(accessToken string) error { return nil }
+
+// SetIntermediateCertificate ...
+func (a AccessControl) SetIntermediateCertificate(accessToken string) error { return nil }
+
+// SetCAChain ...
+func (a AccessControl) SetCAChain(accessToken string) error { return nil }
