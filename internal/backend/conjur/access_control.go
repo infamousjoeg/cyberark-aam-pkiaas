@@ -141,11 +141,6 @@ func (a AccessControl) SignCertificate(accessToken string, templateName string) 
 	return a.checkPermission(accessToken, a.privileges.CertificateSignSpecific+templateName)
 }
 
-// AdminOnly ...
-func (a AccessControl) AdminOnly(accessToken string) error {
-	return fmt.Errorf("Admin should no longer work!!!")
-}
-
 // GenerateIntermediateCSR ...
 func (a AccessControl) GenerateIntermediateCSR(accessToken string) error {
 	return a.checkPermission(accessToken, a.privileges.GenerateIntermediateCSR)
