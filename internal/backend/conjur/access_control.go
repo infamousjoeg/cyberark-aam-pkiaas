@@ -10,17 +10,20 @@ import (
 
 // Privileges ...
 type Privileges struct {
-	Authenticate              string
-	Purge                     string
-	CRLPurge                  string
-	CertificateSignSpecific   string
-	CertificateCreateSpecific string
-	CertificateRevokeSpecific string
-	TemplateCreateAny         string
-	TemplateManageSpecific    string
-	TemplateDeleteSpecific    string
-	TemplateReadSpecific      string
-	ListTemplates             string
+	Authenticate               string
+	Purge                      string
+	CRLPurge                   string
+	CertificateSignSpecific    string
+	CertificateCreateSpecific  string
+	CertificateRevokeSpecific  string
+	TemplateCreateAny          string
+	TemplateManageSpecific     string
+	TemplateDeleteSpecific     string
+	TemplateReadSpecific       string
+	ListTemplates              string
+	GenerateIntermediateCSR    string
+	SetIntermediateCertificate string
+	SetCAChain                 string
 }
 
 // AccessControl ...
@@ -34,17 +37,20 @@ type AccessControl struct {
 // NewDefaultPrivileges ...
 func NewDefaultPrivileges() Privileges {
 	return Privileges{
-		Authenticate:              "authenticate",
-		Purge:                     "purge",
-		CRLPurge:                  "purge-crl",
-		CertificateSignSpecific:   "sign-certificate-from-",
-		CertificateCreateSpecific: "create-certificate-from-",
-		CertificateRevokeSpecific: "revoke-certificate-",
-		TemplateCreateAny:         "create-templates",
-		TemplateManageSpecific:    "manage-template-",
-		TemplateDeleteSpecific:    "delete-template-",
-		TemplateReadSpecific:      "read-template-",
-		ListTemplates:             "list-templates",
+		Authenticate:               "authenticate",
+		Purge:                      "purge",
+		CRLPurge:                   "purge-crl",
+		CertificateSignSpecific:    "sign-certificate-from-",
+		CertificateCreateSpecific:  "create-certificate-from-",
+		CertificateRevokeSpecific:  "revoke-certificate-",
+		TemplateCreateAny:          "create-templates",
+		TemplateManageSpecific:     "manage-template-",
+		TemplateDeleteSpecific:     "delete-template-",
+		TemplateReadSpecific:       "read-template-",
+		ListTemplates:              "list-templates",
+		GenerateIntermediateCSR:    "generate-intermediate-csr",
+		SetIntermediateCertificate: "set-intermediate-certificate",
+		SetCAChain:                 "set-ca-chain",
 	}
 }
 
@@ -140,6 +146,21 @@ func (a AccessControl) AdminOnly(accessToken string) error {
 	return fmt.Errorf("Admin should no longer work!!!")
 }
 
+// GenerateIntermediateCSR ...
+func (a AccessControl) GenerateIntermediateCSR(accessToken string) error {
+	return a.checkPermission(accessToken, a.privileges.GenerateIntermediateCSR)
+}
+
+// SetIntermediateCertificate ...
+func (a AccessControl) SetIntermediateCertificate(accessToken string) error {
+	return a.checkPermission(accessToken, a.privileges.SetIntermediateCertificate)
+}
+
+// SetCAChain ...
+func (a AccessControl) SetCAChain(accessToken string) error {
+	return a.checkPermission(accessToken, a.privileges.SetCAChain)
+}
+
 func (a AccessControl) checkPermission(accessToken string, permission string) error {
 	if a.disabled {
 		return nil
@@ -165,7 +186,6 @@ func (a AccessControl) checkPermission(accessToken string, permission string) er
 
 	if allowed {
 		return nil
-	} else {
-		return fmt.Errorf("You do not have the privilege '%s'", permission)
 	}
+	return fmt.Errorf("You do not have the privilege '%s'", permission)
 }
