@@ -16,5 +16,7 @@ type Access interface {
 	CreateCertificate(accessToken string, templateName string) error
 	RevokeCertificate(accessToken string, serialNumber string) error
 	SignCertificate(accessToken string, templateName string) error
-	AdminOnly(accessToken string) error
+	GenerateIntermediateCSR(accessToken string) error
+	SetIntermediateCertificate(accessToken string) error
+	SetCAChain(accessToken string) error
 }
