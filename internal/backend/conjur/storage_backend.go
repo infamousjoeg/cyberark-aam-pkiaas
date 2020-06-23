@@ -1,7 +1,9 @@
 package conjur
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
@@ -29,12 +31,153 @@ func (c StorageBackend) GetAccessControl() backend.Access {
 	return backend.Access(c.Access)
 }
 
+// InitConfig This will init the policy in the 'pki' webservice
+func (c StorageBackend) InitConfig() error {
+	pkiPolicy := getInitConfigPolicy()
+	response, err := c.client.LoadPolicy(conjurapi.PolicyModePut, c.policyBranch, pkiPolicy)
+	if err != nil {
+		return fmt.Errorf("Failed to initialize configuration for the PKI service. %v. %s", response, err)
+	}
+
+	return nil
+}
+
+func getInitConfigPolicy() io.Reader {
+	return bytes.NewReader([]byte(`- !webservice
+- !variable ca/cert
+- !variable ca/key
+- !variable ca/cert-chain
+- !variable crl
+
+# higher level groups
+- !group admin
+- !group audit
+- !group authenticate
+
+- &admins
+  - !group templates-admin
+  - !group certificates-admin
+  - !group purge-admin
+  - !group ca-admin
+
+# endpoint permission groups
+- &templates
+  - !group list-templates
+  - !group read-templates
+  - !group create-templates
+  - !group manage-templates
+  - !group delete-templates
+- &certificates
+  - !group list-certificates
+  - !group read-certificates
+  - !group create-certificates
+  - !group sign-certificates
+  - !group revoke-certificates
+- &purge
+  - !group purge
+  - !group purge-crl
+- &ca
+  - !group set-ca-chain
+  - !group set-ca-signing-key
+  - !group set-ca-signing-cert
+  - !group generate-ca
+
+- !permit
+  role: !group authenticate
+  resource: !webservice
+  privileges:
+  - authenticate
+
+- !permit
+  role: !group list-templates
+  resource: !webservice
+  privileges:
+  - list-templates
+
+- !permit
+  role: !group list-certificates
+  resource: !webservice
+  privileges:
+  - list-certificates
+
+- !permit
+  role: !group purge
+  resource: !webservice
+  privileges:
+  - purge
+
+- !permit
+  role: !group purge-crl
+  resource: !webservice
+  privileges:
+  - purge-crl
+
+- !permit
+  role: !group set-ca-chain
+  resource: !webservice
+  privileges:
+  - set-ca-chain
+
+- !permit
+  role: !group set-ca-signing-key
+  resource: !webservice
+  privileges:
+  - set-ca-signing-key
+
+- !permit
+  role: !group set-ca-signing-cert
+  resource: !webservice
+  privileges:
+  - set-ca-signing-cert
+
+- !permit
+  role: !group generate-ca
+  resource: !webservice
+  privileges:
+  - generate-ca
+
+- !grant
+  roles: *templates
+  member: !group templates-admin
+
+- !grant
+  roles: *certificates
+  member: !group certificates-admin
+
+- !grant
+  roles: *purge
+  member: !group purge-admins
+
+- !grant
+  roles: *ca
+  member: !group ca-admins
+
+- !grant
+  roles: *admins
+  member: !group admin
+
+- !grant
+  roles:
+  - !group list-templates
+  - !group list-certificates
+  - !group read-templates
+  - !group read-certificates
+  member: !group audit
+
+- !grant
+  roles:
+  - !group list-certificates
+  - !group read-certificates
+  member: !group authenticate
+`))
+}
+
 func (c StorageBackend) getTemplatePolicyBranch() string {
-	return c.policyBranch + "/templates"
+	return c.policyBranch
 }
 
 func (c StorageBackend) getCertificatePolicyBranch() string {
-	return c.policyBranch + "/certificates"
+	return c.policyBranch
 }
 
 func (c StorageBackend) getCAChainVariableID() string {
@@ -69,19 +212,104 @@ func defaultConjurClient() (*conjurapi.Client, error) {
 
 func defaultCreateTemplatePolicy() string {
 	return `- !variable
-  id: <TemplateName>
+  id: templates/<TemplateName>
+
+# groups related to the privileges
+- !group templates/<TemplateName>-read
+- !group templates/<TemplateName>-manage
+- !group templates/<TemplateName>-delete
+- !group templates/<TemplateName>-create-certificates
+- !group templates/<TemplateName>-sign-certificates
+
+# assign the privileges to the groups above
+- !permit
+  role: !group templates/<TemplateName>-read
+  resource: !webservice pki
+  privileges:
+  - read-template-<TemplateName>
+
+- !permit
+  role: !group templates/<TemplateName>-manage
+  resource: !webservice pki
+  privileges:
+  - manage-template-<TemplateName>
+
+- !permit
+  role: !group templates/<TemplateName>-delete
+  resource: !webservice pki
+  privileges:
+  - delete-template-<TemplateName>
+
+- !permit
+  role: !group templates/<TemplateName>-create-certificate
+  resource: !webservice pki
+  privileges:
+  - create-certificate-from-<TemplateName>
+
+- !permit
+  role: !group templates/<TemplateName>-sign-certificate
+  privileges:
+  - sign-certificate-from-<TemplateName>
+
+
+
+# grant the groups accordingly
+- !grant
+  role: !group templates/<TemplateName>-read
+  member: !group read-templates
+
+- !grant
+  role: !group templates/<TemplateName>-manage
+  member: !group manage-templates
+
+- !grant
+  role: !group templates/<TemplateName>-delete
+  member: !group delete-templates
+
+- !grant
+  role: !group templates/<TemplateName>-create-certificate
+  member: !group create-certificates
+
+- !grant
+  role: !group templates/<TemplateName>-sign-certificate
+  member: !group sign-certificates
 `
 }
 
 func defaultCreateCertificatePolicy() string {
 	return `- !variable
-  id: "<SerialNumber>"
+  id: certificates/<SerialNumber>
   annotations:
     Revoked: <Revoked>
     RevocationDate: <RevocationDate>
     RevocationReasonCode: <RevocationReasonCode>
     ExpirationDate: <ExpirationDate>
     InternalState: csasa<InternalState>csasa
+
+# groups related to the privileges
+- !group certificates/<SerialNumber>-read
+- !group certificates/<SerialNumber>-revoke
+
+# assign the privileges to the groups above
+- !permit
+  role: !group certificates/<SerialNumber>-read
+  resource: !webservice pki
+  privileges:
+  - read-certificate-<SerialNumber>
+- !permit
+  role: !group certificates/<SerialNumber>-revoke
+  resource: !webservice pki
+  privileges:
+  - revoke-certificate-<SerialNumber>
+
+# assign global level groups the ability to read and revoke these certificates
+- !grant
+  role: !group certificates/<SerialNumber>-read
+  member: !group read-certificates
+
+- !grant
+  role: !group certificates/<SerialNumber>-revoke
+  member: !group revoke-certificates
 `
 }
 
@@ -98,13 +326,20 @@ func defaultRevokeCertificatePolicy() string {
 
 func defaultDeleteTemplatePolicy() string {
 	return `- !delete
-  record: !variable <TemplateName>
+  records: 
+  - !variable templates/<TemplateName>
+  - !group templates/<TemplateName>-read
+  - !group templates/<TemplateName>-managed
+  - !group templates/<TemplateName>-delete
 `
 }
 
 func defaultDeleteCertificatePolicy() string {
 	return `- !delete
-  record: !variable <SerialNumber>
+  records: 
+  - !variable certificates/<SerialNumber>
+  - !group certificates/<SerialNumber>-read
+  - !group certificates/<SerialNumber>-revoke
 `
 }
 
