@@ -5,3 +5,5 @@ dev/conjur.pem*
 tests/*.log
 tests/.vagrant
 tests/pki_*
+.scannerwork
+sonar-project.properties
