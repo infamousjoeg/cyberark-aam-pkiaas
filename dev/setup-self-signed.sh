@@ -2,14 +2,10 @@
 set -e
 
 export CONJUR_AUTHN_LOGIN="host/pki-admin"
-<<<<<<< HEAD
+
 export CONJUR_AUTHN_API_KEY="${CONJUR_PKI_ADMIN_API_KEY}"
 export VERBOSE="-vvv"
-=======
-export CONJUR_CERT_FILE="$(pwd)/conjur.pem"
-export CONJUR_ACCOUNT="conjur"
-export CONJUR_AUTHN_API_KEY="18ybbxf2ytt4pr1j8tek739n3vsf34hxmpbw6fg8j1nqy15pp1nn5z"
->>>>>>> Added panic for invalid initialization
+
 
 source conjur_utils.sh
 session_token=$(conjur_authenticate)
