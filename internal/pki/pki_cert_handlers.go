@@ -282,7 +282,8 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 	err = backend.CreateCertificate(cert)
 	if err != nil {
 		return types.CreateCertificateResponse{}, httperror.CertWriteFail(err.Error())
-
+	}
+	
 	return response, httperror.HTTPError{}
 }
 
