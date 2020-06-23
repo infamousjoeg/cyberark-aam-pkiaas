@@ -59,126 +59,126 @@ var routes = Routes{
 		"GetCA",
 		strings.ToUpper("Get"),
 		"/ca/certificate",
-		backend.GetCAHandler,
+		GetCAHandler,
 	},
 
 	Route{
 		"GetCAChain",
 		strings.ToUpper("Get"),
 		"/ca/chain",
-		backend.GetCAChainHandler,
+		GetCAChainHandler,
 	},
 
 	Route{
 		"CreateCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/create",
-		backend.CreateCertHandler,
+		CreateCertHandler,
 	},
 
 	Route{
 		"GetCertificate",
 		strings.ToUpper("Get"),
 		"/certificate/{serialNumber}",
-		backend.GetCertHandler,
+		GetCertHandler,
 	},
 
 	Route{
 		"ListCertificates",
 		strings.ToUpper("Get"),
 		"/certificates",
-		backend.ListCertsHandler,
+		ListCertsHandler,
 	},
 
 	Route{
 		"Purge",
 		strings.ToUpper("Post"),
 		"/purge",
-		backend.PurgeHandler,
+		PurgeHandler,
 	},
 
 	Route{
 		"RevokeCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/revoke",
-		backend.RevokeCertHandler,
+		RevokeCertHandler,
 	},
 
 	Route{
 		"SignCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/sign",
-		backend.SignCertHandler,
+		SignCertHandler,
 	},
 
 	Route{
 		"GetCRL",
 		strings.ToUpper("Get"),
 		"/crl",
-		backend.GetCRLHandler,
+		GetCRLHandler,
 	},
 
 	Route{
 		"PurgeCRL",
 		strings.ToUpper("Post"),
 		"/crl/purge",
-		backend.PurgeCRLHandler,
+		PurgeCRLHandler,
 	},
 
 	Route{
 		"CreateTemplate",
 		strings.ToUpper("Post"),
 		"/template/create",
-		backend.CreateTemplateHandler,
+		CreateTemplateHandler,
 	},
 
 	Route{
 		"DeleteTemplate",
 		strings.ToUpper("Delete"),
 		"/template/delete/{templateName}",
-		backend.DeleteTemplateHandler,
+		DeleteTemplateHandler,
 	},
 
 	Route{
 		"GetTemplate",
 		strings.ToUpper("Get"),
 		"/template/{templateName}",
-		backend.GetTemplateHandler,
+		GetTemplateHandler,
 	},
 
 	Route{
 		"ListTemplates",
 		strings.ToUpper("Get"),
 		"/templates",
-		backend.ListTemplatesHandler,
+		ListTemplatesHandler,
 	},
 
 	Route{
 		"ManageTemplate",
 		strings.ToUpper("Put"),
 		"/template/manage",
-		backend.ManageTemplateHandler,
+		ManageTemplateHandler,
 	},
 
 	Route{
 		"GenerateIntermediateCSR",
 		strings.ToUpper("Post"),
 		"/ca/generate",
-		backend.GenerateIntermediateCSRHandler,
+		GenerateIntermediateCSRHandler,
 	},
 
 	Route{
 		"SetIntermediateCertificate",
 		strings.ToUpper("Post"),
 		"/ca/set",
-		backend.SetIntermediateCertHandler,
+		SetIntermediateCertHandler,
 	},
 
 	Route{
 		"SetCAChain",
 		strings.ToUpper("Post"),
 		"/ca/chain/set",
-		backend.SetCAChainHandler,
+		SetCAChainHandler,
 	},
 
 	// Route{

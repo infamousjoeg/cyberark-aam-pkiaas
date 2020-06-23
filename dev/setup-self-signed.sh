@@ -2,8 +2,10 @@
 set -e
 
 export CONJUR_AUTHN_LOGIN="host/pki-admin"
+
 export CONJUR_AUTHN_API_KEY="${CONJUR_PKI_ADMIN_API_KEY}"
 export VERBOSE="-vvv"
+
 
 source conjur_utils.sh
 session_token=$(conjur_authenticate)
@@ -43,7 +45,8 @@ data='{
   "templateName": "andrewsTemplate",
   "ttl": 1
 }'
-response=$(curl -s -H "Content-Type: application/json" \
+
+response=$(curl --fail -v -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
   $VERBOSE \

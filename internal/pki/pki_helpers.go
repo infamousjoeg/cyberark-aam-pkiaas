@@ -94,7 +94,7 @@ func GenerateKeys(keyAlgo string, keySize string) (crypto.PrivateKey, crypto.Pub
 // GenerateSerialNumber ---------------------------------------------------------
 // Generates a new serial number and validates it doesn't already exist in the certificate
 // store
-func (p *Pki) GenerateSerialNumber() (*big.Int, error) {
+func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 	maxValue := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, maxValue)
 	if err != nil {
@@ -103,7 +103,7 @@ func (p *Pki) GenerateSerialNumber() (*big.Int, error) {
 	// Test the created serial number against the serial numbers stored in the backend
 	// and continue looping, creating, and testing serial numbers until a unique one
 	// is generated
-	for _, err := p.Backend.GetCertificate(serialNumber); err == nil; {
+	for _, err := backend.GetCertificate(serialNumber); err == nil; {
 		serialNumber, err = rand.Int(rand.Reader, maxValue)
 		if err != nil {
 			return big.NewInt(0), errors.New("Error creating serial number: " + err.Error())
@@ -375,13 +375,13 @@ func SetCertSubject(subject types.SubjectFields, commonName string) (pkix.Name, 
 // PrepareCertificateParameters ---------------------------------------------------
 // Catch-all helper method to isolate redundant code that is used to set parameters
 // that are used when creating a new certificate
-func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, backend backend.Storage) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
-	template, err := p.Backend.GetTemplate(templateName)
+func PrepareCertificateParameters(templateName string, reqTTL int64, backend backend.Storage) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
+	template, err := backend.GetTemplate(templateName)
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Error retrieving template from backend: " + err.Error())
 	}
 
-	serialNumber, err := p.GenerateSerialNumber()
+	serialNumber, err := GenerateSerialNumber(backend)
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Error generating serial number: " + err.Error())
 	}
@@ -397,7 +397,7 @@ func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, ba
 
 	// Retrieve the intermediate CA certificate from backend and go through the necessary steps
 	// to convert it from a PEM-string to a usable x509.Certificate object
-	strCert, err := p.Backend.GetSigningCert()
+	strCert, err := backend.GetSigningCert()
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Error retrieving signing certificate from backend: " + err.Error())
 	}
@@ -418,7 +418,7 @@ func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, ba
 
 	// Retrieve the signing key from backend and calculate the signature algorithm for use in the
 	// certificate generation
-	strKey, err := p.Backend.GetSigningKey()
+	strKey, err := backend.GetSigningKey()
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Error retrieving signing key from backend: " + err.Error())
 	}
