@@ -45,9 +45,7 @@ data='{
   "templateName": "andrewsTemplate",
   "ttl": 1
 }'
-<<<<<<< HEAD
-response=$(curl -s -H "Content-Type: application/json" \
-=======
+
 response=$(curl --fail -v -H "Content-Type: application/json" \
 >>>>>>> Added panic for invalid initialization
   -H "$session_token" \
@@ -157,7 +155,6 @@ curl --fail -s \
 
 
 # re-create same template so I can test manually
-<<<<<<< HEAD
 # data='{
 #   "templateName": "testingTemplate",
 #   "keyAlgo": "RSA",
@@ -167,14 +164,3 @@ curl --fail -s \
 #   -H "$session_token" \
 #   --data "$data" \
 #   $pki_url/template/create
-=======
-data='{
-  "templateName": "testingTemplate",
-  "keyAlgo": "RSA",
-  "keyBits": "2048"
-}'
-curl --fail -H "Content-Type: application/json" \
-  -H "$session_token" \
-  --data "$data" \
-  http://localhost:8080/template/create
->>>>>>> Added panic for invalid initialization
