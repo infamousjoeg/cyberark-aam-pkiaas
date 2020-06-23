@@ -30,7 +30,7 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().AdminOnly(authHeader)
+	err = backend.Backend.GetAccessControl().GenerateIntermediateCSR(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
@@ -80,7 +80,7 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().AdminOnly(authHeader)
+	err = backend.Backend.GetAccessControl().SetIntermediateCertificate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
@@ -151,7 +151,7 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().AdminOnly(authHeader)
+	err = backend.Backend.GetAccessControl().SetCAChain(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
