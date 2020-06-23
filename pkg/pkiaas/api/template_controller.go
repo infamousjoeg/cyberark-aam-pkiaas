@@ -197,7 +197,7 @@ func ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().ReadTemplates(authHeader)
+	err = backend.Backend.GetAccessControl().ListTemplates(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
