@@ -47,7 +47,6 @@ data='{
 }'
 
 response=$(curl --fail -v -H "Content-Type: application/json" \
->>>>>>> Added panic for invalid initialization
   -H "$session_token" \
   --data "$data" \
   $VERBOSE \
