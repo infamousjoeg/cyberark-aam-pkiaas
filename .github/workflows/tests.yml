@@ -40,6 +40,9 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
+      - name: Build PKIaaS Docker Image
+        run: |
+          docker build -t cyberark/pkiaas:test .
       - name: Setup Conjur OSS
         run: ./tests/build.sh
       - name: Load PKI Config Policy
@@ -69,9 +72,6 @@ jobs:
         run: |
           cat pki_admin | jq -r ".created_roles" | jq -r '.["quick-start:host:pki-service"]' | jq -r .api_key > CONJUR_ADMIN_API_KEY
           rm -f pki_admin
-      - name: Build PKIaaS Docker Image
-        run: |
-          docker build -t cyberark/pkiaas:test .
       - name: Deploy PKIaaS Docker Container
         run: |
           docker run --name cpki-test -d -p 3000:8080 \
