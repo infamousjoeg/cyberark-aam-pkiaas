@@ -266,11 +266,7 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 		SerialNumber:  strSerialNumber,
 		LeaseDuration: ttl,
 	}
-	err = json.NewEncoder(w).Encode(response)
-	if err != nil {
-		http.Error(w, "CPKICC019: Error writing HTTP response - "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+
 	// Object for the data to be written to the storage backend
 	cert := types.CreateCertificateData{
 		SerialNumber:   serialNumber.String(),
@@ -283,7 +279,7 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 	if err != nil {
 		return types.CreateCertificateResponse{}, httperror.CertWriteFail(err.Error())
 	}
-	
+
 	return response, httperror.HTTPError{}
 }
 
