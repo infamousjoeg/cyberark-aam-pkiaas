@@ -43,59 +43,14 @@ jobs:
       - name: Build PKIaaS Docker Image
         run: |
           docker build -t cyberark/pkiaas:test .
-      - name: Setup Conjur OSS
-        run: ./tests/build.sh
-      - name: Load PKI Config Policy
-        run: |
-          docker cp ./tests/pki-config-policy.yml cyberark-aam-pkiaas_client_1:/root/pki-config-policy.yml
-          docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load root /root/pki-config-policy.yml > pki_config
-          docker exec -i cyberark-aam-pkiaas_client_1 conjur list
-      - name: Upload pki_config Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: pki_config
-          path: pki_config
-      - name: Load PKI Admin Policy
-        run: |
-          docker cp ./tests/pki-admin-policy.yml cyberark-aam-pkiaas_client_1:/root/pki-admin-policy.yml
-          docker exec -i cyberark-aam-pkiaas_client_1 conjur policy load root /root/pki-admin-policy.yml > pki_admin
-      - name: Upload pki_admin Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: pki_admin
-          path: pki_admin
-      - name: Parse pki_config
-        run: |
-          cat pki_config | jq -r ".created_roles" | jq -r '.["quick-start:host:pki-service"]' | jq -r .api_key > CONJUR_AUTHN_API_KEY
-          rm -f pki_config
-      - name: Parse pki_admin
-        run: |
-          cat pki_admin | jq -r ".created_roles" | jq -r '.["quick-start:host:pki-service"]' | jq -r .api_key > CONJUR_ADMIN_API_KEY
-          rm -f pki_admin
       - name: Deploy PKIaaS Docker Container
         run: |
           docker run --name cpki-test -d -p 3000:8080 \
-            -e CONJUR_AUTHN_LOGIN="host/pki-service" \
-            -e CONJUR_AUTHN_API_KEY="$(cat CONJUR_AUTHN_API_KEY)" \
-            -e CONJUR_APPLIANCE_URL="http://localhost:8080" \
-            -e CONJUR_ACCOUNT="quick-start" \
+            -e CONJUR_AUTHN_LOGIN="${{ secrets.CONJUR_AUTHN_LOGIN }}" \
+            -e CONJUR_AUTHN_API_KEY="${{ secrets.CONJUR_AUTHN_API_KEY }}" \
+            -e CONJUR_APPLIANCE_URL="${{ secrets.CONJUR_APPLIANCE_URL }}" \
+            -e CONJUR_ACCOUNT="${{ secrets.CONJUR_ACCOUNT }}" \
             cyberark/pkiaas:test
-      # - name: Inspect PKIaaS Docker Container
-      #   run: |
-      #     docker inspect cpki-test > inspect_log
-      # - name: Upload inspect_log Artifact
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: Docker Inspect Log
-      #     path: inspect_log
-      # - name: Report Docker Logs for PKIaaS Docker Container
-      #   run: |
-      #     docker logs cpki-test > activity_log
-      # - name: Upload activity_log Artifact
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: Docker Activity Log
-      #     path: activity_log
       - name: Test PKIaaS Web Service
         run: |
-          curl -k -X GET http://localhost:3000/
+          curl -k -X GET http://localhost:3000
