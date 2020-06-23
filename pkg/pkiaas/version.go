@@ -4,7 +4,6 @@ import "fmt"
 
 // Version field is a SemVer that should indicate the baked-in version
 // of the broker
-
 var Version = "0.5.0"
 
 // Tag field denotes the specific build type for the broker. It may
