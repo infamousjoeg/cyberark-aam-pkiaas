@@ -34,7 +34,7 @@ func (c StorageBackend) GetAccessControl() backend.Access {
 // InitConfig This will init the policy in the 'pki' webservice
 func (c StorageBackend) InitConfig() error {
 	pkiPolicy := getInitConfigPolicy()
-	response, err := c.client.LoadPolicy(conjurapi.PolicyModePut, c.policyBranch, pkiPolicy)
+	response, err := c.client.LoadPolicy(conjurapi.PolicyModePatch, c.policyBranch, pkiPolicy)
 	if err != nil {
 		return fmt.Errorf("Failed to initialize configuration for the PKI service. %v. %s", response, err)
 	}
@@ -338,7 +338,7 @@ func defaultCreateCertificatePolicy() string {
 
 func defaultRevokeCertificatePolicy() string {
 	return `- !variable
-  id: "<SerialNumber>"
+  id: certificates/<SerialNumber>
   annotations:
     Revoked: <Revoked>
     RevocationDate: <RevocationDate>
