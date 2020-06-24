@@ -12,7 +12,7 @@ import (
 
 // CreateTemplate ...
 func (c StorageBackend) CreateTemplate(template types.Template) error {
-	variableID := c.getTemplatePolicyBranch() + "/" + template.TemplateName
+	variableID := c.getTemplateVariableID(template.TemplateName)
 
 	// validate template does not exists
 	_, err := c.client.RetrieveSecret(variableID)
@@ -80,7 +80,7 @@ func (c StorageBackend) ListTemplates() ([]string, error) {
 
 // GetTemplate ...
 func (c StorageBackend) GetTemplate(templateName string) (types.Template, error) {
-	variableID := c.getTemplatePolicyBranch() + "/" + templateName
+	variableID := c.getTemplateVariableID(templateName)
 	templateJSON, err := c.client.RetrieveSecret(variableID)
 	template := &types.Template{}
 
@@ -99,7 +99,7 @@ func (c StorageBackend) GetTemplate(templateName string) (types.Template, error)
 // DeleteTemplate ...
 func (c StorageBackend) DeleteTemplate(templateName string) error {
 	// validate template resource exists
-	variableID := c.getTemplatePolicyBranch() + "/" + templateName
+	variableID := c.getTemplateVariableID(templateName)
 	_, err := c.client.RetrieveSecret(variableID)
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve template with id '%s'. %s", variableID, err)
