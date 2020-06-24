@@ -3,9 +3,6 @@
   - !user rob
   - !user joe
 
-- !group pki-admins
-
 - !grant
-  role: !user admin
-  member: !group pki-admins
-
+  role: !group pki/admin
+  members: *users
