@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 )
 
 // Privileges ...
@@ -133,7 +134,8 @@ func (a AccessControl) CreateCertificate(accessToken string, templateName string
 
 // RevokeCertificate ...
 func (a AccessControl) RevokeCertificate(accessToken string, serialNumber string) error {
-	return a.checkPermission(accessToken, a.privileges.CertificateRevokeSpecific+serialNumber)
+	serialNumberInt, _ := pki.ConvertSerialOctetStringToInt(serialNumber)
+	return a.checkPermission(accessToken, a.privileges.CertificateRevokeSpecific+serialNumberInt.String())
 }
 
 // SignCertificate ...
