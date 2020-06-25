@@ -22,6 +22,11 @@ func init() {
 	if err != nil {
 		panic("Error initializing PKI backend: " + err.Error())
 	}
+
+	err = pkiclient.InitConfig()
+	if err != nil {
+		panic("Error initializing PKI configuration: " + err.Error())
+	}
 	backend.Backend = pkiclient
 	//	backend.Backend = dummy.Dummy{}
 }

@@ -13,7 +13,7 @@ import (
 
 // CreateCertificate ...
 func (c StorageBackend) CreateCertificate(cert types.CreateCertificateData) error {
-	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
+	variableID := c.getCertificateVariableID(cert.SerialNumber)
 
 	// validate cert does not exists
 	_, err := c.client.RetrieveSecret(variableID)
@@ -25,8 +25,7 @@ func (c StorageBackend) CreateCertificate(cert types.CreateCertificateData) erro
 }
 
 func (c StorageBackend) updateCertificate(cert types.CreateCertificateData, policyTemplate string) error {
-
-	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
+	variableID := c.getCertificateVariableID(cert.SerialNumber)
 
 	// replace template placeholders
 	newPolicy := bytes.NewReader([]byte(ReplaceCertificate(cert, policyTemplate)))
@@ -90,7 +89,7 @@ func (c StorageBackend) ListCertificates() ([]*big.Int, error) {
 
 // GetCertificate ...
 func (c StorageBackend) GetCertificate(serialNumber *big.Int) (string, error) {
-	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
+	variableID := c.getCertificateVariableID(serialNumber.String())
 	value, err := c.client.RetrieveSecret(variableID)
 
 	if err != nil {
@@ -103,7 +102,7 @@ func (c StorageBackend) GetCertificate(serialNumber *big.Int) (string, error) {
 // DeleteCertificate ...
 func (c StorageBackend) DeleteCertificate(serialNumber *big.Int) error {
 	// validate template resource exists
-	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
+	variableID := c.getCertificateVariableID(serialNumber.String())
 	_, err := c.client.RetrieveSecret(variableID)
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve certificate with serial number '%s'. %s", variableID, err)
@@ -130,8 +129,7 @@ func (c StorageBackend) DeleteCertificate(serialNumber *big.Int) error {
 
 // RevokeCertificate ...
 func (c StorageBackend) RevokeCertificate(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error {
-
-	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
+	variableID := c.getCertificateVariableID(serialNumber.String())
 	_, err := c.client.RetrieveSecret(variableID)
 
 	if err != nil {
@@ -178,7 +176,7 @@ func (c StorageBackend) GetRevokedCerts() ([]types.RevokedCertificate, error) {
 // CertificateRevoked Return the types.RevokedCertifcate repersented by the certificate
 // If the certificate is not revoked, and empty types.RevokedCertificate is returned
 func (c StorageBackend) CertificateRevoked(serialNumber *big.Int) (types.RevokedCertificate, error) {
-	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
+	variableID := c.getCertificateVariableID(serialNumber.String())
 
 	// Retrieve the specific resource, if not found return error
 	resourceID := GetFullResourceID(c.client.GetConfig().Account, "variable", variableID)

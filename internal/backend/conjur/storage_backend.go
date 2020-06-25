@@ -34,7 +34,7 @@ func (c StorageBackend) GetAccessControl() backend.Access {
 // InitConfig This will init the policy in the 'pki' webservice
 func (c StorageBackend) InitConfig() error {
 	pkiPolicy := getInitConfigPolicy()
-	response, err := c.client.LoadPolicy(conjurapi.PolicyModePut, c.policyBranch, pkiPolicy)
+	response, err := c.client.LoadPolicy(conjurapi.PolicyModePatch, c.policyBranch, pkiPolicy)
 	if err != nil {
 		return fmt.Errorf("Failed to initialize configuration for the PKI service. %v. %s", response, err)
 	}
@@ -80,7 +80,7 @@ func getInitConfigPolicy() io.Reader {
   - !group set-ca-chain
   - !group set-ca-signing-key
   - !group set-ca-signing-cert
-  - !group generate-ca
+  - !group generate-intermediate-csr
 
 - !permit
   role: !group authenticate
@@ -93,6 +93,12 @@ func getInitConfigPolicy() io.Reader {
   resource: !webservice
   privileges:
   - list-templates
+
+- !permit
+  role: !group create-templates
+  resource: !webservice
+  privileges:
+  - create-templates
 
 - !permit
   role: !group list-certificates
@@ -131,10 +137,10 @@ func getInitConfigPolicy() io.Reader {
   - set-ca-signing-cert
 
 - !permit
-  role: !group generate-ca
+  role: !group generate-intermediate-csr
   resource: !webservice
   privileges:
-  - generate-ca
+  - generate-intermediate-csr
 
 - !grant
   roles: *templates
@@ -146,15 +152,24 @@ func getInitConfigPolicy() io.Reader {
 
 - !grant
   roles: *purge
-  member: !group purge-admins
+  member: !group purge-admin
 
 - !grant
   roles: *ca
-  member: !group ca-admins
+  member: !group ca-admin
 
 - !grant
   roles: *admins
   member: !group admin
+
+- !grant
+  role: !group authenticate
+  members:
+  - !group admin
+  - !group ca-admin
+  - !group purge-admin
+  - !group certificates-admin
+  - !group templates-admin
 
 - !grant
   roles:
@@ -176,8 +191,16 @@ func (c StorageBackend) getTemplatePolicyBranch() string {
 	return c.policyBranch
 }
 
+func (c StorageBackend) getTemplateVariableID(templateName string) string {
+	return c.policyBranch + "/templates/" + templateName
+}
+
 func (c StorageBackend) getCertificatePolicyBranch() string {
 	return c.policyBranch
+}
+
+func (c StorageBackend) getCertificateVariableID(serialNumber string) string {
+	return c.policyBranch + "/certificates/" + serialNumber
 }
 
 func (c StorageBackend) getCAChainVariableID() string {
@@ -224,30 +247,30 @@ func defaultCreateTemplatePolicy() string {
 # assign the privileges to the groups above
 - !permit
   role: !group templates/<TemplateName>-read
-  resource: !webservice pki
+  resource: !webservice
   privileges:
   - read-template-<TemplateName>
 
 - !permit
   role: !group templates/<TemplateName>-manage
-  resource: !webservice pki
+  resource: !webservice
   privileges:
   - manage-template-<TemplateName>
 
 - !permit
   role: !group templates/<TemplateName>-delete
-  resource: !webservice pki
+  resource: !webservice
   privileges:
   - delete-template-<TemplateName>
 
 - !permit
-  role: !group templates/<TemplateName>-create-certificate
-  resource: !webservice pki
+  role: !group templates/<TemplateName>-create-certificates
+  resource: !webservice
   privileges:
   - create-certificate-from-<TemplateName>
 
 - !permit
-  role: !group templates/<TemplateName>-sign-certificate
+  role: !group templates/<TemplateName>-sign-certificates
   privileges:
   - sign-certificate-from-<TemplateName>
 
@@ -267,11 +290,11 @@ func defaultCreateTemplatePolicy() string {
   member: !group delete-templates
 
 - !grant
-  role: !group templates/<TemplateName>-create-certificate
+  role: !group templates/<TemplateName>-create-certificates
   member: !group create-certificates
 
 - !grant
-  role: !group templates/<TemplateName>-sign-certificate
+  role: !group templates/<TemplateName>-sign-certificates
   member: !group sign-certificates
 `
 }
@@ -293,12 +316,12 @@ func defaultCreateCertificatePolicy() string {
 # assign the privileges to the groups above
 - !permit
   role: !group certificates/<SerialNumber>-read
-  resource: !webservice pki
+  resource: !webservice
   privileges:
   - read-certificate-<SerialNumber>
 - !permit
   role: !group certificates/<SerialNumber>-revoke
-  resource: !webservice pki
+  resource: !webservice
   privileges:
   - revoke-certificate-<SerialNumber>
 
@@ -315,7 +338,7 @@ func defaultCreateCertificatePolicy() string {
 
 func defaultRevokeCertificatePolicy() string {
 	return `- !variable
-  id: "<SerialNumber>"
+  id: certificates/<SerialNumber>
   annotations:
     Revoked: <Revoked>
     RevocationDate: <RevocationDate>

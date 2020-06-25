@@ -1,7 +1,4 @@
 - !host pki-admin
-- !permit
-  role: !host pki-admin
-  resource: !webservice pki
-  privileges:
-  - use
-  - admin
+- !grant
+  role: !group pki/admin
+  member: !host pki-admin
