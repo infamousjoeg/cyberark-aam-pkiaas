@@ -17,7 +17,7 @@ import (
 func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	if !pki.ValidateContentType(r.Header, "application/json") {
 		httpErr := httperror.InvalidContentType()
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 
 	}
 
@@ -27,12 +27,12 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 	}
 	err = backend.Backend.GetAccessControl().CreateTemplate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 	}
 	var newTemplate types.Template
 	decoder := json.NewDecoder(r.Body)
@@ -40,11 +40,11 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err = decoder.Decode(&newTemplate)
 	if err != nil {
 		httpErr := httperror.RequestDecodeFail(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 	}
 	httpErr := pki.CreateTemplate(newTemplate, backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -61,7 +61,7 @@ func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -70,14 +70,14 @@ func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err = backend.Backend.GetAccessControl().ReadTemplate(authHeader, templateName)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	template, httpErr := pki.GetTemplate(templateName, backend.Backend)
 
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -85,7 +85,7 @@ func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(template)
 	if err != nil {
 		httpErr := httperror.ResponseEncodeError(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -97,7 +97,7 @@ func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	if !pki.ValidateContentType(r.Header, "application/json") {
 		httpErr := httperror.InvalidContentType()
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -108,7 +108,7 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 	var newTemplate types.Template
@@ -117,19 +117,19 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err = decoder.Decode(&newTemplate)
 	if err != nil {
 		httpErr := httperror.RequestDecodeFail(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 	err = backend.Backend.GetAccessControl().ManageTemplate(authHeader, newTemplate.TemplateName)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	template, httpErr := pki.GetTemplate(newTemplate.TemplateName, backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -139,19 +139,19 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err = decoder.Decode(&template)
 	if err != nil {
 		httpErr := httperror.RequestDecodeFail(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	httpErr = pki.DeleteTemplate(template.TemplateName, backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	httpErr = pki.CreateTemplate(template, backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -168,7 +168,7 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -177,13 +177,13 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	err = backend.Backend.GetAccessControl().DeleteTemplate(authHeader, templateName)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	httpErr := pki.DeleteTemplate(templateName, backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -199,27 +199,27 @@ func ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
 	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	err = backend.Backend.GetAccessControl().ListTemplates(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	templateList, httpErr := pki.ListTemplate(backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(templateList)
 	if err != nil {
 		httpErr := httperror.ResponseEncodeError(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }

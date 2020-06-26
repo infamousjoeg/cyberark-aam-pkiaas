@@ -18,7 +18,7 @@ import (
 func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 	if !pki.ValidateContentType(r.Header, "application/json") {
 		httpErr := httperror.InvalidContentType()
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -26,14 +26,14 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	err = backend.Backend.GetAccessControl().GenerateIntermediateCSR(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -43,20 +43,20 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 	err = decoder.Decode(&intermediateRequest)
 	if err != nil {
 		httpErr := httperror.RequestDecodeFail(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	intermediateResponse, httpErr := pki.GenerateIntermediateCSR(intermediateRequest, backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(intermediateResponse)
 	if err != nil {
 		httpErr := httperror.ResponseEncodeError(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -68,7 +68,7 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 	if !pki.ValidateContentType(r.Header, "application/json") {
 		httpErr := httperror.InvalidContentType()
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -76,14 +76,14 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	err = backend.Backend.GetAccessControl().SetIntermediateCertificate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -93,7 +93,7 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 	err = decoder.Decode(&signedCert)
 	if err != nil {
 		httpErr := httperror.RequestDecodeFail(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -104,13 +104,13 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 func GetCAHandler(w http.ResponseWriter, r *http.Request) {
 	pemCA, httpErr := pki.GetCA(backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 	_, err := w.Write(pemCA)
 	if err != nil {
 		httpErr := httperror.ResponseWriteError(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -121,13 +121,13 @@ func GetCAHandler(w http.ResponseWriter, r *http.Request) {
 func GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	caChainBundle, httpErr := pki.GetCAChain(backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 	err := json.NewEncoder(w).Encode(caChainBundle)
 	if err != nil {
 		httpErr := httperror.ResponseEncodeError(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -139,7 +139,7 @@ func GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	if !pki.ValidateContentType(r.Header, "application/json") {
 		httpErr := httperror.InvalidContentType()
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -147,14 +147,14 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	err = backend.Backend.GetAccessControl().SetCAChain(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
@@ -164,12 +164,12 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	err = decoder.Decode(&pemBundle)
 	if err != nil {
 		httpErr := httperror.RequestDecodeFail(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 	httpErr := pki.SetCAChain(pemBundle, backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -179,13 +179,13 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 func GetCRLHandler(w http.ResponseWriter, r *http.Request) {
 	decodedCRL, httpErr := pki.GetCRL(backend.Backend)
 	if httpErr != (httperror.HTTPError{}) {
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 	_, err := w.Write(decodedCRL)
 	if err != nil {
 		httpErr := httperror.ResponseWriteError(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -199,14 +199,14 @@ func PurgeHandler(w http.ResponseWriter, r *http.Request) {
 	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	err = backend.Backend.GetAccessControl().Purge(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
@@ -219,14 +219,14 @@ func PurgeCRLHandler(w http.ResponseWriter, r *http.Request) {
 	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
 	err = backend.Backend.GetAccessControl().CRLPurge(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 }
