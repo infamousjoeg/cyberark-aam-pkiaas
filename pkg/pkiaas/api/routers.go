@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 )
 
 // Route struct
@@ -44,8 +43,6 @@ func NewRouter() *mux.Router {
 func Index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Successful GET /")
 }
-
-var backend pki.Pki
 
 var routes = Routes{
 	Route{

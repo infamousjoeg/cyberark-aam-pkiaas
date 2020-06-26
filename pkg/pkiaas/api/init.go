@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/conjur"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/pkiaas"
 )
+
+var storage backend.Storage
 
 func init() {
 	version := flag.Bool("v", false, "Display current version")
@@ -27,6 +30,6 @@ func init() {
 	if err != nil {
 		panic("Error initializing PKI configuration: " + err.Error())
 	}
-	backend.Backend = pkiclient
+	storage = pkiclient
 	//	backend.Backend = dummy.Dummy{}
 }

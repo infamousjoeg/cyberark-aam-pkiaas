@@ -17,23 +17,28 @@ type CreateCertReq struct {
 // Structure that represents a certificate request template corresponding to the
 // JSON body from the '/template/create' and '/template/manage' endpoints
 type Template struct {
-	TemplateName      string        `json:"templateName"`
-	KeyAlgo           string        `json:"keyAlgo"`
-	KeyBits           string        `json:"keyBits"`
-	MaxTTL            int64         `json:"maxTTL"`
-	Subject           SubjectFields `json:"subject"`
-	KeyUsages         []string      `json:"keyUsages,omitempty"`
-	ExtKeyUsages      []string      `json:"extKeyUsages,omitempty"`
-	MaxPathLength     string        `json:"maxPathLength,omitempty"`
-	PermDNSDomains    []string      `json:"permDNSDomains,omitempty"`
-	ExclDNSDomains    []string      `json:"exclDNSDomains,omitempty"`
-	PermIPRanges      []string      `json:"permIPRanges,omitempty"`
-	ExclIPRanges      []string      `json:"exclIPRanges,omitempty"`
-	PermEmails        []string      `json:"permEmails,omitempty"`
-	ExclEmails        []string      `json:"exclEmails,omitempty"`
-	PermURIDomains    []string      `json:"permURIDomains,omitempty"`
-	ExclURIDomains    []string      `json:"exclURIDomains,omitempty"`
-	PolicyIdentifiers []string      `json:"policyIdentifiers,omitempty"`
+	TemplateName       string        `json:"templateName"`
+	KeyAlgo            string        `json:"keyAlgo"`
+	KeyBits            string        `json:"keyBits"`
+	MaxTTL             int64         `json:"maxTTL"`
+	Subject            SubjectFields `json:"subject"`
+	KeyUsages          []string      `json:"keyUsages,omitempty"`
+	ExtKeyUsages       []string      `json:"extKeyUsages,omitempty"`
+	ValidateCNHostname bool          `json:"validateCNHostname,omitempty"`
+	PermitLocalhostCN  bool          `json:"permitLocalhostCN,omitempty"`
+	PermitWildcardCN   bool          `json:"permitWildcardCN,omitempty"`
+	PermitRootDomainCN bool          `json:"permitRootDomain,omitempty"`
+	PermitSubdomainCN  bool          `json:"permitSubdomainCN,omitempty"`
+	AllowedCNDomains   []string      `json:"allowedCNDomains,omitempty"`
+	PermDNSDomains     []string      `json:"permDNSDomains,omitempty"`
+	ExclDNSDomains     []string      `json:"exclDNSDomains,omitempty"`
+	PermIPRanges       []string      `json:"permIPRanges,omitempty"`
+	ExclIPRanges       []string      `json:"exclIPRanges,omitempty"`
+	PermEmails         []string      `json:"permEmails,omitempty"`
+	ExclEmails         []string      `json:"exclEmails,omitempty"`
+	PermURIDomains     []string      `json:"permURIDomains,omitempty"`
+	ExclURIDomains     []string      `json:"exclURIDomains,omitempty"`
+	PolicyIdentifiers  []string      `json:"policyIdentifiers,omitempty"`
 }
 
 // CreateCertificateResponse ---------------------------------------------------

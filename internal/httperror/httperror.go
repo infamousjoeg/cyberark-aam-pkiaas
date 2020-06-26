@@ -791,6 +791,19 @@ func WriteCRLFail(err string) HTTPError {
 	}
 }
 
+// InvalidCN -----------
+func InvalidCN(err string) HTTPError {
+	var errorCode string
+	switch getCallerFunctionName() {
+	case "SignCert":
+		errorCode = "CPKISG016"
+	}
+	return HTTPError{ErrorCode: errorCode,
+		ErrorMessage: "Invalid Common Name requested for certificate - " + err,
+		HTTPResponse: http.StatusInternalServerError,
+	}
+}
+
 // JSON ------------
 func (httpErr HTTPError) JSON() string {
 	json, _ := json.Marshal(httpErr)

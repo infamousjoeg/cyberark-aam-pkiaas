@@ -23,14 +23,14 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().GenerateIntermediateCSR(authHeader)
+	err = storage.GetAccessControl().GenerateIntermediateCSR(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -47,7 +47,7 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	intermediateResponse, httpErr := pki.GenerateIntermediateCSR(intermediateRequest, backend.Backend)
+	intermediateResponse, httpErr := pki.GenerateIntermediateCSR(intermediateRequest, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -73,14 +73,14 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().SetIntermediateCertificate(authHeader)
+	err = storage.GetAccessControl().SetIntermediateCertificate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -99,10 +99,10 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetCAHandler ----------------------------------------------------------------------
-// Handler to retrieve the base64-encoded DER intermediate CA certificate from the storage backend
+// Handler to retrieve the base64-encoded DER intermediate CA certificate from the storage storage
 // and return it in PEM format
 func GetCAHandler(w http.ResponseWriter, r *http.Request) {
-	pemCA, httpErr := pki.GetCA(backend.Backend)
+	pemCA, httpErr := pki.GetCA(storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -117,9 +117,9 @@ func GetCAHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetCAChainHandler -----------------------------------------------------------------
 // Handler to retrieve the base64-encoded DER intermediate CA certificates associated with
-// the CA chain from the storage backend and return them in PEM format
+// the CA chain from the storage storage and return them in PEM format
 func GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
-	caChainBundle, httpErr := pki.GetCAChain(backend.Backend)
+	caChainBundle, httpErr := pki.GetCAChain(storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -135,7 +135,7 @@ func GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 // SetCAChainHandler -----------------------------------------------------------------
 // Handler to capture a PEM encoded certificate bundle from the request and parse it
 // into individual DER certificates. Each of these certificates are stored in base64
-// format in the storage backend
+// format in the storage storage
 func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	if !pki.ValidateContentType(r.Header, "application/json") {
 		httpErr := httperror.InvalidContentType()
@@ -144,14 +144,14 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().SetCAChain(authHeader)
+	err = storage.GetAccessControl().SetCAChain(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -167,7 +167,7 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-	httpErr := pki.SetCAChain(pemBundle, backend.Backend)
+	httpErr := pki.SetCAChain(pemBundle, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -175,9 +175,9 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetCRLHandler ----------------------------------------------------
-// Handler to retrieve the DER encoded CRL from the storage backend
+// Handler to retrieve the DER encoded CRL from the storage storage
 func GetCRLHandler(w http.ResponseWriter, r *http.Request) {
-	decodedCRL, httpErr := pki.GetCRL(backend.Backend)
+	decodedCRL, httpErr := pki.GetCRL(storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -192,18 +192,18 @@ func GetCRLHandler(w http.ResponseWriter, r *http.Request) {
 
 // PurgeHandler -----------------------------------------------------
 // Handler that will purge all expired certificates from both the certificate
-// repository in the storage backend, as well as the CRL, within a given buffer
+// repository in the storage storage, as well as the CRL, within a given buffer
 // time that is passed in the request
 func PurgeHandler(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().Purge(authHeader)
+	err = storage.GetAccessControl().Purge(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -216,14 +216,14 @@ func PurgeHandler(w http.ResponseWriter, r *http.Request) {
 // within a given buffer time that is passed in the request
 func PurgeCRLHandler(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().CRLPurge(authHeader)
+	err = storage.GetAccessControl().CRLPurge(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)

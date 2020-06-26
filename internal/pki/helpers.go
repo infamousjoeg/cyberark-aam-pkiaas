@@ -412,7 +412,7 @@ func PrepareCertificateParameters(templateName string, reqTTL int64, backend bac
 	}
 
 	// Validate that requested certificate is within validity period of CA certificate
-	if caCert.NotAfter.Sub(time.Now().Add(time.Minute*time.Duration(ttl))) < 0 {
+	if caCert.NotAfter.Sub(time.Now().Add(time.Minute*time.Duration(ttl)).UTC()) < 0 {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Requested certificate validity period is greater than the CA validity period")
 	}
 
@@ -491,6 +491,57 @@ func ProcessSubjectAltNames(altNames []string) ([]string, []string, []net.IP, []
 		}
 	}
 	return dnsNames, emailAddresses, ipAddresses, URIs, nil
+}
+
+// ValidateCommonName -------------------------------------------------------------
+// Ensure the CommonName passed in a certificate creation request adheres to all the
+// standards defined in the requested template
+func ValidateCommonName(commonName string, template types.Template) error {
+
+	if template.ValidateCNHostname {
+		re := regexp.MustCompile("^[a-zA-Z0-9.*-]*$")
+		if !re.MatchString(commonName) {
+			return errors.New("Common Name is not a valid hostname; valid hostname is required by template")
+		}
+	}
+
+	if !template.PermitLocalhostCN {
+		if commonName == "localhost" || commonName == "localdomain" {
+			return errors.New("The requested template does not permit " + commonName + " as a common name")
+		}
+	}
+
+	if !template.PermitWildcardCN {
+		if strings.Contains(commonName, "*") {
+			return errors.New("The requested template does not permit wildcards")
+		}
+	}
+
+	if len(template.AllowedCNDomains) > 0 {
+		cnHost := strings.Split(commonName, ".")[0]
+		cnDomain := strings.Replace(commonName, cnHost, "", 1)
+		valid := false
+		for _, domain := range template.AllowedCNDomains {
+			if !template.PermitRootDomainCN && commonName == domain {
+				return errors.New("The request template does not permit the certificate common name to be the root domain")
+			}
+			if template.PermitSubdomainCN {
+				if strings.Contains(domain, cnDomain) {
+					valid = true
+				}
+			} else {
+				if domain == cnDomain {
+					valid = true
+				}
+			}
+
+		}
+		if !valid {
+			return errors.New("The common name is not in any of the domains permitted by the requested template")
+		}
+	}
+
+	return nil
 }
 
 // ValidateSubjectAltNames --------------------------------------------------------
@@ -589,6 +640,7 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 			}
 		}
 	}
+
 	if len(template.PermDNSDomains) > 0 {
 		// Loop through all the permitted DNS domains and validate that the domain matches
 		// at least one of the permitted DNS domains

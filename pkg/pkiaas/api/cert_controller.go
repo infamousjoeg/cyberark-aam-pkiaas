@@ -24,7 +24,7 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the Sign Certificate endpoint using the requested template
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -39,13 +39,13 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-	err = backend.Backend.GetAccessControl().SignCertificate(authHeader, signReq.TemplateName)
+	err = storage.GetAccessControl().SignCertificate(authHeader, signReq.TemplateName)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-	response, httpErr := pki.SignCert(signReq, backend.Backend)
+	response, httpErr := pki.SignCert(signReq, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -72,7 +72,7 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the Create Certificate endpoint using the requested template
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -88,14 +88,14 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().CreateCertificate(authHeader, certReq.TemplateName)
+	err = storage.GetAccessControl().CreateCertificate(authHeader, certReq.TemplateName)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	response, httpErr := pki.CreateCert(certReq, backend.Backend)
+	response, httpErr := pki.CreateCert(certReq, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -118,14 +118,14 @@ func GetCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, but there
 	// is no need for an authorization check as all authenticated entities will be allowed
 	// to retrieve public certificate data
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	response, httpErr := pki.GetCert(serialNumber, backend.Backend)
+	response, httpErr := pki.GetCert(serialNumber, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -149,14 +149,14 @@ func ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, but there
 	// is no need for an authorization check as all authenticated entities will be allowed
 	// to retrieve public certificate data
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	response, httpErr := pki.ListCerts(backend.Backend)
+	response, httpErr := pki.ListCerts(storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -185,7 +185,7 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the Revoke Certificate endpoint for the specified serial number
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -200,13 +200,13 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-	err = backend.Backend.GetAccessControl().RevokeCertificate(authHeader, crlReq.SerialNumber)
+	err = storage.GetAccessControl().RevokeCertificate(authHeader, crlReq.SerialNumber)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-	httpErr := pki.RevokeCert(crlReq, backend.Backend)
+	httpErr := pki.RevokeCert(crlReq, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
