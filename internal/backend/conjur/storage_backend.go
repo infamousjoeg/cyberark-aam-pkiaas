@@ -354,7 +354,7 @@ func defaultDeleteTemplatePolicy() string {
 - !delete
   record: !group templates/<TemplateName>-read
 - !delete
-  record: !group templates/<TemplateName>-managed
+  record: !group templates/<TemplateName>-manage
 - !delete
   record: !group templates/<TemplateName>-delete
 - !delete
