@@ -348,12 +348,19 @@ func defaultRevokeCertificatePolicy() string {
 }
 
 func defaultDeleteTemplatePolicy() string {
-	return `- !delete
-  records: 
-  - !variable templates/<TemplateName>
-  - !group templates/<TemplateName>-read
-  - !group templates/<TemplateName>-managed
-  - !group templates/<TemplateName>-delete
+	return `
+- !delete
+  record: !variable templates/<TemplateName>
+- !delete
+  record: !group templates/<TemplateName>-read
+- !delete
+  record: !group templates/<TemplateName>-manage
+- !delete
+  record: !group templates/<TemplateName>-delete
+- !delete
+  record: !group templates/<TemplateName>-create-certificates
+- !delete
+  record: !group templates/<TemplateName>-sign-certificates
 `
 }
 
