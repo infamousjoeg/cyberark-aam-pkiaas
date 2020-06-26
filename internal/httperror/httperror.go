@@ -1,6 +1,8 @@
 package httperror
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"runtime"
 	"strings"
@@ -8,8 +10,8 @@ import (
 
 // HTTPError ------
 type HTTPError struct {
-	ErrorCode    string
-	ErrorMessage string
+	ErrorCode    string `json:"errorCode"`
+	ErrorMessage string `json:"errorMessage"`
 	HTTPResponse int
 }
 
@@ -18,11 +20,8 @@ const invalidAuthn string = "Invalid authentication from header - "
 
 // InvalidContentType ----------
 func InvalidContentType() HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "CreateTemplateHandler":
 		errorCode = "CPKICT001"
 	case "ManageTemplateHandler":
@@ -49,11 +48,8 @@ func InvalidContentType() HTTPError {
 
 // InvalidAuthn ------------------
 func InvalidAuthn(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "CreateTemplateHandler":
 		errorCode = "CPKICT002"
 	case "GetTemplateHandler":
@@ -93,11 +89,8 @@ func InvalidAuthn(err string) HTTPError {
 
 // InvalidAuthz -----------------
 func InvalidAuthz(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "CreateTemplateHandler":
 		errorCode = "CPKICT003"
 	case "GetTemplateHandler":
@@ -133,11 +126,8 @@ func InvalidAuthz(err string) HTTPError {
 
 // RequestDecodeFail --------------------
 func RequestDecodeFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "CreateTemplateHandler":
 		errorCode = "CPKICT004"
 	case "ManageTemplateHandler":
@@ -163,11 +153,8 @@ func RequestDecodeFail(err string) HTTPError {
 
 // InvalidKeyAlgo -----------------
 func InvalidKeyAlgo(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "CreateTemplateHandler":
 		errorCode = "CPKICT005"
 	}
@@ -179,11 +166,8 @@ func InvalidKeyAlgo(err string) HTTPError {
 
 // InvalidKeyUsage -------------
 func InvalidKeyUsage(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "CreateTemplateHandler":
 		errorCode = "CPKICT006"
 	case "SignCert":
@@ -199,11 +183,8 @@ func InvalidKeyUsage(err string) HTTPError {
 
 // InvalidExtKeyUsage -----------------
 func InvalidExtKeyUsage(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "CreateTemplateHandler":
 		errorCode = "CPKICT007"
 	case "SignCert":
@@ -219,11 +200,8 @@ func InvalidExtKeyUsage(err string) HTTPError {
 
 // InvalidPolicyID -----------
 func InvalidPolicyID(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "CreateTemplateHandler":
 		errorCode = "CPKICT008"
 	}
@@ -235,11 +213,8 @@ func InvalidPolicyID(err string) HTTPError {
 
 // StorageWriteFail --------------
 func StorageWriteFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "CreateTemplateHandler":
 		errorCode = "CPKICT009"
 	case "SetCAChain":
@@ -253,11 +228,8 @@ func StorageWriteFail(err string) HTTPError {
 
 // StorageReadFail ---------------------
 func StorageReadFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GetTemplateHandler":
 		errorCode = "CPKIGT003"
 	case "ListTemplatesHandler":
@@ -281,11 +253,8 @@ func StorageReadFail(err string) HTTPError {
 
 // ResponseEncodeError -----------
 func ResponseEncodeError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GetTemplateHandler":
 		errorCode = "CPKIGT004"
 	case "ListTemplatesHandler":
@@ -307,11 +276,8 @@ func ResponseEncodeError(err string) HTTPError {
 
 // ResponseWriteError -----------
 func ResponseWriteError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GetCAHandler":
 		errorCode = "CPKICA003"
 	case "GetCRLHandler":
@@ -329,12 +295,9 @@ func ResponseWriteError(err string) HTTPError {
 
 // StorageDeleteFail -----------
 func StorageDeleteFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
-	case "DeleteTemplateHandler":
+	switch getCallerFunctionName() {
+	case "DeleteTemplate":
 		errorCode = "CPKIDT003"
 	}
 	return HTTPError{ErrorCode: errorCode,
@@ -345,11 +308,8 @@ func StorageDeleteFail(err string) HTTPError {
 
 // KeygenError ---------
 func KeygenError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI005"
 	case "CreateCert":
@@ -363,11 +323,8 @@ func KeygenError(err string) HTTPError {
 
 // ProcessSubjectError ---------
 func ProcessSubjectError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI006"
 	case "SignCert":
@@ -383,11 +340,8 @@ func ProcessSubjectError(err string) HTTPError {
 
 // ProcessSANError ---------
 func ProcessSANError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI007"
 	case "CreateCert":
@@ -401,11 +355,8 @@ func ProcessSANError(err string) HTTPError {
 
 // InvalidSAN --------
 func InvalidSAN(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKISG012"
 	case "CreateCert":
@@ -419,11 +370,8 @@ func InvalidSAN(err string) HTTPError {
 
 // BasicConstraintError ----------
 func BasicConstraintError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI008"
 	}
@@ -435,11 +383,8 @@ func BasicConstraintError(err string) HTTPError {
 
 // MarshalKeyUsageError -----------
 func MarshalKeyUsageError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI009"
 	}
@@ -451,11 +396,8 @@ func MarshalKeyUsageError(err string) HTTPError {
 
 // BadSigAlgo -------------
 func BadSigAlgo(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI010"
 	}
@@ -467,11 +409,8 @@ func BadSigAlgo(err string) HTTPError {
 
 // GenerateCSRFail -------
 func GenerateCSRFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI011"
 	}
@@ -483,11 +422,8 @@ func GenerateCSRFail(err string) HTTPError {
 
 // GenerateSerialFail ----------
 func GenerateSerialFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI012"
 	}
@@ -499,11 +435,8 @@ func GenerateSerialFail(err string) HTTPError {
 
 // GenerateSelfSignFail ---------
 func GenerateSelfSignFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI013"
 	}
@@ -515,11 +448,8 @@ func GenerateSelfSignFail(err string) HTTPError {
 
 // CertWriteFail ---------
 func CertWriteFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI014"
 	case "SetIntermediateCertificate":
@@ -537,11 +467,8 @@ func CertWriteFail(err string) HTTPError {
 
 // ECDSAKeyError -------------
 func ECDSAKeyError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI015"
 	case "CreateCert":
@@ -555,11 +482,8 @@ func ECDSAKeyError(err string) HTTPError {
 
 // SigningKeyWriteFail ---------
 func SigningKeyWriteFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GenerateIntermediateCSRHandler":
 		errorCode = "CPKIGI016"
 	}
@@ -571,11 +495,8 @@ func SigningKeyWriteFail(err string) HTTPError {
 
 // SigningKeyReadFail -----------
 func SigningKeyReadFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI008"
 	case "RevokeCert":
@@ -589,11 +510,8 @@ func SigningKeyReadFail(err string) HTTPError {
 
 // InvalidCertificateFormat --------
 func InvalidCertificateFormat() HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI005"
 	}
@@ -605,11 +523,8 @@ func InvalidCertificateFormat() HTTPError {
 
 // ParseCertificateError -----------
 func ParseCertificateError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI006"
 	case "RevokeCert":
@@ -623,11 +538,8 @@ func ParseCertificateError(err string) HTTPError {
 
 // ParseCSRError -----------
 func ParseCSRError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SignCert":
 		errorCode = "CPKISG006"
 	}
@@ -639,11 +551,8 @@ func ParseCSRError(err string) HTTPError {
 
 // InvalidPEM -----------
 func InvalidPEM() HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SignCert":
 		errorCode = "CPKISG005"
 	}
@@ -655,11 +564,8 @@ func InvalidPEM() HTTPError {
 
 // CertificatePublicKeyError ----
 func CertificatePublicKeyError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI007"
 	}
@@ -671,11 +577,8 @@ func CertificatePublicKeyError(err string) HTTPError {
 
 // DecodeCertError ------------
 func DecodeCertError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GetCA":
 		errorCode = "CPKICA002"
 	case "GetCAChain":
@@ -694,11 +597,8 @@ func DecodeCertError(err string) HTTPError {
 
 // DecodeSigningKeyError -------------
 func DecodeSigningKeyError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI009"
 	}
@@ -710,11 +610,8 @@ func DecodeSigningKeyError(err string) HTTPError {
 
 // DecodeCRLError -----------
 func DecodeCRLError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GetCRL":
 		errorCode = "CPKICR002"
 	}
@@ -726,11 +623,8 @@ func DecodeCRLError(err string) HTTPError {
 
 // ParseSigningKeyError ------------
 func ParseSigningKeyError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI010"
 	case "RevokeCert":
@@ -744,11 +638,8 @@ func ParseSigningKeyError(err string) HTTPError {
 
 // ParsePublicKeyError --------
 func ParsePublicKeyError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI011"
 	}
@@ -760,11 +651,8 @@ func ParsePublicKeyError(err string) HTTPError {
 
 // PublicKeyMismatch ----------
 func PublicKeyMismatch() HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI012"
 	}
@@ -776,11 +664,8 @@ func PublicKeyMismatch() HTTPError {
 
 // CAChainProcessError ---------
 func CAChainProcessError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "GetCAChain":
 		errorCode = "CPKIGC004"
 	}
@@ -792,11 +677,8 @@ func CAChainProcessError(err string) HTTPError {
 
 // CertificateParameterFail --------
 func CertificateParameterFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SignCert":
 		errorCode = "CPKISG007"
 	case "CreateCert":
@@ -810,11 +692,8 @@ func CertificateParameterFail(err string) HTTPError {
 
 // TemplateSubjectMismatch -----------
 func TemplateSubjectMismatch() HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SignCert":
 		errorCode = "CPKISG009"
 	}
@@ -826,11 +705,8 @@ func TemplateSubjectMismatch() HTTPError {
 
 // CreateCertificateFail ---------
 func CreateCertificateFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SignCert":
 		errorCode = "CPKISG013"
 	case "CreateCert":
@@ -844,11 +720,8 @@ func CreateCertificateFail(err string) HTTPError {
 
 // SerialNumberConversionError ------
 func SerialNumberConversionError(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "SignCert":
 		errorCode = "CPKISG014"
 	case "CreateCert":
@@ -868,11 +741,8 @@ func SerialNumberConversionError(err string) HTTPError {
 
 // ParseReasonFail ------------
 func ParseReasonFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "RevokeCert":
 		errorCode = "CPKIRC005"
 	}
@@ -884,11 +754,8 @@ func ParseReasonFail(err string) HTTPError {
 
 // RevocationFail ---------------
 func RevocationFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "RevokeCert":
 		errorCode = "CPKIRC007"
 	}
@@ -900,11 +767,8 @@ func RevocationFail(err string) HTTPError {
 
 // CreateCRLFail -----------------
 func CreateCRLFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "RevokeCert":
 		errorCode = "CPKIRC015"
 	}
@@ -916,11 +780,8 @@ func CreateCRLFail(err string) HTTPError {
 
 // WriteCRLFail -----------
 func WriteCRLFail(err string) HTTPError {
-	stackAddr := make([]uintptr, 1)
-	runtime.Callers(2, stackAddr)
-	caller := runtime.FuncForPC(stackAddr[0] - 1)
 	var errorCode string
-	switch strings.Split(caller.Name(), ".")[1] {
+	switch getCallerFunctionName() {
 	case "RevokeCert":
 		errorCode = "CPKIRC016"
 	}
@@ -928,4 +789,19 @@ func WriteCRLFail(err string) HTTPError {
 		ErrorMessage: "Error writing new CRL to storage backend - " + err,
 		HTTPResponse: http.StatusInternalServerError,
 	}
+}
+
+// JSON ------------
+func (httpErr HTTPError) JSON() string {
+	json, _ := json.Marshal(httpErr)
+	return string(json)
+}
+
+func getCallerFunctionName() string {
+	stackAddr := make([]uintptr, 1)
+	runtime.Callers(3, stackAddr)
+	caller := runtime.FuncForPC(stackAddr[0] - 1)
+	fmt.Println(caller.Name())
+	parts := strings.Split(caller.Name(), ".")
+	return parts[len(parts)-1]
 }
