@@ -180,6 +180,12 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
 		return
 	}
+
+	httpErr = pki.DeleteTemplate(templateName, backend.Backend)
+	if httpErr != (httperror.HTTPError{}) {
+		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		return
+	}
 }
 
 // ListTemplatesHandler ---------------------------------------------------------
