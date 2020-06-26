@@ -180,6 +180,13 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
 		return
 	}
+
+	err = backend.Backend.DeleteTemplate(templateName)
+	if err != nil {
+		httpErr := httperror.StorageDeleteFail(err.Error())
+		http.Error(w, httpErr.ErrorCode+": "+httpErr.ErrorMessage, httpErr.HTTPResponse)
+		return
+	}
 }
 
 // ListTemplatesHandler ---------------------------------------------------------
