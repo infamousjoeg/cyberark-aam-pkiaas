@@ -76,6 +76,11 @@ func SignCert(signReq types.SignRequest, backend backend.Storage) (types.CreateC
 		}
 	}
 
+	err = ValidateCommonName(signReq.CommonName, template)
+	if err != nil {
+		return types.CreateCertificateResponse{}, httperror.InvalidCN(err.Error())
+	}
+
 	// Validate that all the SANs from the HTTP request are either
 	// explicitly permitted by the template or NOT explicitly denied
 	// by the template
@@ -88,8 +93,8 @@ func SignCert(signReq types.SignRequest, backend backend.Storage) (types.CreateC
 	newCert := x509.Certificate{
 		SerialNumber:          serialNumber,
 		Subject:               csrSubject,
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Minute * time.Duration(ttl)),
+		NotBefore:             time.Now().UTC(),
+		NotAfter:              time.Now().Add(time.Minute * time.Duration(ttl)).UTC(),
 		SignatureAlgorithm:    sigAlgo,
 		AuthorityKeyId:        caCert.SubjectKeyId,
 		KeyUsage:              keyUsage,
@@ -141,7 +146,7 @@ func SignCert(signReq types.SignRequest, backend backend.Storage) (types.CreateC
 	cert := types.CreateCertificateData{
 		SerialNumber:   serialNumber.String(),
 		Revoked:        false,
-		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).String(),
+		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).UTC().String(),
 		Certificate:    base64.StdEncoding.EncodeToString(derCert),
 	}
 	err = backend.CreateCertificate(cert)
@@ -180,6 +185,11 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 		return types.CreateCertificateResponse{}, httperror.InvalidExtKeyUsage(err.Error())
 	}
 
+	err = ValidateCommonName(certReq.CommonName, template)
+	if err != nil {
+		return types.CreateCertificateResponse{}, httperror.InvalidCN(err.Error())
+	}
+
 	// Process the request's Subject Alternate Name fields into arrays specific to each
 	// type of SAN, then validate that the requested SANs are permitted/not excluded by
 	// the template
@@ -187,6 +197,7 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 	if err != nil {
 		return types.CreateCertificateResponse{}, httperror.ProcessSANError(err.Error())
 	}
+
 	err = ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
 	if err != nil {
 		return types.CreateCertificateResponse{}, httperror.InvalidSAN(err.Error())
@@ -195,8 +206,8 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 	newCert := x509.Certificate{
 		SerialNumber:          serialNumber,
 		Subject:               certSubject,
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Minute * time.Duration(ttl)),
+		NotBefore:             time.Now().UTC(),
+		NotAfter:              time.Now().Add(time.Minute * time.Duration(ttl)).UTC(),
 		SignatureAlgorithm:    sigAlgo,
 		AuthorityKeyId:        caCert.SubjectKeyId,
 		KeyUsage:              keyUsage,
@@ -271,7 +282,7 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 	cert := types.CreateCertificateData{
 		SerialNumber:   serialNumber.String(),
 		Revoked:        false,
-		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).String(),
+		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).UTC().String(),
 		Certificate:    base64.StdEncoding.EncodeToString(derCert),
 	}
 
@@ -341,7 +352,7 @@ func RevokeCert(crlReq types.RevokeRequest, backend backend.Storage) httperror.H
 			return httperror.ParseReasonFail(err.Error())
 		}
 	}
-	revokeTime := time.Now()
+	revokeTime := time.Now().UTC()
 	intSerialNum, err := ConvertSerialOctetStringToInt(crlReq.SerialNumber)
 	if err != nil {
 		return httperror.SerialNumberConversionError(err.Error())

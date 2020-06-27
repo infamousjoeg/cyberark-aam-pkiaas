@@ -24,12 +24,12 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the Create Template endpoint
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 	}
-	err = backend.Backend.GetAccessControl().CreateTemplate(authHeader)
+	err = storage.GetAccessControl().CreateTemplate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -42,7 +42,7 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		httpErr := httperror.RequestDecodeFail(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 	}
-	httpErr := pki.CreateTemplate(newTemplate, backend.Backend)
+	httpErr := pki.CreateTemplate(newTemplate, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -58,7 +58,7 @@ func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// the template name from the URI and test that it has authorization to access the
 	// Get Template endpoint for the requested template
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -67,14 +67,14 @@ func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 	templateName := mux.Vars(r)["templateName"]
 
-	err = backend.Backend.GetAccessControl().ReadTemplate(authHeader, templateName)
+	err = storage.GetAccessControl().ReadTemplate(authHeader, templateName)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	template, httpErr := pki.GetTemplate(templateName, backend.Backend)
+	template, httpErr := pki.GetTemplate(templateName, storage)
 
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -105,7 +105,7 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// request body first in order to get template name for authorization check to ensure the requstor
 	// has authorization to access the Manage Template endpoint as well as the specific template
 	authHeader := r.Header.Get("Authorization")
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -120,14 +120,14 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-	err = backend.Backend.GetAccessControl().ManageTemplate(authHeader, newTemplate.TemplateName)
+	err = storage.GetAccessControl().ManageTemplate(authHeader, newTemplate.TemplateName)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	template, httpErr := pki.GetTemplate(newTemplate.TemplateName, backend.Backend)
+	template, httpErr := pki.GetTemplate(newTemplate.TemplateName, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -143,13 +143,13 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpErr = pki.DeleteTemplate(template.TemplateName, backend.Backend)
+	httpErr = pki.DeleteTemplate(template.TemplateName, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	httpErr = pki.CreateTemplate(template, backend.Backend)
+	httpErr = pki.CreateTemplate(template, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -165,7 +165,7 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, then extract
 	// the template name from the URI and test that it has authorization to access the
 	// Delete Template endpoint for the requested template
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -174,14 +174,14 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 	templateName := mux.Vars(r)["templateName"]
 
-	err = backend.Backend.GetAccessControl().DeleteTemplate(authHeader, templateName)
+	err = storage.GetAccessControl().DeleteTemplate(authHeader, templateName)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	httpErr := pki.DeleteTemplate(templateName, backend.Backend)
+	httpErr := pki.DeleteTemplate(templateName, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
@@ -196,21 +196,21 @@ func ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the List Templates endpoint
-	err := backend.Backend.GetAccessControl().Authenticate(authHeader)
+	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	err = backend.Backend.GetAccessControl().ListTemplates(authHeader)
+	err = storage.GetAccessControl().ListTemplates(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthz(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 
-	templateList, httpErr := pki.ListTemplate(backend.Backend)
+	templateList, httpErr := pki.ListTemplate(storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
