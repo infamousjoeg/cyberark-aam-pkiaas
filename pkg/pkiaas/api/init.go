@@ -13,23 +13,30 @@ import (
 var storage backend.Storage
 
 func init() {
+	initConfig := flag.Bool("i", false, "Load init policy for service")
 	version := flag.Bool("v", false, "Display current version")
 
 	flag.Parse()
 
+	// -v flag detected
 	if *version {
 		fmt.Printf("pkiaas v%s\n", pkiaas.FullVersionName)
 		os.Exit(1)
 	}
+
 	pkiclient, err := conjur.NewFromDefaults()
 	if err != nil {
 		panic("Error initializing PKI backend: " + err.Error())
 	}
 
-	err = pkiclient.InitConfig()
-	if err != nil {
-		panic("Error initializing PKI configuration: " + err.Error())
+	// -i flag detected
+	if *initConfig {
+		err = pkiclient.InitConfig()
+		if err != nil {
+			panic("Error initializing PKI configuration: " + err.Error())
+		}
 	}
+
 	storage = pkiclient
 	//	backend.Backend = dummy.Dummy{}
 }
