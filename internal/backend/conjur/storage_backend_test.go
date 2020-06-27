@@ -31,6 +31,17 @@ func testCreateCertificate() string {
 `
 }
 
+func testRevokeCertificatePolicy() string {
+	return `- !variable
+  id: "<SerialNumber>"
+  annotations:
+    Revoked: <Revoked>
+    RevocationDate: <RevocationDate>
+    RevocationReasonCode: <RevocationReasonCode>
+    InternalState: csasa<InternalState>csasa
+`
+}
+
 func testDeleteTemplate() string {
 	return `- !delete
   record: !variable <TemplateName>
@@ -71,17 +82,11 @@ func defaultConjurClient() (*conjurapi.Client, error) {
 }
 
 func defaultTemplates() conjur.PolicyTemplates {
-	return conjur.NewTemplates(testCreateTemplate(), testDeleteTemplate(), testCreateCertificate(), testDeleteCertificate())
+	return conjur.NewTemplates(testCreateTemplate(), testDeleteTemplate(), testCreateCertificate(), testDeleteCertificate(), testRevokeCertificatePolicy())
 }
 
 func defaultConjurPki() (conjur.StorageBackend, error) {
-	client, err := defaultConjurClient()
-	if err != nil {
-		return conjur.StorageBackend{}, err
-	}
-
-	templates := defaultTemplates()
-	return conjur.NewConjurPki(client, "pki", templates, conjur.NewAccessFromDefaults(client.GetConfig(), "pki")), err
+	return conjur.NewFromDefaults()
 }
 
 func defaultTemplate() types.Template {
@@ -354,6 +359,7 @@ func TestDeleteCertificate(t *testing.T) {
 	serialNumber, _ := new(big.Int).SetString("838837738982929383", 10)
 	newCert := types.CreateCertificateData{
 		SerialNumber: serialNumber.String(),
+		Certificate:  "someCertificateEncodedStuff",
 	}
 
 	conjurPki.CreateCertificate(newCert)
@@ -411,7 +417,7 @@ func TestWriteCAChain(t *testing.T) {
 func TestGetCAChainNonExistent(t *testing.T) {
 	client, _ := defaultConjurClient()
 	templates := defaultTemplates()
-	conjurPki := conjur.NewConjurPki(client, "not-pki", templates, conjur.NewAccessFromDefaults(client.GetConfig(), "pki"))
+	conjurPki := conjur.NewConjurPki(client, "not-pki", templates, conjur.NewAccessFromDefaults(client.GetConfig(), "not-pki"))
 
 	// Retrieve this chain
 	_, err := conjurPki.GetCAChain()
@@ -428,9 +434,13 @@ func TestRevokeCertificate(t *testing.T) {
 	serialNumber, _ := new(big.Int).SetString("88349947748020022", 10)
 	// Create template for this test case
 	cert := types.CreateCertificateData{
-		Certificate:  "SomeDEREncodedBlob",
-		SerialNumber: "88349947748020022",
+		Certificate:    "SomeDEREncodedBlob",
+		SerialNumber:   "88349947748020022",
+		InternalState:  "active",
+		ExpirationDate: "7748020022",
 	}
+
+	_ = conjurPki.DeleteCertificate(serialNumber)
 
 	err = conjurPki.CreateCertificate(cert)
 	if err != nil {
@@ -440,11 +450,6 @@ func TestRevokeCertificate(t *testing.T) {
 	err = conjurPki.RevokeCertificate(serialNumber, 1, time.Now())
 	if err != nil {
 		t.Errorf("Failed to revoked certficiate even though it should be revokable. %s", err)
-	}
-
-	err = conjurPki.DeleteCertificate(serialNumber)
-	if err != nil {
-		t.Errorf("Failed to delete certificate even though it should exist. %s", err)
 	}
 }
 
@@ -493,8 +498,10 @@ func TestGetRevokedCertificates(t *testing.T) {
 	}
 
 	for _, revokedCert := range revokedCerts {
-		if revokedCert.SerialNumber != cert.SerialNumber {
-			t.Errorf("Revoked certificate '%s' is not '%s'", revokedCert.SerialNumber, cert.SerialNumber)
+		if revokedCert.SerialNumber == cert.SerialNumber {
+			return
 		}
 	}
+
+	t.Errorf("Revoked certificate is not '%s'", cert.SerialNumber)
 }

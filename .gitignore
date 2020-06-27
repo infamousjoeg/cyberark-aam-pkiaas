@@ -1,7 +1,8 @@
 bin/
-pkiaas
+cmd/pkiaas/pkiaas*
 conjur_config
 dev/conjur.pem*
 tests/*.log
 tests/.vagrant
 tests/pki_*
+.scannerwork/

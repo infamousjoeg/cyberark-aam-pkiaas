@@ -2,16 +2,11 @@ package conjur
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"math/big"
-	"strconv"
-	"strings"
-	"time"
+	"io"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
 // PolicyTemplates ...
@@ -20,6 +15,7 @@ type PolicyTemplates struct {
 	deleteTemplate    string
 	newCertificate    string
 	deleteCertificate string
+	revokeCertificate string
 }
 
 // StorageBackend ...
@@ -35,16 +31,180 @@ func (c StorageBackend) GetAccessControl() backend.Access {
 	return backend.Access(c.Access)
 }
 
+// InitConfig This will init the policy in the 'pki' webservice
+func (c StorageBackend) InitConfig() error {
+	pkiPolicy := getInitConfigPolicy()
+	response, err := c.client.LoadPolicy(conjurapi.PolicyModePatch, c.policyBranch, pkiPolicy)
+	if err != nil {
+		return fmt.Errorf("Failed to initialize configuration for the PKI service. %v. %s", response, err)
+	}
+
+	return nil
+}
+
+func getInitConfigPolicy() io.Reader {
+	return bytes.NewReader([]byte(`- !webservice
+- !variable ca/cert
+- !variable ca/key
+- !variable ca/cert-chain
+- !variable crl
+
+# higher level groups
+- !group admin
+- !group audit
+- !group authenticate
+
+- &admins
+  - !group templates-admin
+  - !group certificates-admin
+  - !group purge-admin
+  - !group ca-admin
+
+# endpoint permission groups
+- &templates
+  - !group list-templates
+  - !group read-templates
+  - !group create-templates
+  - !group manage-templates
+  - !group delete-templates
+- &certificates
+  - !group list-certificates
+  - !group read-certificates
+  - !group create-certificates
+  - !group sign-certificates
+  - !group revoke-certificates
+- &purge
+  - !group purge
+  - !group purge-crl
+- &ca
+  - !group set-ca-chain
+  - !group set-ca-signing-key
+  - !group set-ca-signing-cert
+  - !group generate-intermediate-csr
+
+- !permit
+  role: !group authenticate
+  resource: !webservice
+  privileges:
+  - authenticate
+
+- !permit
+  role: !group list-templates
+  resource: !webservice
+  privileges:
+  - list-templates
+
+- !permit
+  role: !group create-templates
+  resource: !webservice
+  privileges:
+  - create-templates
+
+- !permit
+  role: !group list-certificates
+  resource: !webservice
+  privileges:
+  - list-certificates
+
+- !permit
+  role: !group purge
+  resource: !webservice
+  privileges:
+  - purge
+
+- !permit
+  role: !group purge-crl
+  resource: !webservice
+  privileges:
+  - purge-crl
+
+- !permit
+  role: !group set-ca-chain
+  resource: !webservice
+  privileges:
+  - set-ca-chain
+
+- !permit
+  role: !group set-ca-signing-key
+  resource: !webservice
+  privileges:
+  - set-ca-signing-key
+
+- !permit
+  role: !group set-ca-signing-cert
+  resource: !webservice
+  privileges:
+  - set-ca-signing-cert
+
+- !permit
+  role: !group generate-intermediate-csr
+  resource: !webservice
+  privileges:
+  - generate-intermediate-csr
+
+- !grant
+  roles: *templates
+  member: !group templates-admin
+
+- !grant
+  roles: *certificates
+  member: !group certificates-admin
+
+- !grant
+  roles: *purge
+  member: !group purge-admin
+
+- !grant
+  roles: *ca
+  member: !group ca-admin
+
+- !grant
+  roles: *admins
+  member: !group admin
+
+- !grant
+  role: !group authenticate
+  members:
+  - !group admin
+  - !group ca-admin
+  - !group purge-admin
+  - !group certificates-admin
+  - !group templates-admin
+
+- !grant
+  roles:
+  - !group list-templates
+  - !group list-certificates
+  - !group read-templates
+  - !group read-certificates
+  member: !group audit
+
+- !grant
+  roles:
+  - !group list-certificates
+  - !group read-certificates
+  member: !group authenticate
+`))
+}
+
 func (c StorageBackend) getTemplatePolicyBranch() string {
-	return c.policyBranch + "/templates"
+	return c.policyBranch
+}
+
+func (c StorageBackend) getTemplateVariableID(templateName string) string {
+	return c.policyBranch + "/templates/" + templateName
 }
 
 func (c StorageBackend) getCertificatePolicyBranch() string {
-	return c.policyBranch + "/certificates"
+	return c.policyBranch
+}
+
+func (c StorageBackend) getCertificateVariableID(serialNumber string) string {
+	return c.policyBranch + "/certificates/" + serialNumber
 }
 
 func (c StorageBackend) getCAChainVariableID() string {
-	return c.policyBranch + "/ca/chain"
+	return c.policyBranch + "/ca/cert-chain"
 }
 
 func (c StorageBackend) getSigningCertVariableID() string {
@@ -75,31 +235,141 @@ func defaultConjurClient() (*conjurapi.Client, error) {
 
 func defaultCreateTemplatePolicy() string {
 	return `- !variable
-  id: <TemplateName>
+  id: templates/<TemplateName>
+
+# groups related to the privileges
+- !group templates/<TemplateName>-read
+- !group templates/<TemplateName>-manage
+- !group templates/<TemplateName>-delete
+- !group templates/<TemplateName>-create-certificates
+- !group templates/<TemplateName>-sign-certificates
+
+# assign the privileges to the groups above
+- !permit
+  role: !group templates/<TemplateName>-read
+  resource: !webservice
+  privileges:
+  - read-template-<TemplateName>
+
+- !permit
+  role: !group templates/<TemplateName>-manage
+  resource: !webservice
+  privileges:
+  - manage-template-<TemplateName>
+
+- !permit
+  role: !group templates/<TemplateName>-delete
+  resource: !webservice
+  privileges:
+  - delete-template-<TemplateName>
+
+- !permit
+  role: !group templates/<TemplateName>-create-certificates
+  resource: !webservice
+  privileges:
+  - create-certificate-from-<TemplateName>
+
+- !permit
+  role: !group templates/<TemplateName>-sign-certificates
+  privileges:
+  - sign-certificate-from-<TemplateName>
+
+
+
+# grant the groups accordingly
+- !grant
+  role: !group templates/<TemplateName>-read
+  member: !group read-templates
+
+- !grant
+  role: !group templates/<TemplateName>-manage
+  member: !group manage-templates
+
+- !grant
+  role: !group templates/<TemplateName>-delete
+  member: !group delete-templates
+
+- !grant
+  role: !group templates/<TemplateName>-create-certificates
+  member: !group create-certificates
+
+- !grant
+  role: !group templates/<TemplateName>-sign-certificates
+  member: !group sign-certificates
 `
 }
 
 func defaultCreateCertificatePolicy() string {
 	return `- !variable
-  id: "<SerialNumber>"
+  id: certificates/<SerialNumber>
   annotations:
     Revoked: <Revoked>
     RevocationDate: <RevocationDate>
     RevocationReasonCode: <RevocationReasonCode>
     ExpirationDate: <ExpirationDate>
     InternalState: csasa<InternalState>csasa
+
+# groups related to the privileges
+- !group certificates/<SerialNumber>-read
+- !group certificates/<SerialNumber>-revoke
+
+# assign the privileges to the groups above
+- !permit
+  role: !group certificates/<SerialNumber>-read
+  resource: !webservice
+  privileges:
+  - read-certificate-<SerialNumber>
+- !permit
+  role: !group certificates/<SerialNumber>-revoke
+  resource: !webservice
+  privileges:
+  - revoke-certificate-<SerialNumber>
+
+# assign global level groups the ability to read and revoke these certificates
+- !grant
+  role: !group certificates/<SerialNumber>-read
+  member: !group read-certificates
+
+- !grant
+  role: !group certificates/<SerialNumber>-revoke
+  member: !group revoke-certificates
+`
+}
+
+func defaultRevokeCertificatePolicy() string {
+	return `- !variable
+  id: certificates/<SerialNumber>
+  annotations:
+    Revoked: <Revoked>
+    RevocationDate: <RevocationDate>
+    RevocationReasonCode: <RevocationReasonCode>
+    InternalState: csasa<InternalState>csasa
 `
 }
 
 func defaultDeleteTemplatePolicy() string {
-	return `- !delete
-  record: !variable <TemplateName>
+	return `
+- !delete
+  record: !variable templates/<TemplateName>
+- !delete
+  record: !group templates/<TemplateName>-read
+- !delete
+  record: !group templates/<TemplateName>-manage
+- !delete
+  record: !group templates/<TemplateName>-delete
+- !delete
+  record: !group templates/<TemplateName>-create-certificates
+- !delete
+  record: !group templates/<TemplateName>-sign-certificates
 `
 }
 
 func defaultDeleteCertificatePolicy() string {
 	return `- !delete
-  record: !variable <SerialNumber>
+  records: 
+  - !variable certificates/<SerialNumber>
+  - !group certificates/<SerialNumber>-read
+  - !group certificates/<SerialNumber>-revoke
 `
 }
 
@@ -118,7 +388,8 @@ func NewFromDefaults() (StorageBackend, error) {
 		defaultCreateTemplatePolicy(),
 		defaultDeleteTemplatePolicy(),
 		defaultCreateCertificatePolicy(),
-		defaultDeleteCertificatePolicy())
+		defaultDeleteCertificatePolicy(),
+		defaultRevokeCertificatePolicy())
 
 	access := NewAccessFromDefaults(conjurClient.GetConfig(), defaultPolicyBranch())
 
@@ -126,12 +397,13 @@ func NewFromDefaults() (StorageBackend, error) {
 }
 
 // NewTemplates ...
-func NewTemplates(newTemplate string, deleteTemplate string, newCertificate string, deleteCertificate string) PolicyTemplates {
+func NewTemplates(newTemplate string, deleteTemplate string, newCertificate string, deleteCertificate string, revokedCertificate string) PolicyTemplates {
 	return PolicyTemplates{
 		newTemplate:       newTemplate,
 		deleteTemplate:    deleteTemplate,
 		newCertificate:    newCertificate,
 		deleteCertificate: deleteCertificate,
+		revokeCertificate: revokedCertificate,
 	}
 }
 
@@ -143,421 +415,4 @@ func NewConjurPki(client *conjurapi.Client, policyBranch string, templates Polic
 		templates:    templates,
 		Access:       access,
 	}
-}
-
-// CreateTemplate ...
-func (c StorageBackend) CreateTemplate(template types.Template) error {
-	variableID := c.getTemplatePolicyBranch() + "/" + template.TemplateName
-
-	// validate template does not exists
-	_, err := c.client.RetrieveSecret(variableID)
-	if err == nil {
-		return fmt.Errorf("Template '%s' already exists", template.TemplateName)
-	}
-
-	// Template name cannot contain a '/'
-	if strings.Contains(template.TemplateName, "/") {
-		return fmt.Errorf("Template name '%s' is invalid because it contains a '/'", template.TemplateName)
-	}
-
-	// replace template placeholders
-	newTemplatePolicy := bytes.NewReader([]byte(
-		ReplaceTemplate(template, c.templates.newTemplate)))
-
-	// cast the template stuct into json
-	templateJSON, err := json.Marshal(template)
-	if err != nil {
-		return err
-	}
-
-	// Load policy to create the variable
-	response, err := c.client.LoadPolicy(
-		conjurapi.PolicyModePatch,
-		c.getTemplatePolicyBranch(),
-		newTemplatePolicy,
-	)
-	if err != nil {
-		return fmt.Errorf("Failed to create template when loading policy. Message '%v'. %s", response, err)
-	}
-
-	// Set the Secret value
-	err = c.client.AddSecret(variableID, string(templateJSON))
-	return err
-}
-
-// ListTemplates ...
-func (c StorageBackend) ListTemplates() ([]string, error) {
-	filter := &conjurapi.ResourceFilter{
-		Kind:   "variable",
-		Search: "templates",
-	}
-	var templateNames []string
-
-	// List resources to get templates
-	resources, err := ListResources(c.client, filter)
-	if err != nil {
-		return templateNames, err
-	}
-
-	// Parse the template name for all of the template variables
-	for _, resource := range resources {
-		_, _, id := SplitConjurID(resource)
-		parts := strings.Split(id, "/")
-		templatesRoot := parts[len(parts)-2]
-		if templatesRoot == "templates" {
-			name := parts[len(parts)-1]
-			templateNames = append(templateNames, name)
-		}
-	}
-
-	return templateNames, err
-}
-
-// GetTemplate ...
-func (c StorageBackend) GetTemplate(templateName string) (types.Template, error) {
-	variableID := c.getTemplatePolicyBranch() + "/" + templateName
-	templateJSON, err := c.client.RetrieveSecret(variableID)
-	template := &types.Template{}
-
-	if err != nil {
-		return *template, fmt.Errorf("Failed to retrieve template with id '%s'. %s", variableID, err)
-	}
-
-	err = json.Unmarshal(templateJSON, template)
-	if err != nil {
-		return *template, fmt.Errorf("Failed to cast '%s' into types.Template. %s", string(templateJSON), err)
-	}
-
-	return *template, err
-}
-
-// DeleteTemplate ...
-func (c StorageBackend) DeleteTemplate(templateName string) error {
-	// validate template resource exists
-	variableID := c.getTemplatePolicyBranch() + "/" + templateName
-	_, err := c.client.RetrieveSecret(variableID)
-	if err != nil {
-		return fmt.Errorf("Failed to retrieve template with id '%s'. %s", variableID, err)
-	}
-
-	// remove the template resource
-	template := types.Template{
-		TemplateName: templateName,
-	}
-	deleteTemplatePolicy := bytes.NewReader([]byte(
-		ReplaceTemplate(template, c.templates.deleteTemplate)))
-	response, err := c.client.LoadPolicy(
-		conjurapi.PolicyModePatch,
-		c.getTemplatePolicyBranch(),
-		deleteTemplatePolicy,
-	)
-	if err != nil {
-		return fmt.Errorf("Failed to delete template with id '%s'. Message: '%v'. %s", variableID, response, err)
-	}
-
-	return err
-}
-
-// CreateCertificate ...
-func (c StorageBackend) CreateCertificate(cert types.CreateCertificateData) error {
-	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
-
-	// validate cert does not exists
-	_, err := c.client.RetrieveSecret(variableID)
-	if err == nil {
-		return fmt.Errorf("Certificate '%s' already exists", cert.SerialNumber)
-	}
-	return c.updateCertificate(cert)
-
-}
-
-func (c StorageBackend) updateCertificate(cert types.CreateCertificateData) error {
-
-	variableID := c.getCertificatePolicyBranch() + "/" + cert.SerialNumber
-	// replace template placeholders
-	newPolicy := bytes.NewReader([]byte(ReplaceCertificate(cert, c.templates.newCertificate)))
-
-	// Load policy to create the variable
-	response, err := c.client.LoadPolicy(
-		conjurapi.PolicyModePatch,
-		c.getCertificatePolicyBranch(),
-		newPolicy,
-	)
-
-	if err != nil {
-		return fmt.Errorf("Failed to load policy for creating certificate. Message '%v'. %s", response, err)
-	}
-
-	// Set the Secret value
-	// If certificate value is not provided assume we are
-	// just updating the certificate variable annotations
-	if cert.Certificate != "" {
-		err = c.client.AddSecret(variableID, cert.Certificate)
-	}
-	return err
-}
-
-// ListCertificates ...
-func (c StorageBackend) ListCertificates() ([]*big.Int, error) {
-	filter := &conjurapi.ResourceFilter{
-		Kind:   "variable",
-		Search: "certificates",
-	}
-
-	var certficateSerialNumbers []*big.Int
-
-	// List resources to get templates
-	resources, err := ListResources(c.client, filter)
-	if err != nil {
-		return certficateSerialNumbers, err
-	}
-
-	// Parse the template name for all of the template variables
-	for _, resource := range resources {
-		_, _, id := SplitConjurID(resource)
-		parts := strings.Split(id, "/")
-		templatesRoot := parts[len(parts)-2]
-		if templatesRoot == "certificates" {
-			serialNumberString := parts[len(parts)-1]
-			// NOTE: I don't really know what the 10 does at then end of the SetString() function
-			serialNumber, ok := new(big.Int).SetString(serialNumberString, 10)
-			if ok {
-				certficateSerialNumbers = append(certficateSerialNumbers, serialNumber)
-			} else {
-				// If we failed to cast then return an error
-				return certficateSerialNumbers, fmt.Errorf("Failed to cast serial number '%s' into type big.Int", serialNumberString)
-			}
-
-		}
-	}
-
-	return certficateSerialNumbers, err
-}
-
-// GetCertificate ...
-func (c StorageBackend) GetCertificate(serialNumber *big.Int) (string, error) {
-	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
-	value, err := c.client.RetrieveSecret(variableID)
-
-	if err != nil {
-		return "", fmt.Errorf("Failed to retrieve certificate with serial number '%s'. %s", variableID, err)
-	}
-
-	return string(value), err
-}
-
-// DeleteCertificate ...
-func (c StorageBackend) DeleteCertificate(serialNumber *big.Int) error {
-	// validate template resource exists
-	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
-	_, err := c.client.RetrieveSecret(variableID)
-	if err != nil {
-		return fmt.Errorf("Failed to retrieve certificate with serial number '%s'. %s", variableID, err)
-	}
-
-	// remove the template resource
-	certificate := types.CreateCertificateData{
-		SerialNumber: serialNumber.String(),
-	}
-	deleteCertPolicy := bytes.NewReader([]byte(
-		ReplaceCertificate(certificate, c.templates.deleteCertificate)))
-
-	response, err := c.client.LoadPolicy(
-		conjurapi.PolicyModePatch,
-		c.getCertificatePolicyBranch(),
-		deleteCertPolicy,
-	)
-	if err != nil {
-		return fmt.Errorf("Failed to delete template with id '%s'. Message: '%v'. %s", variableID, response, err)
-	}
-
-	return err
-}
-
-// GetCAChain ...
-func (c StorageBackend) GetCAChain() ([]string, error) {
-	variableID := c.getCAChainVariableID()
-	caChain := &[]string{}
-
-	value, err := c.client.RetrieveSecret(variableID)
-	if err != nil {
-		return *caChain, fmt.Errorf("Failed to retrieve certificate chain with variable id '%s'. %s", variableID, err)
-	}
-
-	err = json.Unmarshal(value, caChain)
-	if err != nil {
-		return *caChain, fmt.Errorf("Failed to unmarshal certificate chain. %s", err)
-	}
-
-	return *caChain, nil
-}
-
-// WriteCAChain ...
-func (c StorageBackend) WriteCAChain(certBundle []string) error {
-	variableID := c.getCAChainVariableID()
-
-	certBundleJSON, err := json.Marshal(certBundle)
-	if err != nil {
-		return fmt.Errorf("Failed to marshal cert bundle. %s", err)
-	}
-
-	err = c.client.AddSecret(variableID, string(certBundleJSON))
-	if err != nil {
-		return fmt.Errorf("Failed to set certificate chain with variable id '%s'. %s", variableID, err)
-	}
-
-	return nil
-}
-
-// GetSigningCert ...
-func (c StorageBackend) GetSigningCert() (string, error) {
-	variableID := c.getSigningCertVariableID()
-
-	value, err := c.client.RetrieveSecret(variableID)
-	if err != nil {
-		return "", fmt.Errorf("Failed to retrieve signing certificate with variable id '%s'. %s", variableID, err)
-	}
-
-	return string(value), nil
-}
-
-// WriteSigningCert ...
-func (c StorageBackend) WriteSigningCert(content string) error {
-	variableID := c.getSigningCertVariableID()
-
-	err := c.client.AddSecret(variableID, content)
-	if err != nil {
-		return fmt.Errorf("Failed to set signing certificate with variable id '%s'. %s", variableID, err)
-	}
-
-	return nil
-}
-
-// GetSigningKey ...
-func (c StorageBackend) GetSigningKey() (string, error) {
-	variableID := c.getSigningKeyVariableID()
-
-	value, err := c.client.RetrieveSecret(variableID)
-	if err != nil {
-		return "", fmt.Errorf("Failed to retrieve signing key with variable id '%s'. %s", variableID, err)
-	}
-
-	return string(value), nil
-}
-
-// WriteSigningKey ...
-func (c StorageBackend) WriteSigningKey(content string) error {
-	variableID := c.getSigningKeyVariableID()
-
-	err := c.client.AddSecret(variableID, content)
-	if err != nil {
-		return fmt.Errorf("Failed to set signing key with variable id '%s'. %s", variableID, err)
-	}
-
-	return nil
-}
-
-// GetCRL ...
-func (c StorageBackend) GetCRL() (string, error) {
-	variableID := c.getCRLVariableID()
-
-	value, err := c.client.RetrieveSecret(variableID)
-	if err != nil {
-		return "", fmt.Errorf("Failed to retrieve CRL with variable id '%s'. %s", variableID, err)
-	}
-
-	return string(value), nil
-}
-
-// WriteCRL ...
-func (c StorageBackend) WriteCRL(content string) error {
-	variableID := c.getCRLVariableID()
-
-	err := c.client.AddSecret(variableID, content)
-	if err != nil {
-		return fmt.Errorf("Failed to set CRL with variable id '%s'. %s", variableID, err)
-	}
-
-	return nil
-}
-
-// RevokeCertificate ...
-func (c StorageBackend) RevokeCertificate(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error {
-
-	variableID := c.getCertificatePolicyBranch() + "/" + serialNumber.String()
-	_, err := c.client.RetrieveSecret(variableID)
-
-	if err != nil {
-		return fmt.Errorf("Failed to revoked certificate with ID '%s'. %s", variableID, err)
-	}
-
-	certificateInDap := types.CreateCertificateData{
-		SerialNumber:         serialNumber.String(),
-		Revoked:              true,
-		RevocationDate:       fmt.Sprintf("%v", revocationDate.Unix()),
-		RevocationReasonCode: reasonCode,
-		InternalState:        "revoked",
-	}
-
-	err = c.updateCertificate(certificateInDap)
-
-	return err
-}
-
-// GetRevokedCerts ...
-func (c StorageBackend) GetRevokedCerts() ([]types.RevokedCertificate, error) {
-	filter := &conjurapi.ResourceFilter{
-		Kind:   "variable",
-		Search: "csasarevokedcsasa",
-	}
-
-	revokedCerts := []types.RevokedCertificate{}
-
-	resources, err := c.client.Resources(filter)
-	if err != nil {
-		err = fmt.Errorf("Failed to list resources when attempting to get revoked certificates. %s", err)
-		return revokedCerts, err
-	}
-
-	for _, resource := range resources {
-		id := resource["id"].(string)
-		_, _, id = SplitConjurID(id)
-		parts := strings.Split(id, "/")
-		templatesRoot := parts[len(parts)-2]
-
-		if templatesRoot == "certificates" {
-			serialNumberString := parts[len(parts)-1]
-			reasonCode, err := GetAnnotationValue(resource, "RevocationReasonCode")
-			if err != nil {
-				return revokedCerts, fmt.Errorf("Failed to retrieve RevocationReasonCode from certificate '%s'. %s", serialNumberString, err)
-			}
-
-			revocationDate, err := GetAnnotationValue(resource, "RevocationDate")
-			if err != nil {
-				return revokedCerts, fmt.Errorf("Failed to retrieve RevocationDate from certificate '%s'. %s", serialNumberString, err)
-			}
-
-			reasonCodeInt, err := strconv.Atoi(reasonCode)
-			if err != nil {
-				return revokedCerts, fmt.Errorf("Failed to cast RevocationReasonCode '%s' into an int", reasonCode)
-			}
-
-			revocationDateInt, err := strconv.Atoi(revocationDate)
-			if err != nil {
-				return revokedCerts, fmt.Errorf("Failed to cast RevocationDate '%s' into an int", revocationDate)
-			}
-
-			dateTime := time.Unix(int64(revocationDateInt), 0)
-
-			revokedCert := types.RevokedCertificate{
-				SerialNumber:   serialNumberString,
-				ReasonCode:     reasonCodeInt,
-				RevocationDate: dateTime,
-			}
-
-			revokedCerts = append(revokedCerts, revokedCert)
-		}
-	}
-
-	return revokedCerts, nil
 }

@@ -1,0 +1,6 @@
+- !host pki-service
+- !policy
+  id: pki
+  owner: !host pki-service
+  body:
+  - !group admin

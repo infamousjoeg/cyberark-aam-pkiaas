@@ -1,0 +1,8 @@
+- &users
+  - !user andrew
+  - !user rob
+  - !user joe
+
+- !grant
+  role: !group pki/admin
+  members: *users

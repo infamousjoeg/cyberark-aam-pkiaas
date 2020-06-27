@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang/gddo/httputil/header"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
@@ -93,7 +94,7 @@ func GenerateKeys(keyAlgo string, keySize string) (crypto.PrivateKey, crypto.Pub
 // GenerateSerialNumber ---------------------------------------------------------
 // Generates a new serial number and validates it doesn't already exist in the certificate
 // store
-func (p *Pki) GenerateSerialNumber() (*big.Int, error) {
+func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 	maxValue := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, maxValue)
 	if err != nil {
@@ -102,7 +103,7 @@ func (p *Pki) GenerateSerialNumber() (*big.Int, error) {
 	// Test the created serial number against the serial numbers stored in the backend
 	// and continue looping, creating, and testing serial numbers until a unique one
 	// is generated
-	for _, err := p.Backend.GetCertificate(serialNumber); err == nil; {
+	for _, err := backend.GetCertificate(serialNumber); err == nil; {
 		serialNumber, err = rand.Int(rand.Reader, maxValue)
 		if err != nil {
 			return big.NewInt(0), errors.New("Error creating serial number: " + err.Error())
@@ -374,13 +375,13 @@ func SetCertSubject(subject types.SubjectFields, commonName string) (pkix.Name, 
 // PrepareCertificateParameters ---------------------------------------------------
 // Catch-all helper method to isolate redundant code that is used to set parameters
 // that are used when creating a new certificate
-func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, backend backend.Storage) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
-	template, err := p.Backend.GetTemplate(templateName)
+func PrepareCertificateParameters(templateName string, reqTTL int64, backend backend.Storage) (types.Template, *big.Int, int64, x509.SignatureAlgorithm, *x509.Certificate, crypto.PrivateKey, error) {
+	template, err := backend.GetTemplate(templateName)
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Error retrieving template from backend: " + err.Error())
 	}
 
-	serialNumber, err := p.GenerateSerialNumber()
+	serialNumber, err := GenerateSerialNumber(backend)
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Error generating serial number: " + err.Error())
 	}
@@ -396,7 +397,7 @@ func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, ba
 
 	// Retrieve the intermediate CA certificate from backend and go through the necessary steps
 	// to convert it from a PEM-string to a usable x509.Certificate object
-	strCert, err := p.Backend.GetSigningCert()
+	strCert, err := backend.GetSigningCert()
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Error retrieving signing certificate from backend: " + err.Error())
 	}
@@ -409,9 +410,15 @@ func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, ba
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Error parsing decoded signing certificate: " + err.Error())
 	}
+
+	// Validate that requested certificate is within validity period of CA certificate
+	if caCert.NotAfter.Sub(time.Now().Add(time.Minute*time.Duration(ttl)).UTC()) < 0 {
+		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Requested certificate validity period is greater than the CA validity period")
+	}
+
 	// Retrieve the signing key from backend and calculate the signature algorithm for use in the
 	// certificate generation
-	strKey, err := p.Backend.GetSigningKey()
+	strKey, err := backend.GetSigningKey()
 	if err != nil {
 		return types.Template{}, nil, 0, 0, nil, nil, errors.New("Error retrieving signing key from backend: " + err.Error())
 	}
@@ -452,34 +459,89 @@ func (p *Pki) PrepareCertificateParameters(templateName string, reqTTL int64, ba
 // ProcessSubjectAltNames ---------------------------------------------------------
 func ProcessSubjectAltNames(altNames []string) ([]string, []string, []net.IP, []*url.URL, error) {
 	dnsNames, emailAddresses, ipAddresses, URIs := []string{}, []string{}, []net.IP{}, []*url.URL{}
+	// Regex to match email address formats
+	var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 	for _, altName := range altNames {
 		if !strings.Contains(altName, ":") {
-			return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Improperly formatted SAN present in request")
+			return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Improperly formatted SAN present in request: " + altName)
 		}
 		switch strings.Split(altName, ":")[0] {
 		case "IP":
 			tempIP := net.ParseIP(strings.Split(altName, ":")[1])
 			if tempIP == nil {
-				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Invalid IP address SAN present in request")
+				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Invalid IP address SAN present in request: " + strings.Split(altName, ":")[1])
 			}
 			ipAddresses = append(ipAddresses, tempIP)
 		case "DNS":
-
 			dnsNames = append(dnsNames, strings.Split(altName, ":")[1])
 		case "email":
+			if !rxEmail.MatchString(strings.Split(altName, ":")[1]) {
+				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Invalid email address SAN present in request: " + strings.Split(altName, ":")[1])
+			}
 			emailAddresses = append(emailAddresses, strings.Split(altName, ":")[1])
 		case "URI":
-			tempURI, err := url.ParseRequestURI(strings.Split(altName, ":")[1])
+			tempURI, err := url.ParseRequestURI(strings.Split(altName, "RI:")[1])
 			if err != nil {
-				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Invalid URI SAN present in request")
+				return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Invalid URI SAN present in request: " + err.Error())
 			}
 			URIs = append(URIs, tempURI)
 		default:
-			return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Improperly formatted SAN present in request")
+			return dnsNames, emailAddresses, ipAddresses, URIs, errors.New("Improperly formatted SAN present in request: " + altName)
 		}
 	}
 	return dnsNames, emailAddresses, ipAddresses, URIs, nil
+}
+
+// ValidateCommonName -------------------------------------------------------------
+// Ensure the CommonName passed in a certificate creation request adheres to all the
+// standards defined in the requested template
+func ValidateCommonName(commonName string, template types.Template) error {
+
+	if template.ValidateCNHostname {
+		re := regexp.MustCompile("^[a-zA-Z0-9.*-]*$")
+		if !re.MatchString(commonName) {
+			return errors.New("Common Name is not a valid hostname; valid hostname is required by template")
+		}
+	}
+
+	if !template.PermitLocalhostCN {
+		if commonName == "localhost" || commonName == "localdomain" {
+			return errors.New("The requested template does not permit " + commonName + " as a common name")
+		}
+	}
+
+	if !template.PermitWildcardCN {
+		if strings.Contains(commonName, "*") {
+			return errors.New("The requested template does not permit wildcards")
+		}
+	}
+
+	if len(template.AllowedCNDomains) > 0 {
+		cnHost := strings.Split(commonName, ".")[0]
+		cnDomain := strings.Replace(commonName, cnHost, "", 1)
+		valid := false
+		for _, domain := range template.AllowedCNDomains {
+			if !template.PermitRootDomainCN && commonName == domain {
+				return errors.New("The request template does not permit the certificate common name to be the root domain")
+			}
+			if template.PermitSubdomainCN {
+				if strings.Contains(domain, cnDomain) {
+					valid = true
+				}
+			} else {
+				if domain == cnDomain {
+					valid = true
+				}
+			}
+
+		}
+		if !valid {
+			return errors.New("The common name is not in any of the domains permitted by the requested template")
+		}
+	}
+
+	return nil
 }
 
 // ValidateSubjectAltNames --------------------------------------------------------
@@ -578,6 +640,7 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 			}
 		}
 	}
+
 	if len(template.PermDNSDomains) > 0 {
 		// Loop through all the permitted DNS domains and validate that the domain matches
 		// at least one of the permitted DNS domains

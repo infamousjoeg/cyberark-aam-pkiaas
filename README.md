@@ -44,5 +44,5 @@ docker run --name pkiaas-test -d --restart always \
     -e CONJUR_AUTHN_API_KEY=$API_KEY \
     -e CONJUR_APPLIANCE_URL="http://localhost:${PORT}/" \
     -e CONJUR_ACCOUNT="quick-start" \
-    -e CONJUR_CERT_FILE=$CERT_FILE
+    -e CONJUR_SSL_CERTIFICATE=$CERT_FILE
 ```
