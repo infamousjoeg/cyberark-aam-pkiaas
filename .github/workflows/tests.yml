@@ -53,7 +53,7 @@ jobs:
             cyberark/pkiaas:test
       - name: Create Docker Logs File
         run: |
-          docker logs --details cpki-test
+          docker logs --details cpki-test > docker-logs.txt
       - name: Upload Docker Logs as Artifact
         uses: actions/upload-artifact@v2
         with:
