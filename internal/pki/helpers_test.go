@@ -71,6 +71,18 @@ func TestGenerateKeysRsaLowKeyBits(t *testing.T) {
 	}
 }
 
+func TestGenerateKeysRsaHighKeyBits(t *testing.T) {
+	algo := "rsa"
+	keySize := "10000"
+	_, _, err := pki.GenerateKeys(algo, keySize)
+	if err == nil {
+		t.Errorf("Generate public & private key successfully even though keySize is invalid.  %s", err)
+	}
+	if !errorContains(err, "The maximum supported size for RSA keys is 8192 bits") {
+		t.Errorf("Invalid error returned when using invalid keyAlgo. %s", err)
+	}
+}
+
 func TestGenerateKeysECDSAp224(t *testing.T) {
 	algo := "ECDSA"
 	keySize := "p224"
