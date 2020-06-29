@@ -45,12 +45,20 @@ jobs:
           docker build -t cyberark/pkiaas:test .
       - name: Deploy PKIaaS Docker Container
         run: |
-          docker run --name cpki-test -d -p 3000:8080 \
+          docker run --name cpki-test -d -p 8080:8080 \
             -e CONJUR_AUTHN_LOGIN="${{ secrets.CONJUR_AUTHN_LOGIN }}" \
             -e CONJUR_AUTHN_API_KEY="${{ secrets.CONJUR_AUTHN_API_KEY }}" \
             -e CONJUR_APPLIANCE_URL="${{ secrets.CONJUR_APPLIANCE_URL }}" \
             -e CONJUR_ACCOUNT="${{ secrets.CONJUR_ACCOUNT }}" \
             cyberark/pkiaas:test
+      - name: Create Docker Logs File
+        run: |
+          docker logs --details cpki-test
+      - name: Upload Docker Logs as Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: DockerLogs.txt
+          path: docker-logs.txt
       - name: Test PKIaaS Web Service
         run: |
-          curl -k -X GET http://localhost:3000
+          curl -k -X GET http://localhost:8080/health
