@@ -13,7 +13,6 @@ import (
 var storage backend.Storage
 
 func init() {
-	initConfig := flag.Bool("i", false, "Load init policy for service")
 	version := flag.Bool("v", false, "Display current version")
 
 	flag.Parse()
@@ -29,13 +28,10 @@ func init() {
 		panic("Error initializing PKI backend: " + err.Error())
 	}
 
-	// -i flag detected
-	if *initConfig {
-		err = pkiclient.InitConfig()
-		if err != nil {
-			panic("Error initializing PKI configuration: " + err.Error())
-		}
-	}
+	// err = pkiclient.InitConfig()
+	// if err != nil {
+	// 	panic("Error initializing PKI configuration: " + err.Error())
+	// }
 
 	storage = pkiclient
 	//	backend.Backend = dummy.Dummy{}
