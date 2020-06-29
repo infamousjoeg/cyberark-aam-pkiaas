@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -40,6 +41,17 @@ type Pki struct {
 	Backend backend.Storage
 }
 
+func getMaxRsaKeySize() int {
+	value := os.Getenv("PKI_RSA_MAX_KEY_SIZE")
+	intValue, err := strconv.Atoi(value)
+	// If the environment variable cannot be converted into an integer
+	// return the default value
+	if err != nil {
+		return 8192
+	}
+	return intValue
+}
+
 // GenerateKeys -----------------------------------------------------------------
 // Accepts a key algorithm and key bit size as arguments, and then generates the appropriate
 // private and public key based on inputs.
@@ -52,6 +64,9 @@ func GenerateKeys(keyAlgo string, keySize string) (crypto.PrivateKey, crypto.Pub
 		}
 		if bits < minRSASize {
 			return nil, nil, errors.New("The minimum supported size for RSA keys is " + strconv.Itoa(minRSASize) + " bits")
+		}
+		if bits > getMaxRsaKeySize() {
+			return nil, nil, errors.New("The maximum supported size for RSA keys is " + strconv.Itoa(getMaxRsaKeySize()) + " bits")
 		}
 		clientPrivKey, err := rsa.GenerateKey(rand.Reader, bits)
 		if err != nil {
