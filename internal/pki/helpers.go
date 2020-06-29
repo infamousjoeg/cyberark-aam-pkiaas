@@ -44,14 +44,14 @@ type Pki struct {
 // Accepts a key algorithm and key bit size as arguments, and then generates the appropriate
 // private and public key based on inputs.
 func GenerateKeys(keyAlgo string, keySize string) (crypto.PrivateKey, crypto.PublicKey, error) {
-	switch keyAlgo {
+	switch strings.ToUpper(keyAlgo) {
 	case "RSA":
 		bits, err := strconv.Atoi(keySize)
 		if err != nil {
-			return nil, nil, errors.New("The key size for RSA keys is required to be an integer greater than " + string(minRSASize) + " bits")
+			return nil, nil, errors.New("The key size for RSA keys is required to be an integer greater than " + strconv.Itoa(minRSASize) + " bits")
 		}
 		if bits < minRSASize {
-			return nil, nil, errors.New("The minimum supported size for RSA keys is " + string(minRSASize) + " bits")
+			return nil, nil, errors.New("The minimum supported size for RSA keys is " + strconv.Itoa(minRSASize) + " bits")
 		}
 		clientPrivKey, err := rsa.GenerateKey(rand.Reader, bits)
 		if err != nil {
