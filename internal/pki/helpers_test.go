@@ -527,7 +527,7 @@ func TestIPValidateSubjectAltNames(t *testing.T) {
 	URIs := []*url.URL{}
 	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
 	template.PermIPRanges = []string{"192.168.1.10/32"}
-	// template.ExclIPRanges = []string{"10.0.0.1/30"}
+	template.ExclIPRanges = []string{"10.0.0.1/30"}
 
 	err := pki.ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
 	if err != nil {
