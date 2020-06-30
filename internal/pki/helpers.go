@@ -724,10 +724,10 @@ func ProcessPolicyIdentifiers(policyIdentifiers []string) ([]asn1.ObjectIdentifi
 // service and that the key size requested is both pertinent to the requested
 // algorithm and meets minimum size standards
 func ValidateKeyAlgoAndSize(keyAlgo string, keySize string) error {
-	switch keyAlgo {
+	switch strings.ToUpper(keyAlgo) {
 	case "RSA":
-		if keyBits, err := strconv.Atoi(keySize); err != nil || keyBits < 2048 {
-			return errors.New("Invalid key size for key algorithm RSA, must be at least 2048 bits")
+		if keyBits, err := strconv.Atoi(keySize); err != nil || keyBits < minRSASize || keyBits > getMaxRsaKeySize() {
+			return errors.New("Invalid key size for key algorithm RSA, must be at least 2048 bits and no larger than " + strconv.Itoa(getMaxRsaKeySize()))
 		}
 		return nil
 	case "ECDSA":
