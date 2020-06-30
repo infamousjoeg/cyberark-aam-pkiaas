@@ -1,6 +1,4 @@
-bin/
 cmd/pkiaas/pkiaas*
-conjur_config
 dev/conjur.pem*
 tests/*.log
 tests/.vagrant
