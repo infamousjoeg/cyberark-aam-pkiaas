@@ -4,11 +4,14 @@ import (
 	"crypto/x509"
 	"fmt"
 	"math/big"
+	"net"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/dummy"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
 func errorContains(err error, sub string) bool {
@@ -269,5 +272,250 @@ func TestInvalidProcessExtKeyUsages(t *testing.T) {
 	_, err := pki.ProcessExtKeyUsages(extKeyUsages)
 	if err == nil {
 		t.Errorf("Error DID NOT occur during an invalid extKeyUsage")
+	}
+}
+
+func TestAllProcessExtKeyUsages(t *testing.T) {
+	extKeyUsages := []string{
+		"any",
+		"serverAuth",
+		"clientAuth",
+		"codeSigning",
+		"emailProtection",
+		"timeStamping",
+		"OCSPSigning",
+		"ipsecEndSystem",
+		"ipsecTunnel",
+		"ipsecUser",
+		"msSGC",
+		"nsSGC",
+		"msCodeCom",
+		"msCodeKernel",
+	}
+
+	x509ExtKeyUsages, err := pki.ProcessExtKeyUsages(extKeyUsages)
+	if err != nil {
+		t.Errorf("Error occured during a valid extKeyUsage. %s", err)
+	}
+
+	if len(x509ExtKeyUsages) != len(extKeyUsages) {
+		t.Errorf("Ext key usage is invalid")
+	}
+}
+
+func TestSetCertSubject(t *testing.T) {
+	commonName := "some.common.name.local"
+	subFields := types.SubjectFields{}
+
+	subjectName, err := pki.SetCertSubject(subFields, commonName)
+	if err != nil {
+		t.Errorf("Failed to Set the certificate subject. %s", err)
+	}
+
+	if subjectName.CommonName != commonName {
+		t.Errorf("Common name '%s' should be the expected common name of '%s", subjectName.CommonName, commonName)
+	}
+}
+
+func TestAllSetCertSubject(t *testing.T) {
+	commonName := "some.common.name.local"
+	subFields := types.SubjectFields{
+		Organization: "testing",
+		OrgUnit:      "pki",
+		Country:      "US",
+		Locality:     "Boston",
+		Province:     "NoIdea",
+		Address:      "32 my street",
+		PostalCode:   "01590",
+	}
+
+	subjectName, err := pki.SetCertSubject(subFields, commonName)
+	if err != nil {
+		t.Errorf("Failed to Set the certificate subject. %s", err)
+	}
+
+	if subjectName.CommonName != commonName {
+		t.Errorf("Common name '%s' should be the expected common name of '%s", subjectName.CommonName, commonName)
+	}
+
+	if subjectName.Organization[0] != subFields.Organization {
+		t.Errorf("Organization was not set correctly")
+	}
+}
+
+func TestInvalidSetCertSubject(t *testing.T) {
+	commonName := ""
+	subFields := types.SubjectFields{}
+
+	_, err := pki.SetCertSubject(subFields, commonName)
+	if err == nil {
+		t.Errorf("Certificate subject SHOULD NOT be created successfully")
+	}
+}
+
+func TestPrepareCertificateParameters(t *testing.T) {
+	//(templateName string, reqTTL int64, backend backend.Storage)
+	templateName := "TestTemplate"
+	var reqTTL int64 = 1440
+	backend := dummy.Dummy{}
+	// template, serialNumber, ttl, sigAlgo, caCert, signingKey, err := pki.PrepareCertificateParameters(templateName, reqTTL, backend)
+	_, _, ttl, _, _, _, err := pki.PrepareCertificateParameters(templateName, reqTTL, backend)
+	if ttl != reqTTL {
+		t.Errorf("Time to live was set incorrectly")
+	}
+
+	if err != nil {
+		t.Errorf("Failed to prepare the certificte parameters. %s", err)
+	}
+}
+
+func TestInvalidTemplateNamePrepareCertificateParameters(t *testing.T) {
+	//(templateName string, reqTTL int64, backend backend.Storage)
+	templateName := "invalidTemplateName"
+	var reqTTL int64 = 1440
+	backend := dummy.Dummy{}
+	// template, serialNumber, ttl, sigAlgo, caCert, signingKey, err := pki.PrepareCertificateParameters(templateName, reqTTL, backend)
+	_, _, _, _, _, _, err := pki.PrepareCertificateParameters(templateName, reqTTL, backend)
+
+	if err == nil {
+		t.Errorf("Error should have been returned when providing invalid template name")
+	}
+
+	if err.Error() != fmt.Sprintf("Error retrieving template from backend: Unable to locate template with template name %s", templateName) {
+		t.Errorf("Error returned is invalid. %s", err)
+	}
+}
+
+func TestProcessSubjectAltNames(t *testing.T) {
+	altNames := []string{"IP:192.168.1.10"}
+	dnsNames, emailAddresses, ipAddresses, URIs, err := pki.ProcessSubjectAltNames(altNames)
+	if len(dnsNames) != 0 {
+		t.Errorf("Dns name should be empty")
+	}
+	if len(emailAddresses) != 0 {
+		t.Errorf("email addresses should be empty")
+	}
+	if len(URIs) != 0 {
+		t.Errorf("URIs should be empty")
+	}
+	if len(ipAddresses) != 1 {
+		t.Errorf("Only 1 ip address should be returned")
+	}
+	if err != nil {
+		t.Errorf("Error should not be returned when successful process of sub alt name")
+	}
+}
+
+func TestAllProcessSubjectAltNames(t *testing.T) {
+	altNames := []string{
+		"IP:192.168.1.10",
+		"DNS:Something.local",
+		"email:testing@example.org",
+		"URI:https://foo.com",
+	}
+
+	dnsNames, emailAddresses, ipAddresses, URIs, err := pki.ProcessSubjectAltNames(altNames)
+	if len(dnsNames) != 1 {
+		t.Errorf("Only 1 DNS name should be returned")
+	}
+	if len(emailAddresses) != 1 {
+		t.Errorf("Only 1 email addresses should be returned")
+	}
+	if len(URIs) != 1 {
+		t.Errorf("Only 1 URIs should be returned")
+	}
+	if len(ipAddresses) != 1 {
+		t.Errorf("Only 1 ip address should be returned")
+	}
+	if err != nil {
+		t.Errorf("Error should not be returned when successful process of sub alt name. %s", err)
+	}
+}
+
+func TestValidateCommonName(t *testing.T) {
+	commonName := "validCommonName.local"
+	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
+	err := pki.ValidateCommonName(commonName, template)
+	if err != nil {
+		t.Errorf("Common name should be valid. %s", err)
+	}
+}
+
+func TestInvalidCommonNameValidateCommonName(t *testing.T) {
+	commonName := "notValid.local/notValid"
+	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
+	template.ValidateCNHostname = true
+	err := pki.ValidateCommonName(commonName, template)
+	if err.Error() != "Common Name is not a valid hostname; valid hostname is required by template" {
+		t.Errorf("Invalid error message. %s", err)
+	}
+}
+
+func TestAllValidateCommonName(t *testing.T) {
+	commonName := "localhost"
+	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
+	template.ValidateCNHostname = true
+	template.PermitLocalhostCN = true
+	err := pki.ValidateCommonName(commonName, template)
+	if err != nil {
+		t.Errorf("Common name should be valid. %s", err)
+	}
+}
+
+func TestInvalidPermitLocalHostCNValidateCommonName(t *testing.T) {
+	commonName := "localhost"
+	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
+	template.PermitLocalhostCN = false
+	err := pki.ValidateCommonName(commonName, template)
+	if err.Error() != "The requested template does not permit localhost as a common name" {
+		t.Errorf("Invalid Error message. %s", err)
+	}
+}
+
+func TestPermitWildcardCNValidateCommonName(t *testing.T) {
+	commonName := "*.example.org"
+	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
+	template.PermitWildcardCN = true
+	err := pki.ValidateCommonName(commonName, template)
+	if err != nil {
+		t.Errorf("Common name should be valid. %s", err)
+	}
+}
+
+func TestPermitInvalidWildcardCNValidateCommonName(t *testing.T) {
+	commonName := "*.example.org"
+	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
+	template.PermitWildcardCN = false
+	err := pki.ValidateCommonName(commonName, template)
+	if err == nil {
+		t.Errorf("Error should have occured since WildcardDN is NOT permitted")
+	}
+	if err.Error() != "The requested template does not permit wildcards" {
+		t.Errorf("Incorrect error message. %s", err)
+	}
+}
+
+func TestInvalidAllowedCNDomainsValidateCommonName(t *testing.T) {
+	commonName := "example.org"
+	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
+	template.AllowedCNDomains = []string{"notExample.org"}
+	err := pki.ValidateCommonName(commonName, template)
+	if err.Error() != "The common name is not in any of the domains permitted by the requested template" {
+		t.Errorf("Incorrect error message. %s", err)
+	}
+}
+
+func TestDnsNameValidateSubjectAltNames(t *testing.T) {
+	dnsNames := []string{"example.org"}
+	emailAddresses := []string{}
+	ipAddresses := []net.IP{}
+	URIs := []*url.URL{}
+	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
+	template.PermDNSDomains = dnsNames
+	template.ExclDNSDomains = []string{"exludedDomain"}
+
+	err := pki.ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
+	if err != nil {
+		t.Errorf("Error occured even though it should not. %s", err)
 	}
 }
