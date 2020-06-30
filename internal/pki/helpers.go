@@ -118,9 +118,9 @@ func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 	// Test the created serial number against the serial numbers stored in the backend
 	// and continue looping, creating, and testing serial numbers until a unique one
 	// is generated
-	for _, err := backend.GetCertificate(serialNumber); err == nil; {
+	for i, err := backend.GetCertificate(serialNumber); err == nil; {
 		serialNumber, err = rand.Int(rand.Reader, maxValue)
-		if err != nil {
+		if err != nil || i > 2{
 			return big.NewInt(0), errors.New("Error creating serial number: " + err.Error())
 		}
 	}
@@ -588,7 +588,7 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 	if len(template.ExclIPRanges) > 0 {
 		// Loop through all the IP address ranges, extract the subnet associated with each IP address from the SAN request
 		// and validate that none of the subnets match any of the excluded IP ranges
-		for _, network := range template.PermIPRanges {
+		for _, network := range template.ExclIPRanges {
 			for _, address := range ipAddresses {
 				excluded := false
 				_, ipNet, err := net.ParseCIDR(network)
@@ -719,10 +719,10 @@ func ProcessPolicyIdentifiers(policyIdentifiers []string) ([]asn1.ObjectIdentifi
 // service and that the key size requested is both pertinent to the requested
 // algorithm and meets minimum size standards
 func ValidateKeyAlgoAndSize(keyAlgo string, keySize string) error {
-	switch keyAlgo {
+	switch strings.ToUpper(keyAlgo) {
 	case "RSA":
-		if keyBits, err := strconv.Atoi(keySize); err != nil || keyBits < 2048 {
-			return errors.New("Invalid key size for key algorithm RSA, must be at least 2048 bits")
+		if keyBits, err := strconv.Atoi(keySize); err != nil || keyBits < minRSASize || keyBits > getMaxRsaKeySize() {
+			return errors.New("Invalid key size for key algorithm RSA, must be at least 2048 bits and no larger than " + strconv.Itoa(getMaxRsaKeySize()))
 		}
 		return nil
 	case "ECDSA":

@@ -12,7 +12,7 @@ import (
 type HTTPError struct {
 	ErrorCode    string `json:"errorCode"`
 	ErrorMessage string `json:"errorMessage"`
-	HTTPResponse int
+	HTTPResponse int    `json:"statusCode"`
 }
 
 const invalidHeader string = "HTTP Content-Type header - expected application/json"
