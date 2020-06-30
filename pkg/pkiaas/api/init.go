@@ -38,5 +38,5 @@ func init() {
 	}
 
 	storage = pkiclient
-	//	backend.Backend = dummy.Dummy{}
+	// storage = dummy.Dummy{}
 }
