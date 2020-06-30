@@ -506,16 +506,247 @@ func TestInvalidAllowedCNDomainsValidateCommonName(t *testing.T) {
 }
 
 func TestDnsNameValidateSubjectAltNames(t *testing.T) {
-	dnsNames := []string{"example.org"}
+	dnsNames := []string{"subdomain.example.org"}
 	emailAddresses := []string{}
 	ipAddresses := []net.IP{}
 	URIs := []*url.URL{}
 	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
-	template.PermDNSDomains = dnsNames
+	template.PermDNSDomains = []string{"example.org"}
 	template.ExclDNSDomains = []string{"exludedDomain"}
 
 	err := pki.ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
 	if err != nil {
 		t.Errorf("Error occured even though it should not. %s", err)
+	}
+}
+
+func TestIPValidateSubjectAltNames(t *testing.T) {
+	dnsNames := []string{}
+	emailAddresses := []string{}
+	ipAddresses := []net.IP{net.ParseIP("192.168.1.10")}
+	URIs := []*url.URL{}
+	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
+	template.PermIPRanges = []string{"192.168.1.10/32"}
+	// template.ExclIPRanges = []string{"10.0.0.1/30"}
+
+	err := pki.ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
+	if err != nil {
+		t.Errorf("Error occured even though it should not. %s", err)
+	}
+}
+
+func TestEmailValidateSubjectAltNames(t *testing.T) {
+	dnsNames := []string{}
+	emailAddresses := []string{"testing@example.com"}
+	ipAddresses := []net.IP{}
+	URIs := []*url.URL{}
+	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
+	template.PermEmails = []string{"testing@example.com"}
+	template.ExclEmails = []string{"excluded@example.com"}
+
+	err := pki.ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
+	if err != nil {
+		t.Errorf("Error occured even though it should not. %s", err)
+	}
+}
+
+func TestRSAValidateKeyAlgoAndSize(t *testing.T) {
+	keyAlgo := "rsa"
+	keySize := "2048"
+
+	err := pki.ValidateKeyAlgoAndSize(keyAlgo, keySize)
+	if err != nil {
+		t.Errorf("Error occured even though it should have not occured. %s", err)
+	}
+}
+
+func TestSmallRSAKeySizeValidateKeyAlgoAndSize(t *testing.T) {
+	keyAlgo := "rsa"
+	keySize := "1024"
+
+	err := pki.ValidateKeyAlgoAndSize(keyAlgo, keySize)
+	if !errorContains(err, "Invalid key size for key algorithm RSA") {
+		t.Errorf("Incorrect error message. %s", err)
+	}
+}
+
+func TestLargeRSAKeySizeValidateKeyAlgoAndSize(t *testing.T) {
+	keyAlgo := "rsa"
+	keySize := "1024"
+
+	err := pki.ValidateKeyAlgoAndSize(keyAlgo, keySize)
+	if !errorContains(err, "Invalid key size for key algorithm RSA") {
+		t.Errorf("Incorrect error message. %s", err)
+	}
+}
+
+func TestECDSAp224ValidateKeyAlgoAndSize(t *testing.T) {
+	keyAlgo := "ECDSA"
+	keySize := "p224"
+
+	err := pki.ValidateKeyAlgoAndSize(keyAlgo, keySize)
+	if err != nil {
+		t.Errorf("Error occured even though it should have not occured. %s", err)
+	}
+}
+
+func TestECDSAp256ValidateKeyAlgoAndSize(t *testing.T) {
+	keyAlgo := "ECDSA"
+	keySize := "p256"
+
+	err := pki.ValidateKeyAlgoAndSize(keyAlgo, keySize)
+	if err != nil {
+		t.Errorf("Error occured even though it should have not occured. %s", err)
+	}
+}
+
+func TestECDSAp384ValidateKeyAlgoAndSize(t *testing.T) {
+	keyAlgo := "ECDSA"
+	keySize := "p384"
+
+	err := pki.ValidateKeyAlgoAndSize(keyAlgo, keySize)
+	if err != nil {
+		t.Errorf("Error occured even though it should have not occured. %s", err)
+	}
+}
+
+func TestECDSAp521ValidateKeyAlgoAndSize(t *testing.T) {
+	keyAlgo := "ECDSA"
+	keySize := "p521"
+
+	err := pki.ValidateKeyAlgoAndSize(keyAlgo, keySize)
+	if err != nil {
+		t.Errorf("Error occured even though it should have not occured. %s", err)
+	}
+}
+
+func TestInvalidECDSAValidateKeyAlgoAndSize(t *testing.T) {
+	keyAlgo := "ECDSA"
+	keySize := "notGood"
+
+	err := pki.ValidateKeyAlgoAndSize(keyAlgo, keySize)
+	if !errorContains(err, "Invalid key size for key algorithm ECDSA") {
+		t.Errorf("Invalid error message. %s", err)
+	}
+}
+
+func TestED25519ValidateKeyAlgoAndSize(t *testing.T) {
+	keyAlgo := "ED25519"
+	keySize := ""
+
+	err := pki.ValidateKeyAlgoAndSize(keyAlgo, keySize)
+	if err != nil {
+		t.Errorf("Error occured even though it should have not occured. %s", err)
+	}
+}
+
+func TestInvalidKeyAlgoValidateKeyAlgoAndSize(t *testing.T) {
+	keyAlgo := "notReal"
+	keySize := ""
+
+	err := pki.ValidateKeyAlgoAndSize(keyAlgo, keySize)
+	if err == nil {
+		t.Errorf("Error should have been returned with invalid key algo")
+	}
+}
+
+func TestConvertSerialOctetStringToInt(t *testing.T) {
+	serial := "10:53:fc:18:72:7f:74:73:43:ee:fa:74:6a:2a:d0:b4:3e"
+	expected := "111634878307785184247314039260864099390"
+
+	result, err := pki.ConvertSerialOctetStringToInt(serial)
+	if err != nil {
+		t.Errorf("Failed to convert string to integer. %s", err)
+	}
+	if result.String() != expected {
+		t.Errorf("Result was incorrect. Expecting %s but got %s", expected, result.String())
+	}
+}
+
+func TestKeyCompromiseReturnReasonCode(t *testing.T) {
+	reasonString := "keyCompromise"
+	expectedInt := 1
+	reasonInt, err := pki.ReturnReasonCode(reasonString)
+	if err != nil {
+		t.Errorf("Should be no failure. %s", err)
+	}
+	if reasonInt != expectedInt {
+		t.Errorf("Invalid reasonInt, expected %v but got %v", expectedInt, reasonInt)
+	}
+}
+
+func TestCaCompromiseReturnReasonCode(t *testing.T) {
+	reasonString := "cACompromise"
+	expectedInt := 2
+	reasonInt, err := pki.ReturnReasonCode(reasonString)
+	if err != nil {
+		t.Errorf("Should be no failure. %s", err)
+	}
+	if reasonInt != expectedInt {
+		t.Errorf("Invalid reasonInt, expected %v but got %v", expectedInt, reasonInt)
+	}
+}
+
+func TestAffiliationChangedReturnReasonCode(t *testing.T) {
+	reasonString := "affiliationChanged"
+	expectedInt := 3
+	reasonInt, err := pki.ReturnReasonCode(reasonString)
+	if err != nil {
+		t.Errorf("Should be no failure. %s", err)
+	}
+	if reasonInt != expectedInt {
+		t.Errorf("Invalid reasonInt, expected %v but got %v", expectedInt, reasonInt)
+	}
+}
+
+func TestSupersededReturnReasonCode(t *testing.T) {
+	reasonString := "superseded"
+	expectedInt := 4
+	reasonInt, err := pki.ReturnReasonCode(reasonString)
+	if err != nil {
+		t.Errorf("Should be no failure. %s", err)
+	}
+	if reasonInt != expectedInt {
+		t.Errorf("Invalid reasonInt, expected %v but got %v", expectedInt, reasonInt)
+	}
+}
+
+func TestCessationOfOperationReturnReasonCode(t *testing.T) {
+	reasonString := "cessationOfOperation"
+	expectedInt := 5
+	reasonInt, err := pki.ReturnReasonCode(reasonString)
+	if err != nil {
+		t.Errorf("Should be no failure. %s", err)
+	}
+	if reasonInt != expectedInt {
+		t.Errorf("Invalid reasonInt, expected %v but got %v", expectedInt, reasonInt)
+	}
+}
+
+func TestCertificateHoldReturnReasonCode(t *testing.T) {
+	reasonString := "certificateHold"
+	_, err := pki.ReturnReasonCode(reasonString)
+	if !errorContains(err, "This endpoint is for certificate revocation.") {
+		t.Errorf("Incorrect error. %s", err)
+	}
+}
+
+func TestRemoveFromCRLReturnReasonCode(t *testing.T) {
+	reasonString := "removeFromCRL"
+	_, err := pki.ReturnReasonCode(reasonString)
+	if !errorContains(err, "This endpoint is for certificate revocation.") {
+		t.Errorf("Incorrect error. %s", err)
+	}
+}
+
+func TestPrivilegeWithdrawnReturnReasonCode(t *testing.T) {
+	reasonString := "privilegeWithdrawn"
+	expectedInt := 9
+	reasonInt, err := pki.ReturnReasonCode(reasonString)
+	if err != nil {
+		t.Errorf("Should be no failure. %s", err)
+	}
+	if reasonInt != expectedInt {
+		t.Errorf("Invalid reasonInt, expected %v but got %v", expectedInt, reasonInt)
 	}
 }
