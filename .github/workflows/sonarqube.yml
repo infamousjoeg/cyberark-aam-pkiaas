@@ -15,7 +15,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v2
       - name: SonarQube Scan
-        uses: kitabisa/sonarqube-action@master
+        uses: jzlai/sonarqube-action@master
         with:
           host: ${{ secrets.SONARQUBE_HOST }}
           login: ${{ secrets.SONARQUBE_TOKEN }}
