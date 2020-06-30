@@ -118,16 +118,11 @@ func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 	// Test the created serial number against the serial numbers stored in the backend
 	// and continue looping, creating, and testing serial numbers until a unique one
 	// is generated
-	i := 0
-	for _, err := backend.GetCertificate(serialNumber); err == nil; {
+	for i, err := backend.GetCertificate(serialNumber); err == nil; {
 		serialNumber, err = rand.Int(rand.Reader, maxValue)
-		if err != nil {
+		if err != nil || i > 2{
 			return big.NewInt(0), errors.New("Error creating serial number: " + err.Error())
 		}
-		if i > 2 {
-			break
-		}
-		i++
 	}
 	return serialNumber, nil
 }
