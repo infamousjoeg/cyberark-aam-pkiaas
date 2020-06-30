@@ -230,12 +230,16 @@ func TestMultipleProcessKeyUsages(t *testing.T) {
 		"dataEncipherment",
 		"contentCommitment",
 		"keyAgreement",
+		"certSign",
+		"crlSign",
+		"encipherOnly",
+		"decipherOnly",
 	}
 	x509KeyUsage, err := pki.ProcessKeyUsages(keyUsages)
 	if err != nil {
 		t.Errorf("Error occured during a valid keyUsage. %s", err)
 	}
-	if x509KeyUsage != 31 {
+	if x509KeyUsage != 511 {
 		t.Errorf("The keyUsage provided is incorrect. %v", x509KeyUsage)
 	}
 }
@@ -245,5 +249,25 @@ func TestInvalidProcessKeyUsages(t *testing.T) {
 	_, err := pki.ProcessKeyUsages(keyUsages)
 	if err == nil {
 		t.Errorf("No error occured during an invalid keyUsage")
+	}
+}
+
+func TestProcessExtKeyUsages(t *testing.T) {
+	extKeyUsages := []string{"any"}
+	x509ExtKeyUsages, err := pki.ProcessExtKeyUsages(extKeyUsages)
+	if err != nil {
+		t.Errorf("Error occured during a valid extKeyUsage. %s", err)
+	}
+
+	if x509ExtKeyUsages[0] != x509.ExtKeyUsageAny {
+		t.Errorf("Ext key usage is invalid")
+	}
+}
+
+func TestInvalidProcessExtKeyUsages(t *testing.T) {
+	extKeyUsages := []string{"invalidUsage"}
+	_, err := pki.ProcessExtKeyUsages(extKeyUsages)
+	if err == nil {
+		t.Errorf("Error DID NOT occur during an invalid extKeyUsage")
 	}
 }
