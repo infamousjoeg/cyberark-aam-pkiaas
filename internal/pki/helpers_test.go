@@ -1,6 +1,7 @@
 package pki_test
 
 import (
+	"crypto/x509"
 	"fmt"
 	"math/big"
 	"strings"
@@ -208,5 +209,41 @@ func TestGenerateSerialNumberNumbersExist(t *testing.T) {
 	serialNumber, err := pki.GenerateSerialNumber(storage)
 	if err != nil {
 		t.Errorf("Error occured while generating serial number. %s , %s", serialNumber, err)
+	}
+}
+
+func TestProcessKeyUsages(t *testing.T) {
+	keyUsages := []string{"digitalSignature"}
+	x509KeyUsage, err := pki.ProcessKeyUsages(keyUsages)
+	if err != nil {
+		t.Errorf("Error occured during a valid keyUsage. %s", err)
+	}
+	if x509KeyUsage != x509.KeyUsageDigitalSignature {
+		t.Errorf("The keyUsage provided is incorrect. %v", x509KeyUsage)
+	}
+}
+
+func TestMultipleProcessKeyUsages(t *testing.T) {
+	keyUsages := []string{
+		"digitalSignature",
+		"keyEncipherment",
+		"dataEncipherment",
+		"contentCommitment",
+		"keyAgreement",
+	}
+	x509KeyUsage, err := pki.ProcessKeyUsages(keyUsages)
+	if err != nil {
+		t.Errorf("Error occured during a valid keyUsage. %s", err)
+	}
+	if x509KeyUsage != 31 {
+		t.Errorf("The keyUsage provided is incorrect. %v", x509KeyUsage)
+	}
+}
+
+func TestInvalidProcessKeyUsages(t *testing.T) {
+	keyUsages := []string{"notRealKeyUsage"}
+	_, err := pki.ProcessKeyUsages(keyUsages)
+	if err == nil {
+		t.Errorf("No error occured during an invalid keyUsage")
 	}
 }
