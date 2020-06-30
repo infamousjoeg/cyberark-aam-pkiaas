@@ -1,0 +1,23 @@
+name: PKIaaS Tests
+
+on:
+  push:
+    branches: dev
+  pull_request:
+    branches: dev
+
+jobs:
+  sonarqube:
+    name: Sonarqube Analysis
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: SonarQube Scan
+        uses: kitabisa/sonarqube-action@master
+        with:
+          host: ${{ secrets.SONARQUBE_HOST }}
+          login: ${{ secrets.SONARQUBE_TOKEN }}
