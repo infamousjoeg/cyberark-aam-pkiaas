@@ -593,7 +593,7 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 	if len(template.ExclIPRanges) > 0 {
 		// Loop through all the IP address ranges, extract the subnet associated with each IP address from the SAN request
 		// and validate that none of the subnets match any of the excluded IP ranges
-		for _, network := range template.PermIPRanges {
+		for _, network := range template.ExclIPRanges {
 			for _, address := range ipAddresses {
 				excluded := false
 				_, ipNet, err := net.ParseCIDR(network)
