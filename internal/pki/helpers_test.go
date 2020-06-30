@@ -1,9 +1,12 @@
 package pki_test
 
 import (
+	"fmt"
+	"math/big"
 	"strings"
 	"testing"
 
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/dummy"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 )
 
@@ -173,5 +176,37 @@ func TestGenerateKeysInvalidAlgo(t *testing.T) {
 	_, _, err := pki.GenerateKeys(algo, keySize)
 	if !errorContains(err, "The provided key algorithm is not valid") {
 		t.Errorf("Invalid error message. %s", err)
+	}
+}
+
+type MockGenerateSerialNumber struct {
+	dummy.Dummy
+}
+
+func (m MockGenerateSerialNumber) GetCertificate(serialNumber *big.Int) (string, error) {
+	return "", fmt.Errorf("Get Certificate does not exists")
+}
+
+func TestGenerateSerialNumber(t *testing.T) {
+	storage := MockGenerateSerialNumber{}
+	serialNumber, err := pki.GenerateSerialNumber(storage)
+	if err != nil {
+		t.Errorf("Error occured while generating serial number. %s , %s", serialNumber, err)
+	}
+}
+
+type MockGenerateSerialNumbersExist struct {
+	dummy.Dummy
+}
+
+func (m MockGenerateSerialNumbersExist) GetCertificate(serialNumber *big.Int) (string, error) {
+	return "", nil
+}
+
+func TestGenerateSerialNumberNumbersExist(t *testing.T) {
+	storage := MockGenerateSerialNumbersExist{}
+	serialNumber, err := pki.GenerateSerialNumber(storage)
+	if err != nil {
+		t.Errorf("Error occured while generating serial number. %s , %s", serialNumber, err)
 	}
 }
