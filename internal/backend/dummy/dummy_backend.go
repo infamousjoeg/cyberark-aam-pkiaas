@@ -235,3 +235,17 @@ func (d Dummy) CreateCertificate(certificateData types.CreateCertificateData) er
 func (d Dummy) GetAccessControl() backend.Access {
 	return backend.Access(d.Access)
 }
+
+// CertificateRevoked ----------------------------------
+func (d Dummy) CertificateRevoked(serialNumber *big.Int) (types.RevokedCertificate, error) {
+	return types.RevokedCertificate{
+		SerialNumber:   "someSerialNumber",
+		ReasonCode:     1,
+		RevocationDate: time.Now(),
+	}, nil
+}
+
+// InitConfig ------
+func (d Dummy) InitConfig() error {
+	return nil
+}
