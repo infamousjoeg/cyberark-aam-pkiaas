@@ -124,6 +124,7 @@ func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 		if err != nil {
 			break
 		}
+<<<<<<< HEAD
 
 		serialNumber, err = rand.Int(rand.Reader, maxValue)
 		if err != nil {
@@ -133,6 +134,12 @@ func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 		if i > 2 {
 			return big.NewInt(0), errors.New("Error creating serial number")
 		}
+=======
+		serialNumber, err = rand.Int(rand.Reader, maxValue)
+		if err != nil || i > 2 {
+			return big.NewInt(0), errors.New("Error creating serial number: " + err.Error())
+		}
+>>>>>>> Un-commented InitConfig(); Fixed GenerateSerialNumber loop counter
 		i++
 	}
 	return serialNumber, nil
@@ -584,6 +591,7 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 				permitted := false
 				_, ipNet, err := net.ParseCIDR(network)
 				if err != nil {
+
 					return errors.New("Error parsing permitted IP network ranges")
 				}
 				if ipNet.Contains(address) {
