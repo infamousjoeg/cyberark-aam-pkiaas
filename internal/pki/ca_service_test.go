@@ -39,14 +39,23 @@ func intermediateRequest() types.IntermediateRequest {
 
 func TestGenerateIntermediateCSR(t *testing.T) {
 	request := intermediateRequest()
+<<<<<<< HEAD
 	_, err := pki.GenerateIntermediate(request, false, dummyBackend())
 
+=======
+	_, err := pki.GenerateIntermediateCSR(request, dummyBackend())
+>>>>>>> Add tests for ca_service.go
 	assertNoHttpError(t, err)
 }
 
 func TestGenerateIntermediateCSRSelfSigned(t *testing.T) {
 	request := intermediateRequest()
+<<<<<<< HEAD
 	_, err := pki.GenerateIntermediate(request, true, dummyBackend())
+=======
+	request.SelfSigned = true
+	_, err := pki.GenerateIntermediateCSR(request, dummyBackend())
+>>>>>>> Add tests for ca_service.go
 	assertNoHttpError(t, err)
 }
 
@@ -94,4 +103,8 @@ func TestGetCRL(t *testing.T) {
 	assertNoHttpError(t, err)
 }
 
+<<<<<<< HEAD
 // skipped SetCAChain
+=======
+// skipped SetCAChain & SetIntermediateCertificate
+>>>>>>> Add tests for ca_service.go
