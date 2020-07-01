@@ -124,9 +124,14 @@ func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 		if err != nil {
 			break
 		}
+
 		serialNumber, err = rand.Int(rand.Reader, maxValue)
-		if err != nil || i > 2 {
+		if err != nil {
 			return big.NewInt(0), errors.New("Error creating serial number: " + err.Error())
+		}
+
+		if i > 2 {
+			return big.NewInt(0), errors.New("Error creating serial number")
 		}
 		i++
 	}
