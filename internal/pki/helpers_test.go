@@ -209,9 +209,9 @@ func (m MockGenerateSerialNumbersExist) GetCertificate(serialNumber *big.Int) (s
 
 func TestGenerateSerialNumberNumbersExist(t *testing.T) {
 	storage := MockGenerateSerialNumbersExist{}
-	serialNumber, err := pki.GenerateSerialNumber(storage)
-	if err != nil {
-		t.Errorf("Error occured while generating serial number. %s , %s", serialNumber, err)
+	_, err := pki.GenerateSerialNumber(storage)
+	if err == nil {
+		t.Errorf("Error did not occur and was expected")
 	}
 }
 
