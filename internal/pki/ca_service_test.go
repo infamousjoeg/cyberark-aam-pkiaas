@@ -104,7 +104,11 @@ func TestGetCRL(t *testing.T) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // skipped SetCAChain
 =======
 // skipped SetCAChain & SetIntermediateCertificate
 >>>>>>> Add tests for ca_service.go
+=======
+// skipped SetCAChain
+>>>>>>> Only one method skipped
