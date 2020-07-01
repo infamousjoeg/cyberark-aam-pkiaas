@@ -94,4 +94,4 @@ func TestGetCRL(t *testing.T) {
 	assertNoHttpError(t, err)
 }
 
-// skipped SetCAChain & SetIntermediateCertificate
+// skipped SetCAChain
