@@ -67,3 +67,94 @@ func TestExpiredAuthenticate(t *testing.T) {
 	err := accessControl.Authenticate(accessToken)
 	assertErrorContains(t, err, "Could not check the permissions. Permission check failed with HTTP status 401")
 }
+
+func TestListTemplatesAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.ListTemplates(accessToken)
+	assertNoError(t, err)
+}
+
+func TestReadTemplateAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.ReadTemplate(accessToken, "templateName")
+	assertNoError(t, err)
+}
+
+func TestDeleteTemplateAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.DeleteTemplate(accessToken, "templateName")
+	assertNoError(t, err)
+}
+
+func TestManageTemplateAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.ManageTemplate(accessToken, "templateName")
+	assertNoError(t, err)
+}
+
+func TestCreateemplateAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.CreateTemplate(accessToken)
+	assertNoError(t, err)
+}
+
+func TestPurgeAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.Purge(accessToken)
+	assertNoError(t, err)
+}
+
+func TestCRLPurgeAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.CRLPurge(accessToken)
+	assertNoError(t, err)
+}
+
+func TestCreateCertificateAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.CreateCertificate(accessToken, "templateName")
+	assertNoError(t, err)
+}
+
+func TestRevokeCertificateAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.RevokeCertificate(accessToken, "templateName")
+	assertNoError(t, err)
+}
+
+func TestSignCertificateAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.SignCertificate(accessToken, "templateName")
+	assertNoError(t, err)
+}
+
+func TestGenerateIntermediateCSRAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.GenerateIntermediateCSR(accessToken)
+	assertNoError(t, err)
+}
+
+func TestSetIntermediateCertificateAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.SetIntermediateCertificate(accessToken)
+	assertNoError(t, err)
+}
+
+func TestSetCAChainAccessControl(t *testing.T) {
+	accessControl := defaultAccessControl()
+	accessToken := getValidAccessToken(t)
+	err := accessControl.SetCAChain(accessToken)
+	assertNoError(t, err)
+}
