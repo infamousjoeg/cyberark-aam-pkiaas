@@ -231,6 +231,11 @@ func defaultConjurClient() (*conjurapi.Client, error) {
 	return client, err
 }
 
+// NewDefaultConjurClient return the default conjur client
+func NewDefaultConjurClient() (*conjurapi.Client, error) {
+	return defaultConjurClient()
+}
+
 func defaultCreateTemplatePolicy() string {
 	return `- !variable
   id: templates/<TemplateName>
@@ -363,11 +368,15 @@ func defaultDeleteTemplatePolicy() string {
 }
 
 func defaultDeleteCertificatePolicy() string {
-	return `- !delete
-  records: 
-  - !variable certificates/<SerialNumber>
-  - !group certificates/<SerialNumber>-read
-  - !group certificates/<SerialNumber>-revoke
+	return `
+- !delete
+  record: !variable certificates/<SerialNumber>
+
+- !delete
+  record: !group certificates/<SerialNumber>-read
+
+- !delete
+  record: !group certificates/<SerialNumber>-revoke
 `
 }
 
@@ -382,12 +391,7 @@ func NewFromDefaults() (StorageBackend, error) {
 		return StorageBackend{}, fmt.Errorf("Failed to init Conjur client: %s", err)
 	}
 
-	policyTemplates := NewTemplates(
-		defaultCreateTemplatePolicy(),
-		defaultDeleteTemplatePolicy(),
-		defaultCreateCertificatePolicy(),
-		defaultDeleteCertificatePolicy(),
-		defaultRevokeCertificatePolicy())
+	policyTemplates := NewDefaultTemplates()
 
 	access := NewAccessFromDefaults(conjurClient.GetConfig(), defaultPolicyBranch())
 
@@ -403,6 +407,16 @@ func NewTemplates(newTemplate string, deleteTemplate string, newCertificate stri
 		deleteCertificate: deleteCertificate,
 		revokeCertificate: revokedCertificate,
 	}
+}
+
+// NewDefaultTemplates calls NewTemplates with all of the default policy templates
+func NewDefaultTemplates() PolicyTemplates {
+	return NewTemplates(
+		defaultCreateTemplatePolicy(),
+		defaultDeleteTemplatePolicy(),
+		defaultCreateCertificatePolicy(),
+		defaultDeleteCertificatePolicy(),
+		defaultRevokeCertificatePolicy())
 }
 
 // NewConjurPki ...
