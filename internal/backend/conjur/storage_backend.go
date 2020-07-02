@@ -1,7 +1,9 @@
 package conjur
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
@@ -30,160 +32,161 @@ func (c StorageBackend) GetAccessControl() backend.Access {
 }
 
 // InitConfig This will init the policy in the 'pki' webservice
-// func (c StorageBackend) InitConfig() error {
-// 	pkiPolicy := getInitConfigPolicy()
-// 	response, err := c.client.LoadPolicy(conjurapi.PolicyModePatch, c.policyBranch, pkiPolicy)
-// 	if err != nil {
-// 		return fmt.Errorf("Failed to initialize configuration for the PKI service. %v. %s", response, err)
-// 	}
+func (c StorageBackend) InitConfig() error {
+	pkiPolicy := getInitConfigPolicy()
+	response, err := c.client.LoadPolicy(conjurapi.PolicyModePatch, c.policyBranch, pkiPolicy)
+	if err != nil {
+		return fmt.Errorf("Failed to initialize configuration for the PKI service. %v. %s", response, err)
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
-// func getInitConfigPolicy() io.Reader {
-// 	return bytes.NewReader([]byte(`- !webservice
-// - !variable ca/cert
-// - !variable ca/key
-// - !variable ca/cert-chain
-// - !variable crl
+func getInitConfigPolicy() io.Reader {
+	return bytes.NewReader([]byte(`
+- !webservice
+- !variable ca/cert
+- !variable ca/key
+- !variable ca/cert-chain
+- !variable crl
 
-// # higher level groups
-// - !group admin
-// - !group audit
-// - !group authenticate
+# higher level groups
+- !group admin
+- !group audit
+- !group authenticate
 
-// - &admins
-//   - !group templates-admin
-//   - !group certificates-admin
-//   - !group purge-admin
-//   - !group ca-admin
+- &admins
+  - !group templates-admin
+  - !group certificates-admin
+  - !group purge-admin
+  - !group ca-admin
 
-// # endpoint permission groups
-// - &templates
-//   - !group list-templates
-//   - !group read-templates
-//   - !group create-templates
-//   - !group manage-templates
-//   - !group delete-templates
-// - &certificates
-//   - !group list-certificates
-//   - !group read-certificates
-//   - !group create-certificates
-//   - !group sign-certificates
-//   - !group revoke-certificates
-// - &purge
-//   - !group purge
-//   - !group purge-crl
-// - &ca
-//   - !group set-ca-chain
-//   - !group set-ca-signing-key
-//   - !group set-ca-signing-cert
-//   - !group generate-intermediate-csr
+ # endpoint permission groups
+- &templates
+  - !group list-templates
+  - !group read-templates
+  - !group create-templates
+  - !group manage-templates
+  - !group delete-templates
+- &certificates
+  - !group list-certificates
+  - !group read-certificates
+  - !group create-certificates
+  - !group sign-certificates
+  - !group revoke-certificates
+- &purge
+  - !group purge
+  - !group purge-crl
+- &ca
+  - !group set-ca-chain
+  - !group set-ca-signing-key
+  - !group set-ca-signing-cert
+  - !group generate-intermediate-csr
 
-// - !permit
-//   role: !group authenticate
-//   resource: !webservice
-//   privileges:
-//   - authenticate
+- !permit
+  role: !group authenticate
+  resource: !webservice
+  privileges:
+  - authenticate
 
-// - !permit
-//   role: !group list-templates
-//   resource: !webservice
-//   privileges:
-//   - list-templates
+- !permit
+  role: !group list-templates
+  resource: !webservice
+  privileges:
+  - list-templates
 
-// - !permit
-//   role: !group create-templates
-//   resource: !webservice
-//   privileges:
-//   - create-templates
+- !permit
+  role: !group create-templates
+  resource: !webservice
+  privileges:
+  - create-templates
 
-// - !permit
-//   role: !group list-certificates
-//   resource: !webservice
-//   privileges:
-//   - list-certificates
+- !permit
+  role: !group list-certificates
+  resource: !webservice
+  privileges:
+  - list-certificates
 
-// - !permit
-//   role: !group purge
-//   resource: !webservice
-//   privileges:
-//   - purge
+- !permit
+  role: !group purge
+  resource: !webservice
+  privileges:
+  - purge
 
-// - !permit
-//   role: !group purge-crl
-//   resource: !webservice
-//   privileges:
-//   - purge-crl
+- !permit
+  role: !group purge-crl
+  resource: !webservice
+  privileges:
+  - purge-crl
 
-// - !permit
-//   role: !group set-ca-chain
-//   resource: !webservice
-//   privileges:
-//   - set-ca-chain
+- !permit
+  role: !group set-ca-chain
+  resource: !webservice
+  privileges:
+  - set-ca-chain
 
-// - !permit
-//   role: !group set-ca-signing-key
-//   resource: !webservice
-//   privileges:
-//   - set-ca-signing-key
+- !permit
+  role: !group set-ca-signing-key
+  resource: !webservice
+  privileges:
+  - set-ca-signing-key
 
-// - !permit
-//   role: !group set-ca-signing-cert
-//   resource: !webservice
-//   privileges:
-//   - set-ca-signing-cert
+- !permit
+  role: !group set-ca-signing-cert
+  resource: !webservice
+  privileges:
+  - set-ca-signing-cert
 
-// - !permit
-//   role: !group generate-intermediate-csr
-//   resource: !webservice
-//   privileges:
-//   - generate-intermediate-csr
+- !permit
+  role: !group generate-intermediate-csr
+  resource: !webservice
+  privileges:
+  - generate-intermediate-csr
 
-// - !grant
-//   roles: *templates
-//   member: !group templates-admin
+- !grant
+  roles: *templates
+  member: !group templates-admin
 
-// - !grant
-//   roles: *certificates
-//   member: !group certificates-admin
+- !grant
+  roles: *certificates
+  member: !group certificates-admin
 
-// - !grant
-//   roles: *purge
-//   member: !group purge-admin
+- !grant
+  roles: *purge
+  member: !group purge-admin
 
-// - !grant
-//   roles: *ca
-//   member: !group ca-admin
+- !grant
+  roles: *ca
+  member: !group ca-admin
 
-// - !grant
-//   roles: *admins
-//   member: !group admin
+- !grant
+  roles: *admins
+  member: !group admin
 
-// - !grant
-//   role: !group authenticate
-//   members:
-//   - !group admin
-//   - !group ca-admin
-//   - !group purge-admin
-//   - !group certificates-admin
-//   - !group templates-admin
+- !grant
+  role: !group authenticate
+  members:
+  - !group admin
+  - !group ca-admin
+  - !group purge-admin
+  - !group certificates-admin
+  - !group templates-admin
 
-// - !grant
-//   roles:
-//   - !group list-templates
-//   - !group list-certificates
-//   - !group read-templates
-//   - !group read-certificates
-//   member: !group audit
+- !grant
+  roles:
+  - !group list-templates
+  - !group list-certificates
+  - !group read-templates
+  - !group read-certificates
+  member: !group audit
 
-// - !grant
-//   roles:
-//   - !group list-certificates
-//   - !group read-certificates
-//   member: !group authenticate
-// `))
-// }
+- !grant
+  roles:
+  - !group list-certificates
+  - !group read-certificates
+  member: !group authenticate
+ `))
+}
 
 func (c StorageBackend) getTemplatePolicyBranch() string {
 	return c.policyBranch

@@ -118,11 +118,22 @@ func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 	// Test the created serial number against the serial numbers stored in the backend
 	// and continue looping, creating, and testing serial numbers until a unique one
 	// is generated
-	for i, err := backend.GetCertificate(serialNumber); err == nil; {
+	i := 0
+	for {
+		_, err := backend.GetCertificate(serialNumber)
+		if err != nil {
+			break
+		}
+
 		serialNumber, err = rand.Int(rand.Reader, maxValue)
-		if err != nil || i > 2{
+		if err != nil {
 			return big.NewInt(0), errors.New("Error creating serial number: " + err.Error())
 		}
+
+		if i > 2 {
+			return big.NewInt(0), errors.New("Error creating serial number")
+		}
+		i++
 	}
 	return serialNumber, nil
 }
@@ -549,7 +560,6 @@ func ValidateCommonName(commonName string, template types.Template) error {
 					valid = true
 				}
 			}
-
 		}
 		if !valid {
 			return errors.New("The common name is not in any of the domains permitted by the requested template")
@@ -574,6 +584,7 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 				permitted := false
 				_, ipNet, err := net.ParseCIDR(network)
 				if err != nil {
+
 					return errors.New("Error parsing permitted IP network ranges")
 				}
 				if ipNet.Contains(address) {
@@ -590,15 +601,11 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 		// and validate that none of the subnets match any of the excluded IP ranges
 		for _, network := range template.ExclIPRanges {
 			for _, address := range ipAddresses {
-				excluded := false
 				_, ipNet, err := net.ParseCIDR(network)
 				if err != nil {
 					return errors.New("Error parsing excluded IP network ranges")
 				}
 				if ipNet.Contains(address) {
-					excluded = true
-				}
-				if excluded {
 					return errors.New("IP address SAN in request is in the excluded IP ranges")
 				}
 			}
