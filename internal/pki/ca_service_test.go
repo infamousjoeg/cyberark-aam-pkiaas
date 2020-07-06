@@ -40,11 +40,15 @@ func intermediateRequest() types.IntermediateRequest {
 func TestGenerateIntermediateCSR(t *testing.T) {
 	request := intermediateRequest()
 <<<<<<< HEAD
+<<<<<<< HEAD
 	_, err := pki.GenerateIntermediate(request, false, dummyBackend())
 
 =======
 	_, err := pki.GenerateIntermediateCSR(request, dummyBackend())
 >>>>>>> Add tests for ca_service.go
+=======
+	_, err := pki.GenerateIntermediate(request, false, dummyBackend())
+>>>>>>> Fix Issue #60; add self signed as independent endpoint
 	assertNoHttpError(t, err)
 }
 
@@ -54,8 +58,12 @@ func TestGenerateIntermediateCSRSelfSigned(t *testing.T) {
 	_, err := pki.GenerateIntermediate(request, true, dummyBackend())
 =======
 	request.SelfSigned = true
+<<<<<<< HEAD
 	_, err := pki.GenerateIntermediateCSR(request, dummyBackend())
 >>>>>>> Add tests for ca_service.go
+=======
+	_, err := pki.GenerateIntermediate(request, true, dummyBackend())
+>>>>>>> Fix Issue #60; add self signed as independent endpoint
 	assertNoHttpError(t, err)
 }
 
