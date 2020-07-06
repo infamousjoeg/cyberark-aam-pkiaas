@@ -109,19 +109,8 @@ func GenerateIntermediate(intermediateRequest types.IntermediateRequest, selfSig
 	return intermediateResponse, httpErr
 }
 
-<<<<<<< HEAD
 // CreateIntermediateCSR Generates a CSR used for the intermediate signing CA and returns
 // HTTPError if it fails
-=======
-	return intermediateResponse, httpErr
-}
-
-<<<<<<< HEAD
->>>>>>> Fix Issue #60; add self signed as independent endpoint
-=======
-// CreateIntermediateCSR Generates a CSR used for the intermediate signing CA and returns
-// HTTPError if it fails
->>>>>>> Added comments to new functions
 func CreateIntermediateCSR(signRequest x509.CertificateRequest, signPrivKey crypto.PrivateKey) (types.PEMIntermediate, httperror.HTTPError) {
 	// Set X.509 extensions to specify that this CSR is for a CA certificate
 	extraExtensions := []pkix.Extension{}
@@ -173,16 +162,8 @@ func CreateIntermediateCSR(signRequest x509.CertificateRequest, signPrivKey cryp
 	return types.PEMIntermediate{CSR: string(pemSignCSR)}, httperror.HTTPError{}
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 // CreateSelfSignedCert Generates a self signed CA certificate for the PKI service and returns
 // HTTPError if it fails
-=======
->>>>>>> Fix Issue #60; add self signed as independent endpoint
-=======
-// CreateSelfSignedCert Generates a self signed CA certificate for the PKI service and returns
-// HTTPError if it fails
->>>>>>> Added comments to new functions
 func CreateSelfSignedCert(certTemplate x509.Certificate, signPrivKey crypto.PrivateKey, signPubKey crypto.PublicKey, backend backend.Storage) (types.PEMIntermediate, httperror.HTTPError) {
 	serialNumber, err := GenerateSerialNumber(backend)
 	if err != nil {
