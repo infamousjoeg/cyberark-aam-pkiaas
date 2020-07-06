@@ -168,6 +168,13 @@ var routes = Routes{
 	},
 
 	Route{
+		"GenerateIntermediateCSR",
+		strings.ToUpper("Post"),
+		"/ca/generate/selfsigned",
+		GenerateIntermediateCSRHandler,
+	},
+
+	Route{
 		"SetIntermediateCertificate",
 		strings.ToUpper("Post"),
 		"/ca/set",
