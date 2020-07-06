@@ -39,14 +39,14 @@ func intermediateRequest() types.IntermediateRequest {
 
 func TestGenerateIntermediateCSR(t *testing.T) {
 	request := intermediateRequest()
-	_, err := pki.GenerateIntermediateCSR(request, dummyBackend())
+	_, err := pki.GenerateIntermediate(request, false, dummyBackend())
+
 	assertNoHttpError(t, err)
 }
 
 func TestGenerateIntermediateCSRSelfSigned(t *testing.T) {
 	request := intermediateRequest()
-	request.SelfSigned = true
-	_, err := pki.GenerateIntermediateCSR(request, dummyBackend())
+	_, err := pki.GenerateIntermediate(request, true, dummyBackend())
 	assertNoHttpError(t, err)
 }
 

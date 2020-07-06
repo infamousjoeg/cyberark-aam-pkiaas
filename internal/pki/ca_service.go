@@ -20,8 +20,8 @@ import (
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
-// GenerateIntermediateCSR -------------------------------
-func GenerateIntermediateCSR(intermediateRequest types.IntermediateRequest, backend backend.Storage) (types.PEMIntermediate, httperror.HTTPError) {
+// GenerateIntermediate -------------------------------
+func GenerateIntermediate(intermediateRequest types.IntermediateRequest, selfSigned bool, backend backend.Storage) (types.PEMIntermediate, httperror.HTTPError) {
 	signPrivKey, signPubKey, err := GenerateKeys(intermediateRequest.KeyAlgo, intermediateRequest.KeyBits)
 	if err != nil {
 		return types.PEMIntermediate{}, httperror.KeygenError(err.Error())
@@ -37,6 +37,82 @@ func GenerateIntermediateCSR(intermediateRequest types.IntermediateRequest, back
 		return types.PEMIntermediate{}, httperror.ProcessSANError(err.Error())
 	}
 
+	keyType := fmt.Sprintf("%T", signPrivKey)
+
+	var sigAlgo x509.SignatureAlgorithm
+	switch keyType {
+	case "*rsa.PrivateKey":
+		sigAlgo = x509.SHA256WithRSA
+	case "*ecdsa.PrivateKey":
+		sigAlgo = x509.ECDSAWithSHA256
+	case "ed25519.PrivateKey":
+		sigAlgo = x509.PureEd25519
+	default:
+		return types.PEMIntermediate{}, httperror.BadSigAlgo(err.Error())
+	}
+	var intermediateResponse types.PEMIntermediate
+	httpErr := httperror.HTTPError{}
+	if !selfSigned { // Generate a CSR if self-signed is not passed or is passed as false
+
+		signRequest := x509.CertificateRequest{
+			SignatureAlgorithm: sigAlgo,
+			Subject:            certSubject,
+			DNSNames:           dnsNames,
+			EmailAddresses:     emailAddresses,
+			IPAddresses:        ipAddresses,
+			URIs:               URIs,
+		}
+		intermediateResponse, httpErr = CreateIntermediateCSR(signRequest, signPrivKey)
+		if httpErr != (httperror.HTTPError{}) {
+			return types.PEMIntermediate{}, httpErr
+		}
+
+	} else { // Generate a self-signed CA certificate
+
+		certTemplate := x509.Certificate{
+			SignatureAlgorithm:    sigAlgo,
+			Subject:               certSubject,
+			NotBefore:             time.Now().UTC(),
+			NotAfter:              time.Now().Add(time.Hour * 87600).UTC(),
+			DNSNames:              dnsNames,
+			EmailAddresses:        emailAddresses,
+			IPAddresses:           ipAddresses,
+			URIs:                  URIs,
+			BasicConstraintsValid: true,
+			IsCA:                  true,
+			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		}
+		intermediateResponse, httpErr = CreateSelfSignedCert(certTemplate, signPrivKey, signPubKey, backend)
+		if httpErr != (httperror.HTTPError{}) {
+			return types.PEMIntermediate{}, httpErr
+		}
+	}
+
+	var keyBytes []byte
+	// Capture the DER format of the new signing key to be written to backend storage
+	switch intermediateRequest.KeyAlgo {
+	case "RSA":
+		keyBytes = x509.MarshalPKCS1PrivateKey(signPrivKey.(*rsa.PrivateKey))
+	case "ECDSA":
+		keyBytes, err = x509.MarshalECPrivateKey(signPrivKey.(*ecdsa.PrivateKey))
+		if err != nil {
+			return types.PEMIntermediate{}, httperror.ECDSAKeyError(err.Error())
+		}
+	case "ED25519":
+		keyBytes = signPrivKey.(ed25519.PrivateKey)
+	}
+
+	err = backend.WriteSigningKey(base64.StdEncoding.EncodeToString(keyBytes))
+	if err != nil {
+		return types.PEMIntermediate{}, httperror.SigningKeyWriteFail(err.Error())
+	}
+
+	return intermediateResponse, httpErr
+}
+
+// CreateIntermediateCSR Generates a CSR used for the intermediate signing CA and returns
+// HTTPError if it fails
+func CreateIntermediateCSR(signRequest x509.CertificateRequest, signPrivKey crypto.PrivateKey) (types.PEMIntermediate, httperror.HTTPError) {
 	// Set X.509 extensions to specify that this CSR is for a CA certificate
 	extraExtensions := []pkix.Extension{}
 	caConstraint := types.CABasicConstraints{
@@ -74,92 +150,37 @@ func GenerateIntermediateCSR(intermediateRequest types.IntermediateRequest, back
 		Value:    encodedKeyUsage,
 	}
 
-	keyType := fmt.Sprintf("%T", signPrivKey)
+	extraExtensions = append(extraExtensions, isCAExtension)
+	extraExtensions = append(extraExtensions, keyUsageExtension)
 
-	var sigAlgo x509.SignatureAlgorithm
-	switch keyType {
-	case "*rsa.PrivateKey":
-		sigAlgo = x509.SHA256WithRSA
-	case "*ecdsa.PrivateKey":
-		sigAlgo = x509.ECDSAWithSHA256
-	case "ed25519.PrivateKey":
-		sigAlgo = x509.PureEd25519
-	default:
-		return types.PEMIntermediate{}, httperror.BadSigAlgo(err.Error())
-	}
-	var intermediateResponse types.PEMIntermediate
-
-	if !intermediateRequest.SelfSigned { // Generate a CSR if self-signed is not passed or is passed as false
-		extraExtensions = append(extraExtensions, isCAExtension)
-		extraExtensions = append(extraExtensions, keyUsageExtension)
-		signRequest := x509.CertificateRequest{
-			SignatureAlgorithm: sigAlgo,
-			Subject:            certSubject,
-			DNSNames:           dnsNames,
-			EmailAddresses:     emailAddresses,
-			IPAddresses:        ipAddresses,
-			URIs:               URIs,
-			ExtraExtensions:    extraExtensions,
-		}
-		signCSR, err := x509.CreateCertificateRequest(rand.Reader, &signRequest, signPrivKey)
-		if err != nil {
-			return types.PEMIntermediate{}, httperror.GenerateCSRFail(err.Error())
-		}
-
-		pemSignCSR := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: signCSR})
-		intermediateResponse = types.PEMIntermediate{CSR: string(pemSignCSR)}
-
-	} else { // Generate a self-signed CA certificate
-		serialNumber, err := GenerateSerialNumber(backend)
-		if err != nil {
-			return types.PEMIntermediate{}, httperror.GenerateSerialFail(err.Error())
-		}
-		certTemplate := x509.Certificate{
-			SerialNumber:          serialNumber,
-			SignatureAlgorithm:    sigAlgo,
-			Subject:               certSubject,
-			NotBefore:             time.Now().UTC(),
-			NotAfter:              time.Now().Add(time.Hour * 87600).UTC(),
-			DNSNames:              dnsNames,
-			EmailAddresses:        emailAddresses,
-			IPAddresses:           ipAddresses,
-			URIs:                  URIs,
-			BasicConstraintsValid: true,
-			IsCA:                  true,
-			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		}
-		signCert, err := x509.CreateCertificate(rand.Reader, &certTemplate, &certTemplate, signPubKey, signPrivKey)
-		if err != nil {
-			return types.PEMIntermediate{}, httperror.GenerateSelfSignFail(err.Error())
-		}
-		pemSignCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: signCert})
-		intermediateResponse = types.PEMIntermediate{SelfSignedCert: string(pemSignCert)}
-		err = backend.WriteSigningCert(base64.StdEncoding.EncodeToString(signCert))
-		if err != nil {
-			return types.PEMIntermediate{}, httperror.CertWriteFail(err.Error())
-		}
-	}
-
-	var keyBytes []byte
-	// Capture the DER format of the new signing key to be written to backend storage
-	switch intermediateRequest.KeyAlgo {
-	case "RSA":
-		keyBytes = x509.MarshalPKCS1PrivateKey(signPrivKey.(*rsa.PrivateKey))
-	case "ECDSA":
-		keyBytes, err = x509.MarshalECPrivateKey(signPrivKey.(*ecdsa.PrivateKey))
-		if err != nil {
-			return types.PEMIntermediate{}, httperror.ECDSAKeyError(err.Error())
-		}
-	case "ED25519":
-		keyBytes = signPrivKey.(ed25519.PrivateKey)
-	}
-
-	err = backend.WriteSigningKey(base64.StdEncoding.EncodeToString(keyBytes))
+	signRequest.ExtraExtensions = extraExtensions
+	signCSR, err := x509.CreateCertificateRequest(rand.Reader, &signRequest, signPrivKey)
 	if err != nil {
-		return types.PEMIntermediate{}, httperror.SigningKeyWriteFail(err.Error())
+		return types.PEMIntermediate{}, httperror.GenerateCSRFail(err.Error())
 	}
 
-	return intermediateResponse, httperror.HTTPError{}
+	pemSignCSR := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: signCSR})
+	return types.PEMIntermediate{CSR: string(pemSignCSR)}, httperror.HTTPError{}
+}
+
+// CreateSelfSignedCert Generates a self signed CA certificate for the PKI service and returns
+// HTTPError if it fails
+func CreateSelfSignedCert(certTemplate x509.Certificate, signPrivKey crypto.PrivateKey, signPubKey crypto.PublicKey, backend backend.Storage) (types.PEMIntermediate, httperror.HTTPError) {
+	serialNumber, err := GenerateSerialNumber(backend)
+	if err != nil {
+		return types.PEMIntermediate{}, httperror.GenerateSerialFail(err.Error())
+	}
+	certTemplate.SerialNumber = serialNumber
+	signCert, err := x509.CreateCertificate(rand.Reader, &certTemplate, &certTemplate, signPubKey, signPrivKey)
+	if err != nil {
+		return types.PEMIntermediate{}, httperror.GenerateSelfSignFail(err.Error())
+	}
+	pemSignCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: signCert})
+	err = backend.WriteSigningCert(base64.StdEncoding.EncodeToString(signCert))
+	if err != nil {
+		return types.PEMIntermediate{}, httperror.CertWriteFail(err.Error())
+	}
+	return types.PEMIntermediate{SelfSignedCert: string(pemSignCert)}, httperror.HTTPError{}
 }
 
 // SetIntermediateCertificate ----------------------------------------------------------
