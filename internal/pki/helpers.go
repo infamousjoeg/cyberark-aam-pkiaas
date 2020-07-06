@@ -124,8 +124,6 @@ func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 		if err != nil {
 			break
 		}
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 		serialNumber, err = rand.Int(rand.Reader, maxValue)
 		if err != nil {
@@ -135,22 +133,6 @@ func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 		if i > 2 {
 			return big.NewInt(0), errors.New("Error creating serial number")
 		}
-=======
-=======
-
->>>>>>> Error after 3 attempts to generate serial number
-		serialNumber, err = rand.Int(rand.Reader, maxValue)
-		if err != nil {
-			return big.NewInt(0), errors.New("Error creating serial number: " + err.Error())
-		}
-<<<<<<< HEAD
->>>>>>> Un-commented InitConfig(); Fixed GenerateSerialNumber loop counter
-=======
-
-		if i > 2 {
-			return big.NewInt(0), errors.New("Error creating serial number")
-		}
->>>>>>> Error after 3 attempts to generate serial number
 		i++
 	}
 	return serialNumber, nil
