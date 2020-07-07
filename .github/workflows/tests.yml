@@ -46,4 +46,4 @@ jobs:
           docker-compose up --build -d && until [[ -z $(docker ps | grep configurer) ]]; do sleep 1; done
       - name: Test PKIaaS Health
         run: |
-          docker-compose exec pkiaas-tester sh -c 'curl -k -X GET http://pkiaas:8080/health'
+          docker-compose exec -T pkiaas-tester sh -c 'curl -k -X GET http://pkiaas:8080/health'
