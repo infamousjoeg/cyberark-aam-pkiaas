@@ -75,6 +75,10 @@ func NewAccessFromDefaultsDisabled(conjurConfig conjurapi.Config, policyBranch s
 	return NewAccess(conjurConfig, policyBranch, NewDefaultPrivileges(), true)
 }
 
+func replacePrivilege(privilege string, key string, value string) string {
+	return strings.ReplaceAll(privilege, fmt.Sprintf("{%s}", key), value)
+}
+
 func parseAccessToken(accessToken string) (string, error) {
 	accessToken = strings.ReplaceAll(accessToken, "Token token=\"", "")
 	accessToken = strings.Trim(accessToken, "\"")

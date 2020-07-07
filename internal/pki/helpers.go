@@ -584,7 +584,6 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 				permitted := false
 				_, ipNet, err := net.ParseCIDR(network)
 				if err != nil {
-
 					return errors.New("Error parsing permitted IP network ranges")
 				}
 				if ipNet.Contains(address) {

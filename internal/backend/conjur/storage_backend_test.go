@@ -28,4 +28,6 @@ func TestInitConfig(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to init the pki config. %s", err)
 	}
+
+	t.Errorf("Revoked certificate is not '%s'", cert.SerialNumber)
 }

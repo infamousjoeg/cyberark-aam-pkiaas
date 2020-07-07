@@ -106,7 +106,6 @@ func GenerateIntermediate(intermediateRequest types.IntermediateRequest, selfSig
 	if err != nil {
 		return types.PEMIntermediate{}, httperror.SigningKeyWriteFail(err.Error())
 	}
-
 	return intermediateResponse, httpErr
 }
 
