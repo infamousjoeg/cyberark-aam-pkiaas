@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="95ee2130-3c4f-4eea-8694-d8df69135eae" name="shahar-server">
+        <fileTransfer rootFolder="/home/ubuntu" accessType="SFTP" host="3.127.237.122" port="22" sshConfigId="ca4de96f-9e39-401e-9174-fb7e1333ba1c" sshConfig="ubuntu@3.127.237.122:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
