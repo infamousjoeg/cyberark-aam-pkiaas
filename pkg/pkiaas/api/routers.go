@@ -19,8 +19,7 @@ type Route struct {
 // Routes splice
 type Routes []Route
 
-// NewRouter //
-// For handling routing through API engine
+// NewRouter handles routing from the API package to PKI package
 func NewRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 	for _, route := range routes {
@@ -38,10 +37,14 @@ func NewRouter() *mux.Router {
 	return router
 }
 
-// Index route //
-// Returns confirmation message on successful GET of /
+// Index returns confirmation message on successful GET request to /
 func Index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Successful GET /")
+}
+
+// GetHealthHandler returns OK if this application is running
+func GetHealthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "OK")
 }
 
 var routes = Routes{
@@ -165,6 +168,13 @@ var routes = Routes{
 	},
 
 	Route{
+		"GenerateIntermediateCSR",
+		strings.ToUpper("Post"),
+		"/ca/generate/selfsigned",
+		GenerateIntermediateCSRHandler,
+	},
+
+	Route{
 		"SetIntermediateCertificate",
 		strings.ToUpper("Post"),
 		"/ca/set",
@@ -178,10 +188,10 @@ var routes = Routes{
 		SetCAChainHandler,
 	},
 
-	// Route{
-	// 	"Health",
-	// 	strings.ToUpper("Get"),
-	// 	"/health",
-	// 	TBD
-	// },
+	Route{
+		"Health",
+		strings.ToUpper("Get"),
+		"/health",
+		GetHealthHandler,
+	},
 }

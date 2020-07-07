@@ -20,7 +20,6 @@ func main() {
 	log.Printf("Server started")
 
 	router := api.NewRouter()
-
 	port := getPort()
 	log.Fatal(http.ListenAndServe(port, router))
 }

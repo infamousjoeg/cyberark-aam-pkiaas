@@ -43,7 +43,8 @@ func (c StorageBackend) InitConfig() error {
 }
 
 func getInitConfigPolicy() io.Reader {
-	return bytes.NewReader([]byte(`- !webservice
+	return bytes.NewReader([]byte(`
+- !webservice
 - !variable ca/cert
 - !variable ca/key
 - !variable ca/cert-chain
@@ -60,7 +61,7 @@ func getInitConfigPolicy() io.Reader {
   - !group purge-admin
   - !group ca-admin
 
-# endpoint permission groups
+ # endpoint permission groups
 - &templates
   - !group list-templates
   - !group read-templates
@@ -184,7 +185,7 @@ func getInitConfigPolicy() io.Reader {
   - !group list-certificates
   - !group read-certificates
   member: !group authenticate
-`))
+ `))
 }
 
 func (c StorageBackend) getTemplatePolicyBranch() string {
@@ -231,6 +232,11 @@ func defaultConjurClient() (*conjurapi.Client, error) {
 		return nil, fmt.Errorf("Failed to init client from config. %s", err)
 	}
 	return client, err
+}
+
+// NewDefaultConjurClient return the default conjur client
+func NewDefaultConjurClient() (*conjurapi.Client, error) {
+	return defaultConjurClient()
 }
 
 func defaultCreateTemplatePolicy() string {
@@ -365,11 +371,15 @@ func defaultDeleteTemplatePolicy() string {
 }
 
 func defaultDeleteCertificatePolicy() string {
-	return `- !delete
-  records: 
-  - !variable certificates/<SerialNumber>
-  - !group certificates/<SerialNumber>-read
-  - !group certificates/<SerialNumber>-revoke
+	return `
+- !delete
+  record: !variable certificates/<SerialNumber>
+
+- !delete
+  record: !group certificates/<SerialNumber>-read
+
+- !delete
+  record: !group certificates/<SerialNumber>-revoke
 `
 }
 
@@ -384,12 +394,7 @@ func NewFromDefaults() (StorageBackend, error) {
 		return StorageBackend{}, fmt.Errorf("Failed to init Conjur client: %s", err)
 	}
 
-	policyTemplates := NewTemplates(
-		defaultCreateTemplatePolicy(),
-		defaultDeleteTemplatePolicy(),
-		defaultCreateCertificatePolicy(),
-		defaultDeleteCertificatePolicy(),
-		defaultRevokeCertificatePolicy())
+	policyTemplates := NewDefaultTemplates()
 
 	access := NewAccessFromDefaults(conjurClient.GetConfig(), defaultPolicyBranch())
 
@@ -405,6 +410,16 @@ func NewTemplates(newTemplate string, deleteTemplate string, newCertificate stri
 		deleteCertificate: deleteCertificate,
 		revokeCertificate: revokedCertificate,
 	}
+}
+
+// NewDefaultTemplates calls NewTemplates with all of the default policy templates
+func NewDefaultTemplates() PolicyTemplates {
+	return NewTemplates(
+		defaultCreateTemplatePolicy(),
+		defaultDeleteTemplatePolicy(),
+		defaultCreateCertificatePolicy(),
+		defaultDeleteCertificatePolicy(),
+		defaultRevokeCertificatePolicy())
 }
 
 // NewConjurPki ...

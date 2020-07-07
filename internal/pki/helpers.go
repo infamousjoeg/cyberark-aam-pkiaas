@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -40,18 +41,32 @@ type Pki struct {
 	Backend backend.Storage
 }
 
+func getMaxRsaKeySize() int {
+	value := os.Getenv("PKI_RSA_MAX_KEY_SIZE")
+	intValue, err := strconv.Atoi(value)
+	// If the environment variable cannot be converted into an integer
+	// return the default value
+	if err != nil {
+		return 8192
+	}
+	return intValue
+}
+
 // GenerateKeys -----------------------------------------------------------------
 // Accepts a key algorithm and key bit size as arguments, and then generates the appropriate
 // private and public key based on inputs.
 func GenerateKeys(keyAlgo string, keySize string) (crypto.PrivateKey, crypto.PublicKey, error) {
-	switch keyAlgo {
+	switch strings.ToUpper(keyAlgo) {
 	case "RSA":
 		bits, err := strconv.Atoi(keySize)
 		if err != nil {
-			return nil, nil, errors.New("The key size for RSA keys is required to be an integer greater than " + string(minRSASize) + " bits")
+			return nil, nil, errors.New("The key size for RSA keys is required to be an integer greater than " + strconv.Itoa(minRSASize) + " bits")
 		}
 		if bits < minRSASize {
-			return nil, nil, errors.New("The minimum supported size for RSA keys is " + string(minRSASize) + " bits")
+			return nil, nil, errors.New("The minimum supported size for RSA keys is " + strconv.Itoa(minRSASize) + " bits")
+		}
+		if bits > getMaxRsaKeySize() {
+			return nil, nil, errors.New("The maximum supported size for RSA keys is " + strconv.Itoa(getMaxRsaKeySize()) + " bits")
 		}
 		clientPrivKey, err := rsa.GenerateKey(rand.Reader, bits)
 		if err != nil {
@@ -103,11 +118,22 @@ func GenerateSerialNumber(backend backend.Storage) (*big.Int, error) {
 	// Test the created serial number against the serial numbers stored in the backend
 	// and continue looping, creating, and testing serial numbers until a unique one
 	// is generated
-	for _, err := backend.GetCertificate(serialNumber); err == nil; {
+	i := 0
+	for {
+		_, err := backend.GetCertificate(serialNumber)
+		if err != nil {
+			break
+		}
+
 		serialNumber, err = rand.Int(rand.Reader, maxValue)
 		if err != nil {
 			return big.NewInt(0), errors.New("Error creating serial number: " + err.Error())
 		}
+
+		if i > 2 {
+			return big.NewInt(0), errors.New("Error creating serial number")
+		}
+		i++
 	}
 	return serialNumber, nil
 }
@@ -534,7 +560,6 @@ func ValidateCommonName(commonName string, template types.Template) error {
 					valid = true
 				}
 			}
-
 		}
 		if !valid {
 			return errors.New("The common name is not in any of the domains permitted by the requested template")
@@ -573,17 +598,13 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 	if len(template.ExclIPRanges) > 0 {
 		// Loop through all the IP address ranges, extract the subnet associated with each IP address from the SAN request
 		// and validate that none of the subnets match any of the excluded IP ranges
-		for _, network := range template.PermIPRanges {
+		for _, network := range template.ExclIPRanges {
 			for _, address := range ipAddresses {
-				excluded := false
 				_, ipNet, err := net.ParseCIDR(network)
 				if err != nil {
 					return errors.New("Error parsing excluded IP network ranges")
 				}
 				if ipNet.Contains(address) {
-					excluded = true
-				}
-				if excluded {
 					return errors.New("IP address SAN in request is in the excluded IP ranges")
 				}
 			}
@@ -704,10 +725,10 @@ func ProcessPolicyIdentifiers(policyIdentifiers []string) ([]asn1.ObjectIdentifi
 // service and that the key size requested is both pertinent to the requested
 // algorithm and meets minimum size standards
 func ValidateKeyAlgoAndSize(keyAlgo string, keySize string) error {
-	switch keyAlgo {
+	switch strings.ToUpper(keyAlgo) {
 	case "RSA":
-		if keyBits, err := strconv.Atoi(keySize); err != nil || keyBits < 2048 {
-			return errors.New("Invalid key size for key algorithm RSA, must be at least 2048 bits")
+		if keyBits, err := strconv.Atoi(keySize); err != nil || keyBits < minRSASize || keyBits > getMaxRsaKeySize() {
+			return errors.New("Invalid key size for key algorithm RSA, must be at least 2048 bits and no larger than " + strconv.Itoa(getMaxRsaKeySize()))
 		}
 		return nil
 	case "ECDSA":

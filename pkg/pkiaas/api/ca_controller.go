@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/httperror"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
@@ -47,7 +48,13 @@ func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	intermediateResponse, httpErr := pki.GenerateIntermediateCSR(intermediateRequest, storage)
+	var intermediateResponse types.PEMIntermediate
+	var httpErr httperror.HTTPError
+	if strings.Contains(strings.ToUpper(r.URL.String()), "SELFSIGNED") {
+		intermediateResponse, httpErr = pki.GenerateIntermediate(intermediateRequest, true, storage)
+	} else {
+		intermediateResponse, httpErr = pki.GenerateIntermediate(intermediateRequest, false, storage)
+	}
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
