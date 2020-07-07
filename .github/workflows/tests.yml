@@ -46,6 +46,5 @@ jobs:
           docker-compose up --build -d && until [[ -z $(docker ps | grep configurer) ]]; do sleep 1; done
       - name: Execute E2E Tests
         run: |
-          export COMPOSE_INTERACTIVE_NO_CLI=1
           cd dev
-          docker-compose exec pkiaas-tester bash -c 'source /app/env/pkiaas.env && cd /app/dev && ./setup-self-signed.sh'
+          docker-compose exec -T pkiaas-tester bash -c 'source /app/env/pkiaas.env && cd /app/dev && ./setup-self-signed.sh'
