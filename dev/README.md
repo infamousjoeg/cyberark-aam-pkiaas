@@ -1,16 +1,44 @@
-# Setting up the Development Environment
+# Development Environment
 
-To setup a running conjur instance with the correct environment variables execute the following command:
+A quick and easy local development environment for testing CyberArk's PKIaaS against DAP.
+
+## Requirements
+
+* Docker
+* Docker Compose
+
+## Setup
+
+Use Docker Compose to re-build the pkiaas container and come up daemonized.
+
+`docker-compose up --build -d`
+
+The `dev_configurer_1` container takes care of initial configuration of the `conjur-master` as well as policy loading.  It is advised to not continue until `docker ps | grep configurer` no longer echoes a value.  This means configuration has completed.
+
+If you'd like to Compose and wait for `dev_configurer_1` to complete configuration before continuing, you may use:
+
+`docker-compose up --build -d && until [[ -z $(docker ps | grep configurer) ]]; do sleep 1; done`
+
+## Usage
+
+The `pkiaas-tester` container is where you will test from within.
+
+`docker-compose exec pkiaas-tester bash`
+
+| Description | Path |
+|---|---|
+| Certificate | `/app/cert/conjur-master.pem` |
+| Environment Variables | `/app/env/pkiaas.env` |
+| Dev Scripts  | `/app/dev` |
+
 ```bash
-source ./setup.sh
-```
-
-
-Now if you execute `env` you will see the Conjur environment variables set for the pki-service.
-
-To execute E2E tests run:
-```bash
+source /app/env/pkiaas.env
+cd /app/dev
 ./setup-self-signed.sh
 ```
 
-Since the `host/pki-service` environment variables are set, you can even execute `code .` and run the tests associated to the backend to test how PKI resources are being created and deleted from the conjur instance.
+## Teardown
+
+Use Docker Compose to remove orphans (configurer) and all volumes (`-v`).
+
+`docker-compose down --remove-orphans -v`
