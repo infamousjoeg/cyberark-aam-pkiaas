@@ -31,7 +31,7 @@ jobs:
           golint-path: './cmd/...'
 
   build:
-    name: Build
+    name: Build & E2E Test
     runs-on: ubuntu-latest
     needs: lint
     defaults:
@@ -40,17 +40,9 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
-      - name: Build PKIaaS Docker Image
+      - name: Build PKIaaS Environment
         run: |
-          docker build -t cyberark/pkiaas:test .
-      - name: Deploy PKIaaS Docker Container
+          docker-compose up --build -d && until [[ -z $(docker ps | grep configurer) ]]; do sleep 1; done
+      - name: Execute E2E Tests
         run: |
-          docker run --name cpki-test -d -p 8080:8080 \
-            -e CONJUR_AUTHN_LOGIN="${{ secrets.CONJUR_AUTHN_LOGIN }}" \
-            -e CONJUR_AUTHN_API_KEY="${{ secrets.CONJUR_AUTHN_API_KEY }}" \
-            -e CONJUR_APPLIANCE_URL="${{ secrets.CONJUR_APPLIANCE_URL }}" \
-            -e CONJUR_ACCOUNT="${{ secrets.CONJUR_ACCOUNT }}" \
-            cyberark/pkiaas:test
-      - name: Test PKIaaS Web Service
-        run: |
-          curl -k -X GET http://localhost:8080/health
+          docker-compose exec pkiaas-tester bash -c 'source /app/env/pkiaas.env && cd /app/dev && ./setup-self-signed.sh'
