@@ -17,14 +17,13 @@ export session_token="$session_token"
 data='{
   "commonName": "cyberark.pki.local",
   "keyAlgo": "RSA",
-  "keyBits": "2048",
-  "selfSigned": true
+  "keyBits": "2048"
 }'
 curl --fail -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
   $VERBOSE \
-  $pki_url/ca/generate
+  $pki_url/ca/generate/selfsigned
 
 # create a test template
 data='{
