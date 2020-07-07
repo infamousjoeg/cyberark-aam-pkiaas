@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Build PKIaaS Environment
         run: |
-          docker-compose up --build -d && until [[ -z $(docker ps | grep configurer) ]]; do sleep 1; done
+          cd dev && docker-compose up --build -d && until [[ -z $(docker ps | grep configurer) ]]; do sleep 1; done
       - name: Execute E2E Tests
         run: |
           docker-compose exec pkiaas-tester bash -c 'source /app/env/pkiaas.env && cd /app/dev && ./setup-self-signed.sh'
