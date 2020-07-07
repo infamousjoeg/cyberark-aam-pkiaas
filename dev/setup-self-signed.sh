@@ -9,7 +9,7 @@ export VERBOSE=""
 
 source conjur_utils.sh
 session_token=$(conjur_authenticate)
-pki_url="http://localhost:8080"
+pki_url="http://pkiaas:8080"
 
 export session_token="$session_token"
 
