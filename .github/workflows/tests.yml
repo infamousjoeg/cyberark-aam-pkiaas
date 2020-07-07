@@ -37,12 +37,12 @@ jobs:
     defaults:
       run:
         shell: bash
+        working-directory: dev
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
       - name: Build PKIaaS Environment
         run: |
-          cd dev
           docker-compose up --build -d && until [[ -z $(docker ps | grep configurer) ]]; do sleep 1; done
       - name: Test PKIaaS Health
         run: |
