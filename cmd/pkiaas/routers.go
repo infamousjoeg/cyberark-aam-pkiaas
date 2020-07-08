@@ -1,11 +1,13 @@
-package api
+package main
 
 import (
 	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/pkiaas/api"
 )
 
 // Route struct
@@ -19,21 +21,25 @@ type Route struct {
 // Routes splice
 type Routes []Route
 
+// HandlerContext Provides the storage backend to the handler functions via a context
+func handlerContext(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		context.Set(r, "Storage", storage)
+		h.ServeHTTP(w, r)
+	})
+}
+
 // NewRouter handles routing from the API package to PKI package
 func NewRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 	for _, route := range routes {
-		var handler http.Handler
-		handler = route.HandlerFunc
-		handler = Logger(handler, route.Name)
 
 		router.
 			Methods(route.Method).
 			Path(route.Pattern).
 			Name(route.Name).
-			Handler(handler)
+			Handler(handlerContext(route.HandlerFunc))
 	}
-
 	return router
 }
 
@@ -59,133 +65,133 @@ var routes = Routes{
 		"GetCA",
 		strings.ToUpper("Get"),
 		"/ca/certificate",
-		GetCAHandler,
+		api.GetCAHandler,
 	},
 
 	Route{
 		"GetCAChain",
 		strings.ToUpper("Get"),
 		"/ca/chain",
-		GetCAChainHandler,
+		api.GetCAChainHandler,
 	},
 
 	Route{
 		"CreateCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/create",
-		CreateCertHandler,
+		api.CreateCertHandler,
 	},
 
 	Route{
 		"GetCertificate",
 		strings.ToUpper("Get"),
 		"/certificate/{serialNumber}",
-		GetCertHandler,
+		api.GetCertHandler,
 	},
 
 	Route{
 		"ListCertificates",
 		strings.ToUpper("Get"),
 		"/certificates",
-		ListCertsHandler,
+		api.ListCertsHandler,
 	},
 
 	Route{
 		"Purge",
 		strings.ToUpper("Post"),
 		"/purge",
-		PurgeHandler,
+		api.PurgeHandler,
 	},
 
 	Route{
 		"RevokeCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/revoke",
-		RevokeCertHandler,
+		api.RevokeCertHandler,
 	},
 
 	Route{
 		"SignCertificate",
 		strings.ToUpper("Post"),
 		"/certificate/sign",
-		SignCertHandler,
+		api.SignCertHandler,
 	},
 
 	Route{
 		"GetCRL",
 		strings.ToUpper("Get"),
 		"/crl",
-		GetCRLHandler,
+		api.GetCRLHandler,
 	},
 
 	Route{
 		"PurgeCRL",
 		strings.ToUpper("Post"),
 		"/crl/purge",
-		PurgeCRLHandler,
+		api.PurgeCRLHandler,
 	},
 
 	Route{
 		"CreateTemplate",
 		strings.ToUpper("Post"),
 		"/template/create",
-		CreateTemplateHandler,
+		api.CreateTemplateHandler,
 	},
 
 	Route{
 		"DeleteTemplate",
 		strings.ToUpper("Delete"),
 		"/template/delete/{templateName}",
-		DeleteTemplateHandler,
+		api.DeleteTemplateHandler,
 	},
 
 	Route{
 		"GetTemplate",
 		strings.ToUpper("Get"),
 		"/template/{templateName}",
-		GetTemplateHandler,
+		api.GetTemplateHandler,
 	},
 
 	Route{
 		"ListTemplates",
 		strings.ToUpper("Get"),
 		"/templates",
-		ListTemplatesHandler,
+		api.ListTemplatesHandler,
 	},
 
 	Route{
 		"ManageTemplate",
 		strings.ToUpper("Put"),
 		"/template/manage",
-		ManageTemplateHandler,
+		api.ManageTemplateHandler,
 	},
 
 	Route{
 		"GenerateIntermediateCSR",
 		strings.ToUpper("Post"),
 		"/ca/generate",
-		GenerateIntermediateCSRHandler,
+		api.GenerateIntermediateHandler,
 	},
 
 	Route{
-		"GenerateIntermediateCSR",
+		"GenerateSelfSigned",
 		strings.ToUpper("Post"),
 		"/ca/generate/selfsigned",
-		GenerateIntermediateCSRHandler,
+		api.GenerateIntermediateHandler,
 	},
 
 	Route{
 		"SetIntermediateCertificate",
 		strings.ToUpper("Post"),
 		"/ca/set",
-		SetIntermediateCertHandler,
+		api.SetIntermediateCertHandler,
 	},
 
 	Route{
 		"SetCAChain",
 		strings.ToUpper("Post"),
 		"/ca/chain/set",
-		SetCAChainHandler,
+		api.SetCAChainHandler,
 	},
 
 	Route{

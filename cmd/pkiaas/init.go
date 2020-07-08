@@ -1,4 +1,4 @@
-package api
+package main
 
 import (
 	"flag"
@@ -34,5 +34,5 @@ func init() {
 	}
 
 	storage = pkiclient
-	// storage = dummy.Dummy{}
+
 }

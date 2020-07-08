@@ -9,6 +9,9 @@ github.com/cyberark/conjur-api-go/conjurapi/response
 # github.com/golang/gddo v0.0.0-20200324184333-3c2cc9a6329d
 ## explicit
 github.com/golang/gddo/httputil/header
+# github.com/gorilla/context v1.1.1
+## explicit
+github.com/gorilla/context
 # github.com/gorilla/mux v1.7.4
 ## explicit
 github.com/gorilla/mux

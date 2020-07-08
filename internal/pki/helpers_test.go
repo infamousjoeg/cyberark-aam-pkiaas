@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -507,44 +506,35 @@ func TestInvalidAllowedCNDomainsValidateCommonName(t *testing.T) {
 
 func TestDnsNameValidateSubjectAltNames(t *testing.T) {
 	dnsNames := []string{"subdomain.example.org"}
-	emailAddresses := []string{}
-	ipAddresses := []net.IP{}
-	URIs := []*url.URL{}
 	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
 	template.PermDNSDomains = []string{"example.org"}
 	template.ExclDNSDomains = []string{"exludedDomain"}
 
-	err := pki.ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
+	err := pki.ValidateDNSSAN(dnsNames, template)
 	if err != nil {
 		t.Errorf("Error occured even though it should not. %s", err)
 	}
 }
 
 func TestIPValidateSubjectAltNames(t *testing.T) {
-	dnsNames := []string{}
-	emailAddresses := []string{}
 	ipAddresses := []net.IP{net.ParseIP("192.168.1.10")}
-	URIs := []*url.URL{}
 	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
 	template.PermIPRanges = []string{"192.168.1.10/32"}
 	template.ExclIPRanges = []string{"10.0.0.1/30"}
 
-	err := pki.ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
+	err := pki.ValidateIPSAN(ipAddresses, template)
 	if err != nil {
 		t.Errorf("Error occured even though it should not. %s", err)
 	}
 }
 
 func TestEmailValidateSubjectAltNames(t *testing.T) {
-	dnsNames := []string{}
 	emailAddresses := []string{"testing@example.com"}
-	ipAddresses := []net.IP{}
-	URIs := []*url.URL{}
 	template, _ := dummy.Dummy{}.GetTemplate("TestTemplate")
 	template.PermEmails = []string{"testing@example.com"}
 	template.ExclEmails = []string{"excluded@example.com"}
 
-	err := pki.ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
+	err := pki.ValidateEmailSAN(emailAddresses, template)
 	if err != nil {
 		t.Errorf("Error occured even though it should not. %s", err)
 	}

@@ -5,24 +5,26 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/context"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/httperror"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
-// GenerateIntermediateCSRHandler ------------------------------------------
+// GenerateIntermediateHandler ------------------------------------------
 // Handler that receives parameters for generating a new intermediate CA and creates
 // a CSR to be signed by the enterprise root CA (or another intermediate CA in the chain)
 // and creates a new signing key that is stored in backened storage to be used for all
 // new certificate generation. Alternatively, if the 'selfSigned' property is passed in
 // the request as true, it will generate and return a self-signed CA certificate
-func GenerateIntermediateCSRHandler(w http.ResponseWriter, r *http.Request) {
+func GenerateIntermediateHandler(w http.ResponseWriter, r *http.Request) {
 	if !pki.ValidateContentType(r.Header, "application/json") {
 		httpErr := httperror.InvalidContentType()
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-
+	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
@@ -78,7 +80,7 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-
+	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
@@ -109,6 +111,7 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 // Handler to retrieve the base64-encoded DER intermediate CA certificate from the storage storage
 // and return it in PEM format
 func GetCAHandler(w http.ResponseWriter, r *http.Request) {
+	storage := context.Get(r, "Storage").(backend.Storage)
 	pemCA, httpErr := pki.GetCA(storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -126,6 +129,7 @@ func GetCAHandler(w http.ResponseWriter, r *http.Request) {
 // Handler to retrieve the base64-encoded DER intermediate CA certificates associated with
 // the CA chain from the storage storage and return them in PEM format
 func GetCAChainHandler(w http.ResponseWriter, r *http.Request) {
+	storage := context.Get(r, "Storage").(backend.Storage)
 	caChainBundle, httpErr := pki.GetCAChain(storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -151,6 +155,7 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	authHeader := r.Header.Get("Authorization")
+	storage := context.Get(r, "Storage").(backend.Storage)
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
@@ -184,6 +189,7 @@ func SetCAChainHandler(w http.ResponseWriter, r *http.Request) {
 // GetCRLHandler ----------------------------------------------------
 // Handler to retrieve the DER encoded CRL from the storage storage
 func GetCRLHandler(w http.ResponseWriter, r *http.Request) {
+	storage := context.Get(r, "Storage").(backend.Storage)
 	decodedCRL, httpErr := pki.GetCRL(storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
@@ -202,6 +208,7 @@ func GetCRLHandler(w http.ResponseWriter, r *http.Request) {
 // repository in the storage storage, as well as the CRL, within a given buffer
 // time that is passed in the request
 func PurgeHandler(w http.ResponseWriter, r *http.Request) {
+	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
@@ -222,6 +229,7 @@ func PurgeHandler(w http.ResponseWriter, r *http.Request) {
 // Handler that will purge all expired certificates from the CRL
 // within a given buffer time that is passed in the request
 func PurgeCRLHandler(w http.ResponseWriter, r *http.Request) {
+	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {

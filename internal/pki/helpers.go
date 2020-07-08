@@ -569,13 +569,11 @@ func ValidateCommonName(commonName string, template types.Template) error {
 	return nil
 }
 
-// ValidateSubjectAltNames --------------------------------------------------------
-// Loops through all DNS Names, Email Addresses, IP Addresses, and URIs presented
-// as Subject Alternative Names for a certificate and validates that they are not
-// explicitly excluded from being valid based on the template, as well as ensuring
-// that, if the template has defined permitted SANs, the request is permitted
-func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddresses []net.IP, URIs []*url.URL, template types.Template) error {
-
+// ValidateIPSAN Loops through all IP Addresses as Subject Alternative Names for a
+// certificate and validates that they are not explicitly excluded from being valid
+// based on the template, as well as ensuring that, if the template has defined permitted
+//SANs, the request is permitted
+func ValidateIPSAN(ipAddresses []net.IP, template types.Template) error {
 	if len(template.PermIPRanges) > 0 {
 		// Loop through all the IP address ranges, extract the subnet associated with each IP address from the SAN request
 		// and validate that the subnet matches one or more of the permitted IP ranges
@@ -584,6 +582,7 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 				permitted := false
 				_, ipNet, err := net.ParseCIDR(network)
 				if err != nil {
+
 					return errors.New("Error parsing permitted IP network ranges")
 				}
 				if ipNet.Contains(address) {
@@ -610,7 +609,14 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 			}
 		}
 	}
+	return nil
+}
 
+// ValidateEmailSAN Loops through all email addresses as Subject Alternative Names for a
+// certificate and validates that they are not explicitly excluded from being valid
+// based on the template, as well as ensuring that, if the template has defined permitted
+//SANs, the request is permitted
+func ValidateEmailSAN(emailAddresses []string, template types.Template) error {
 	// Regex to match email address formats
 	var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	if len(template.PermEmails) > 0 {
@@ -661,7 +667,14 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 			}
 		}
 	}
+	return nil
+}
 
+// ValidateDNSSAN Loops through all DNS domains as Subject Alternative Names for a
+// certificate and validates that they are not explicitly excluded from being valid
+// based on the template, as well as ensuring that, if the template has defined permitted
+//SANs, the request is permitted
+func ValidateDNSSAN(dnsNames []string, template types.Template) error {
 	if len(template.PermDNSDomains) > 0 {
 		// Loop through all the permitted DNS domains and validate that the domain matches
 		// at least one of the permitted DNS domains
@@ -696,6 +709,14 @@ func ValidateSubjectAltNames(dnsNames []string, emailAddresses []string, ipAddre
 			}
 		}
 	}
+	return nil
+}
+
+// ValidateURISAN Loops through all URIs passed as Subject Alternative Names for a
+// certificate and validates that they are not explicitly excluded from being valid
+// based on the template, as well as ensuring that, if the template has defined permitted
+//SANs, the request is permitted
+func ValidateURISAN(URIs []*url.URL, template types.Template) error {
 	return nil
 }
 

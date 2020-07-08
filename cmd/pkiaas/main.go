@@ -4,8 +4,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/pkiaas/api"
 )
 
 func getPort() string {
@@ -19,7 +17,7 @@ func getPort() string {
 func main() {
 	log.Printf("Server started")
 
-	router := api.NewRouter()
+	router := NewRouter()
 	port := getPort()
 	log.Fatal(http.ListenAndServe(port, router))
 }

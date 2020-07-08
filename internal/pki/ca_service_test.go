@@ -40,7 +40,6 @@ func intermediateRequest() types.IntermediateRequest {
 func TestGenerateIntermediateCSR(t *testing.T) {
 	request := intermediateRequest()
 	_, err := pki.GenerateIntermediate(request, false, dummyBackend())
-
 	assertNoHttpError(t, err)
 }
 
@@ -94,4 +93,4 @@ func TestGetCRL(t *testing.T) {
 	assertNoHttpError(t, err)
 }
 
-// skipped SetCAChain
+// skipped SetCAChain & SetIntermediateCertificate
