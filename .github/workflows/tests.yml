@@ -43,7 +43,11 @@ jobs:
         uses: actions/checkout@v2
       - name: Build PKIaaS Environment
         run: |
-          docker-compose up --build -d && until [[ -z $(docker ps | grep configurer) ]]; do sleep 1; done
+          docker-compose up --build -d && until [[ -z $(docker ps | grep configurer) ]]; do sleep 1; echo "."; done
+          sleep 5
+      - name: Docker Logs for dev_pkiaas_1
+        run: |
+          docker logs dev_pkiaas_1
       - name: Test PKIaaS Health
         run: |
-          curl -k -X GET http://0.0.0.0:8080/health
+          curl -k -X GET 0.0.0.0:8080/health
