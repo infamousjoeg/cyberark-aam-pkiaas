@@ -19,7 +19,7 @@ PATCH_VER="${MINOR_SETUP#*.}"
 # Increment minor version if patch reaches 10
 if [[ $PATCH_VER == 10 ]]; then
     (( MINOR_VER++ ))
-    (( PATCH_VER++ ))
+    (( PATCH_VER=0 ))
 # Otherwise, just increment patch version
 else
     (( PATCH_VER++ ))
