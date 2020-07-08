@@ -40,12 +40,19 @@ func intermediateRequest() types.IntermediateRequest {
 func TestGenerateIntermediateCSR(t *testing.T) {
 	request := intermediateRequest()
 	_, err := pki.GenerateIntermediate(request, false, dummyBackend())
+<<<<<<< HEAD
 
+=======
+>>>>>>> Moved initialization and router to main package; added contexts to pass storage backend into controllers
 	assertNoHttpError(t, err)
 }
 
 func TestGenerateIntermediateCSRSelfSigned(t *testing.T) {
 	request := intermediateRequest()
+<<<<<<< HEAD
+=======
+	request.SelfSigned = true
+>>>>>>> Moved initialization and router to main package; added contexts to pass storage backend into controllers
 	_, err := pki.GenerateIntermediate(request, true, dummyBackend())
 	assertNoHttpError(t, err)
 }
