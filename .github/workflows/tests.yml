@@ -1,10 +1,6 @@
 name: PKIaaS Tests
 
 on:
-  push:
-    branches-ignore:
-      - master
-      - dev
   pull_request:
     branches:
       - master
