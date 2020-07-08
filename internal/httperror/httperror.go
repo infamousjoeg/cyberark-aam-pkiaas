@@ -2,7 +2,6 @@ package httperror
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"runtime"
 	"strings"
@@ -814,7 +813,6 @@ func getCallerFunctionName() string {
 	stackAddr := make([]uintptr, 1)
 	runtime.Callers(3, stackAddr)
 	caller := runtime.FuncForPC(stackAddr[0] - 1)
-	fmt.Println(caller.Name())
 	parts := strings.Split(caller.Name(), ".")
 	return parts[len(parts)-1]
 }

@@ -35,6 +35,12 @@ var ocspServer = []string{"OCSPURLField"}
 var issuingCertificateURL = []string{"IssuingCertificateURL"}
 var crlDistributionPoints = []string{"CRLDistributionPoints"}
 
+// Pki --------------------------------------------------------------------------
+// A simple struct to house all the interfaces that are needed by the PKI service
+type Pki struct {
+	Backend backend.Storage
+}
+
 func getMaxRsaKeySize() int {
 	value := os.Getenv("PKI_RSA_MAX_KEY_SIZE")
 	intValue, err := strconv.Atoi(value)
@@ -563,10 +569,10 @@ func ValidateCommonName(commonName string, template types.Template) error {
 	return nil
 }
 
-// ValidateIPSAN Loops through all IP Addresses presented as Subject Alternative
-// Names for a certificate and validates that they are not explicitly excluded
-//from being valid based on the template, as well as ensuring that, if the template
-// has defined permitted SANs, the request is permitted
+// ValidateIPSAN Loops through all IP Addresses as Subject Alternative Names for a
+// certificate and validates that they are not explicitly excluded from being valid
+// based on the template, as well as ensuring that, if the template has defined permitted
+//SANs, the request is permitted
 func ValidateIPSAN(ipAddresses []net.IP, template types.Template) error {
 	if len(template.PermIPRanges) > 0 {
 		// Loop through all the IP address ranges, extract the subnet associated with each IP address from the SAN request
@@ -606,61 +612,12 @@ func ValidateIPSAN(ipAddresses []net.IP, template types.Template) error {
 	return nil
 }
 
-// ValidateDNSSAN Loops through all DNS namaes presented as Subject Alternative
-// Names for a certificate and validates that they are not explicitly excluded
-//from being valid based on the template, as well as ensuring that, if the template
-// has defined permitted SANs, the request is permitted
-func ValidateDNSSAN(dnsNames []string, template types.Template) error {
-	if len(template.PermDNSDomains) > 0 {
-		// Loop through all the permitted DNS domains and validate that the domain matches
-		// at least one of the permitted DNS domains
-		for _, permDNS := range template.PermDNSDomains {
-			for _, dns := range dnsNames {
-				permitted := false
-				if len(dns) > len(permDNS) {
-					if string(dns[len(dns)-len(permDNS):]) == permDNS {
-						permitted = true
-					}
-				}
-				if !permitted {
-					return errors.New("DNS SAN in request is not in permitted DNS domains")
-				}
-			}
-		}
-	}
-	if len(template.ExclDNSDomains) > 0 {
-		// Loop through all the excluded DNS domains and validate that the domain does not
-		// match any of the excluded DNS domains
-		for _, exclDNS := range template.ExclDNSDomains {
-			for _, dns := range dnsNames {
-				excluded := false
-				if len(dns) > len(exclDNS) {
-					if string(dns[len(dns)-len(exclDNS):]) == exclDNS {
-						excluded = true
-					}
-				}
-				if excluded {
-					return errors.New("DNS SAN in request is in excluded DNS domains")
-				}
-			}
-		}
-	}
-	return nil
-}
-
-// ValidateURISAN Loops through all URIs presented as Subject Alternative
-// Names for a certificate and validates that they are not explicitly excluded
-//from being valid based on the template, as well as ensuring that, if the template
-// has defined permitted SANs, the request is permitted
-func ValidateURISAN(URIs []*url.URL, template types.Template) error {
-	return nil
-}
-
-// ValidateEmailSAN Loops through all email addresses presented as Subject Alternative
-// Names for a certificate and validates that they are not explicitly excluded
-//from being valid based on the template, as well as ensuring that, if the template
-// has defined permitted SANs, the request is permitted
+// ValidateEmailSAN Loops through all email addresses as Subject Alternative Names for a
+// certificate and validates that they are not explicitly excluded from being valid
+// based on the template, as well as ensuring that, if the template has defined permitted
+//SANs, the request is permitted
 func ValidateEmailSAN(emailAddresses []string, template types.Template) error {
+	// Regex to match email address formats
 	var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	if len(template.PermEmails) > 0 {
 		// Loop through all the permitted email addresses, validate the email address from the
@@ -710,6 +667,56 @@ func ValidateEmailSAN(emailAddresses []string, template types.Template) error {
 			}
 		}
 	}
+	return nil
+}
+
+// ValidateDNSSAN Loops through all DNS domains as Subject Alternative Names for a
+// certificate and validates that they are not explicitly excluded from being valid
+// based on the template, as well as ensuring that, if the template has defined permitted
+//SANs, the request is permitted
+func ValidateDNSSAN(dnsNames []string, template types.Template) error {
+	if len(template.PermDNSDomains) > 0 {
+		// Loop through all the permitted DNS domains and validate that the domain matches
+		// at least one of the permitted DNS domains
+		for _, permDNS := range template.PermDNSDomains {
+			for _, dns := range dnsNames {
+				permitted := false
+				if len(dns) > len(permDNS) {
+					if string(dns[len(dns)-len(permDNS):]) == permDNS {
+						permitted = true
+					}
+				}
+				if !permitted {
+					return errors.New("DNS SAN in request is not in permitted DNS domains")
+				}
+			}
+		}
+	}
+	if len(template.ExclDNSDomains) > 0 {
+		// Loop through all the excluded DNS domains and validate that the domain does not
+		// match any of the excluded DNS domains
+		for _, exclDNS := range template.ExclDNSDomains {
+			for _, dns := range dnsNames {
+				excluded := false
+				if len(dns) > len(exclDNS) {
+					if string(dns[len(dns)-len(exclDNS):]) == exclDNS {
+						excluded = true
+					}
+				}
+				if excluded {
+					return errors.New("DNS SAN in request is in excluded DNS domains")
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// ValidateURISAN Loops through all URIs passed as Subject Alternative Names for a
+// certificate and validates that they are not explicitly excluded from being valid
+// based on the template, as well as ensuring that, if the template has defined permitted
+//SANs, the request is permitted
+func ValidateURISAN(URIs []*url.URL, template types.Template) error {
 	return nil
 }
 
