@@ -1,0 +1,25 @@
+name: PKIaas Release - dev
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Increment Version in version.go
+        run: |
+          ./dev/bump-version.sh
+      - name: Commit version.go changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Auto-incremented version.go
+      
