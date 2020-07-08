@@ -27,6 +27,11 @@ func CreateTemplate(newTemplate types.Template, backend backend.Storage) httperr
 		return httperror.InvalidExtKeyUsage(err.Error())
 	}
 
+	//	err = ValidateTemplateDNS(newTemplate.PermDNSDomains, newTemplate.ExclDNSDomains)
+	//	err = ValidateTemplateIP(newTemplate.PermIPRanges, newTemplate.ExclIPRanges)
+	//	err = ValidateTemplateURI(newTemplate.PermURIDomains, newTemplate.ExclURIDomains)
+	//	err = ValidateTemplateEmail(newTemplate.PermEmails, newTemplate.ExclEmails)
+
 	// Validate any policy identifier OIDs that are sent in the request
 	_, err = ProcessPolicyIdentifiers(newTemplate.PolicyIdentifiers)
 	if err != nil {

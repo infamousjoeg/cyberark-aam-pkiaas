@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/httperror"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
@@ -23,6 +25,7 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the Create Template endpoint
+	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
@@ -57,6 +60,7 @@ func GetTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, then extract
 	// the template name from the URI and test that it has authorization to access the
 	// Get Template endpoint for the requested template
+	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
@@ -104,6 +108,7 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service. 	Then parse the
 	// request body first in order to get template name for authorization check to ensure the requstor
 	// has authorization to access the Manage Template endpoint as well as the specific template
+	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
@@ -165,6 +170,7 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, then extract
 	// the template name from the URI and test that it has authorization to access the
 	// Delete Template endpoint for the requested template
+	storage := context.Get(r, "Storage").(backend.Storage)
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
@@ -196,6 +202,7 @@ func ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the List Templates endpoint
+	storage := context.Get(r, "Storage").(backend.Storage)
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())

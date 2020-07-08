@@ -1,4 +1,4 @@
-package api
+package main
 
 import (
 	"flag"
@@ -28,11 +28,10 @@ func init() {
 		panic("Error initializing PKI backend: " + err.Error())
 	}
 
-	// err = pkiclient.InitConfig()
-	// if err != nil {
-	// 	panic("Error initializing PKI configuration: " + err.Error())
-	// }
+	err = pkiclient.InitConfig()
+	if err != nil {
+		panic("Error initializing PKI configuration: " + err.Error())
+	}
 
 	storage = pkiclient
-	// storage = dummy.Dummy{}
 }

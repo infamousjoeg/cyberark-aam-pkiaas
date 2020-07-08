@@ -26,7 +26,7 @@ func InvalidContentType() HTTPError {
 		errorCode = "CPKICT001"
 	case "ManageTemplateHandler":
 		errorCode = "CPKIMT001"
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI001"
 	case "SetIntermediateCertHandler":
 		errorCode = "CPKISI001"
@@ -60,7 +60,7 @@ func InvalidAuthn(err string) HTTPError {
 		errorCode = "CPKIDT001"
 	case "ListTemplatesHandler":
 		errorCode = "CPKILT002"
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI002"
 	case "SetIntermediateCertHandler":
 		errorCode = "CPKISI002"
@@ -101,7 +101,7 @@ func InvalidAuthz(err string) HTTPError {
 		errorCode = "CPKIDT002"
 	case "ListTemplatesHandler":
 		errorCode = "CPKILT002"
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI003"
 	case "SetIntermediateCertHandler":
 		errorCode = "CPKISI003"
@@ -132,7 +132,7 @@ func RequestDecodeFail(err string) HTTPError {
 		errorCode = "CPKICT004"
 	case "ManageTemplateHandler":
 		errorCode = "CPKIMT003"
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI004"
 	case "SetIntermediateCertHandler":
 		errorCode = "CPKISI004"
@@ -259,7 +259,7 @@ func ResponseEncodeError(err string) HTTPError {
 		errorCode = "CPKIGT004"
 	case "ListTemplatesHandler":
 		errorCode = "CPKILT004"
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI017"
 	case "GetCAChain":
 		errorCode = "CPKIGC005"
@@ -310,7 +310,7 @@ func StorageDeleteFail(err string) HTTPError {
 func KeygenError(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI005"
 	case "CreateCert":
 		errorCode = "CPKICC011"
@@ -325,7 +325,7 @@ func KeygenError(err string) HTTPError {
 func ProcessSubjectError(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI006"
 	case "SignCert":
 		errorCode = "CPKISG008"
@@ -342,7 +342,7 @@ func ProcessSubjectError(err string) HTTPError {
 func ProcessSANError(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI007"
 	case "CreateCert":
 		errorCode = "CPKICC009"
@@ -357,7 +357,7 @@ func ProcessSANError(err string) HTTPError {
 func InvalidSAN(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKISG012"
 	case "CreateCert":
 		errorCode = "CPKICC010"
@@ -372,7 +372,7 @@ func InvalidSAN(err string) HTTPError {
 func BasicConstraintError(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI008"
 	}
 	return HTTPError{ErrorCode: errorCode,
@@ -385,7 +385,7 @@ func BasicConstraintError(err string) HTTPError {
 func MarshalKeyUsageError(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI009"
 	}
 	return HTTPError{ErrorCode: errorCode,
@@ -398,7 +398,7 @@ func MarshalKeyUsageError(err string) HTTPError {
 func BadSigAlgo(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI010"
 	}
 	return HTTPError{ErrorCode: errorCode,
@@ -411,7 +411,7 @@ func BadSigAlgo(err string) HTTPError {
 func GenerateCSRFail(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI011"
 	}
 	return HTTPError{ErrorCode: errorCode,
@@ -424,7 +424,7 @@ func GenerateCSRFail(err string) HTTPError {
 func GenerateSerialFail(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI012"
 	}
 	return HTTPError{ErrorCode: errorCode,
@@ -437,7 +437,7 @@ func GenerateSerialFail(err string) HTTPError {
 func GenerateSelfSignFail(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI013"
 	}
 	return HTTPError{ErrorCode: errorCode,
@@ -450,7 +450,7 @@ func GenerateSelfSignFail(err string) HTTPError {
 func CertWriteFail(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI014"
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI013"
@@ -469,7 +469,7 @@ func CertWriteFail(err string) HTTPError {
 func ECDSAKeyError(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI015"
 	case "CreateCert":
 		errorCode = "CPKICC013"
@@ -484,7 +484,7 @@ func ECDSAKeyError(err string) HTTPError {
 func SigningKeyWriteFail(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GenerateIntermediateCSRHandler":
+	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI016"
 	}
 	return HTTPError{ErrorCode: errorCode,

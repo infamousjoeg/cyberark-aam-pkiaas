@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/cyberark/conjur-api-go v0.6.0
 	github.com/golang/gddo v0.0.0-20200324184333-3c2cc9a6329d
+	github.com/gorilla/context v1.1.1
 	github.com/gorilla/mux v1.7.4
 	github.com/onsi/ginkgo v1.12.3 // indirect
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
