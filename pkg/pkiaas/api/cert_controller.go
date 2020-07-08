@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/httperror"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
@@ -23,6 +25,7 @@ func SignCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the Sign Certificate endpoint using the requested template
+	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
@@ -71,6 +74,7 @@ func CreateCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the Create Certificate endpoint using the requested template
+	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
@@ -118,6 +122,7 @@ func GetCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, but there
 	// is no need for an authorization check as all authenticated entities will be allowed
 	// to retrieve public certificate data
+	storage := context.Get(r, "Storage").(backend.Storage)
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
@@ -149,6 +154,7 @@ func ListCertsHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the requesting entity can both authenticate to the PKI service, but there
 	// is no need for an authorization check as all authenticated entities will be allowed
 	// to retrieve public certificate data
+	storage := context.Get(r, "Storage").(backend.Storage)
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
@@ -184,6 +190,7 @@ func RevokeCertHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
 	// has authorization to access the Revoke Certificate endpoint for the specified serial number
+	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
 	err := storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {

@@ -84,7 +84,19 @@ func SignCert(signReq types.SignRequest, backend backend.Storage) (types.CreateC
 	// Validate that all the SANs from the HTTP request are either
 	// explicitly permitted by the template or NOT explicitly denied
 	// by the template
-	err = ValidateSubjectAltNames(certReq.DNSNames, certReq.EmailAddresses, certReq.IPAddresses, certReq.URIs, template)
+	err = ValidateIPSAN(certReq.IPAddresses, template)
+	if err != nil {
+		return types.CreateCertificateResponse{}, httperror.InvalidSAN(err.Error())
+	}
+	err = ValidateDNSSAN(certReq.DNSNames, template)
+	if err != nil {
+		return types.CreateCertificateResponse{}, httperror.InvalidSAN(err.Error())
+	}
+	err = ValidateEmailSAN(certReq.EmailAddresses, template)
+	if err != nil {
+		return types.CreateCertificateResponse{}, httperror.InvalidSAN(err.Error())
+	}
+	err = ValidateURISAN(certReq.URIs, template)
 	if err != nil {
 		return types.CreateCertificateResponse{}, httperror.InvalidSAN(err.Error())
 	}
@@ -198,7 +210,19 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 		return types.CreateCertificateResponse{}, httperror.ProcessSANError(err.Error())
 	}
 
-	err = ValidateSubjectAltNames(dnsNames, emailAddresses, ipAddresses, URIs, template)
+	err = ValidateIPSAN(ipAddresses, template)
+	if err != nil {
+		return types.CreateCertificateResponse{}, httperror.InvalidSAN(err.Error())
+	}
+	err = ValidateDNSSAN(dnsNames, template)
+	if err != nil {
+		return types.CreateCertificateResponse{}, httperror.InvalidSAN(err.Error())
+	}
+	err = ValidateEmailSAN(emailAddresses, template)
+	if err != nil {
+		return types.CreateCertificateResponse{}, httperror.InvalidSAN(err.Error())
+	}
+	err = ValidateURISAN(URIs, template)
 	if err != nil {
 		return types.CreateCertificateResponse{}, httperror.InvalidSAN(err.Error())
 	}
