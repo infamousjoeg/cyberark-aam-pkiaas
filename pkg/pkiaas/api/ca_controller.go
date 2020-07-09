@@ -105,6 +105,12 @@ func SetIntermediateCertHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
+
+	httpErr := pki.SetIntermediateCertificate(signedCert, storage)
+	if httpErr != (httperror.HTTPError{}) {
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
+		return
+	}
 }
 
 // GetCAHandler ----------------------------------------------------------------------
