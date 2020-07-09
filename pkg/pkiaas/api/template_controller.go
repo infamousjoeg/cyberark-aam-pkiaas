@@ -192,6 +192,7 @@ func DeleteTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ListTemplatesHandler ---------------------------------------------------------
