@@ -239,3 +239,67 @@ func TestDeleteNonExistentCertificate(t *testing.T) {
 		}
 	}
 }
+
+func TestListExpiredCertificates(t *testing.T) {
+	conjurPki, err := defaultConjurPki()
+	if err != nil {
+		t.Errorf("Failed to init conjurPki interface. %s", err)
+	}
+	serialNumber, _ := new(big.Int).SetString("93898300200293809", 10)
+	expirationTimeYesterday := time.Now().AddDate(0, 0, -1).Unix()
+	// Create template for this test case
+	cert := types.CreateCertificateData{
+		Certificate:    "SomeDEREncodedBlob",
+		SerialNumber:   "93898300200293809",
+		ExpirationDate: fmt.Sprintf("%v", expirationTimeYesterday),
+	}
+
+	// Load the new template from above
+	conjurPki.DeleteCertificate(serialNumber)
+	err = conjurPki.CreateCertificate(cert)
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+
+	expiredCerts, err := conjurPki.ListExpiredCertificates(0)
+	if err != nil {
+		t.Errorf("Failed to retrieve expired certs. %s", err)
+	}
+
+	if expiredCerts[0].Cmp(serialNumber) != 0 {
+		t.Errorf("The returned expired certificate was not valid. %v and was expecting %v", expiredCerts[0], serialNumber)
+	}
+	conjurPki.DeleteCertificate(serialNumber)
+}
+
+func TestNoListExpiredCertificates(t *testing.T) {
+	conjurPki, err := defaultConjurPki()
+	if err != nil {
+		t.Errorf("Failed to init conjurPki interface. %s", err)
+	}
+	serialNumber, _ := new(big.Int).SetString("938983002002938091", 10)
+	expirationTimeYesterday := time.Now().AddDate(0, 0, 1).Unix()
+	// Create template for this test case
+	cert := types.CreateCertificateData{
+		Certificate:    "SomeDEREncodedBlob",
+		SerialNumber:   "938983002002938091",
+		ExpirationDate: fmt.Sprintf("%v", expirationTimeYesterday),
+	}
+
+	// Load the new template from above
+	conjurPki.DeleteCertificate(serialNumber)
+	err = conjurPki.CreateCertificate(cert)
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+
+	expiredCerts, err := conjurPki.ListExpiredCertificates(0)
+	if err != nil {
+		t.Errorf("Failed to retrieve expired certs. %s", err)
+	}
+
+	if len(expiredCerts) != 0 {
+		t.Errorf("Certifcates returned however no certificates should be expired")
+	}
+	conjurPki.DeleteCertificate(serialNumber)
+}
