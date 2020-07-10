@@ -87,6 +87,44 @@ func (c StorageBackend) ListCertificates() ([]*big.Int, error) {
 	return certficateSerialNumbers, err
 }
 
+// ListExpiredCertificates List all certificates that are currenty expired
+func (c StorageBackend) ListExpiredCertificates(dayBuffer int) ([]*big.Int, error) {
+	filter := &conjurapi.ResourceFilter{
+		Kind:   "variable",
+		Search: "certificates",
+	}
+
+	var certficateSerialNumbers []*big.Int
+	resources, err := c.client.Resources(filter)
+	if err != nil {
+		err = fmt.Errorf("Failed to list resources when attempting to get revoked certificates. %s", err)
+		return certficateSerialNumbers, err
+	}
+
+	currentTime := time.Now().UTC()
+	for _, resource := range resources {
+		_, _, id := SplitConjurID(resource["id"].(string))
+		parts := strings.Split(id, "/")
+		templatesRoot := parts[len(parts)-2]
+		if templatesRoot == "certificates" {
+			isExpired := IsCertificateExpired(resource, currentTime, dayBuffer)
+			if isExpired {
+				serialNumberString := parts[len(parts)-1]
+				// NOTE: I don't really know what the 10 does at then end of the SetString() function
+				serialNumber, ok := new(big.Int).SetString(serialNumberString, 10)
+				if ok {
+					certficateSerialNumbers = append(certficateSerialNumbers, serialNumber)
+				} else {
+					// If we failed to cast then return an error
+					return certficateSerialNumbers, fmt.Errorf("Failed to cast serial number '%s' into type big.Int", serialNumberString)
+				}
+			}
+		}
+	}
+
+	return certficateSerialNumbers, nil
+}
+
 // GetCertificate ...
 func (c StorageBackend) GetCertificate(serialNumber *big.Int) (string, error) {
 	variableID := c.getCertificateVariableID(serialNumber.String())
