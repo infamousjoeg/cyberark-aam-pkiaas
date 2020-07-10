@@ -306,7 +306,7 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 	cert := types.CreateCertificateData{
 		SerialNumber:   serialNumber.String(),
 		Revoked:        false,
-		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).UTC().String(),
+		ExpirationDate: fmt.Sprintf("%v", time.Now().Add(time.Duration(time.Minute*time.Duration(ttl))).UTC().Unix()),
 		Certificate:    base64.StdEncoding.EncodeToString(derCert),
 	}
 
