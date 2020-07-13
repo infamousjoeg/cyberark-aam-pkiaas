@@ -11,6 +11,15 @@ import (
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 )
 
+// StringToTime take an EPOCH string and convert to time.Time
+func StringToTime(s string) (time.Time, error) {
+	sec, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Unix(sec, 0), nil
+}
+
 // ReplaceTemplate ...
 // TODO: If a variable value is empty should we not create it or should we leave it empty on the conjur side?
 func ReplaceTemplate(template types.Template, templateContent string) string {
@@ -120,6 +129,25 @@ func ParseRevokedCertificate(resource map[string]interface{}) (types.RevokedCert
 	}
 
 	return revokedCert, nil
+}
+
+// IsCertificateExpired this function will take in a certificate resource, the current time and the day buffer
+// It will check if the current time is past the expirationTime with the day buffer added to the expiration time
+func IsCertificateExpired(resource map[string]interface{}, currentTime time.Time, dayBuffer int) bool {
+	value, err := GetAnnotationValue(resource, "ExpirationDate")
+	if err != nil {
+		return false
+	}
+
+	expirationTime, err := StringToTime(value)
+	if err != nil {
+		return false
+	}
+
+	// Add buffer days to expiration date
+	expirationTime = expirationTime.AddDate(0, 0, dayBuffer)
+
+	return currentTime.After(expirationTime)
 }
 
 // GetAnnotationValue ...

@@ -1,4 +1,4 @@
-name: PKIaaS Tests
+name: PKIaaS CI
 
 on:
   pull_request:

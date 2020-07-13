@@ -301,7 +301,7 @@ func StorageDeleteFail(err string) HTTPError {
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error deleting template from backend - " + err,
-		HTTPResponse: http.StatusInternalServerError,
+		HTTPResponse: http.StatusNotFound,
 	}
 }
 

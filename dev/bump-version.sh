@@ -26,4 +26,4 @@ else
 fi
 
 # Find current version in version.go and replace with new version
-sed -i "s/var Version = \"${VERSION}\"/var Version = \"0.7.1\"/" pkg/pkiaas/version.go
+sed -i "s/var Version = \"${VERSION}\"/var Version = \"0.${MINOR_VER}.${PATCH_VER}\"/" pkg/pkiaas/version.go
