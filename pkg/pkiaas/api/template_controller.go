@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/gorilla/context"
@@ -104,25 +106,30 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		httpErr := httperror.RequestDecodeFail(err.Error())
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
+		return
+	}
 	// Ensure that the requesting entity can both authenticate to the PKI service. 	Then parse the
 	// request body first in order to get template name for authorization check to ensure the requstor
 	// has authorization to access the Manage Template endpoint as well as the specific template
 	storage := context.Get(r, "Storage").(backend.Storage)
 	authHeader := r.Header.Get("Authorization")
-	err := storage.GetAccessControl().Authenticate(authHeader)
+	err = storage.GetAccessControl().Authenticate(authHeader)
 	if err != nil {
 		httpErr := httperror.InvalidAuthn(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 	var newTemplate types.Template
-	decoder := json.NewDecoder(r.Body)
+	decoder := json.NewDecoder(bytes.NewReader(body))
 	decoder.DisallowUnknownFields()
 	err = decoder.Decode(&newTemplate)
 	if err != nil {
 		httpErr := httperror.RequestDecodeFail(err.Error())
-		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
+		http.Error(w, httpErr.JSON()+"   "+string(body), httpErr.HTTPResponse)
 		return
 	}
 	err = storage.GetAccessControl().ManageTemplate(authHeader, newTemplate.TemplateName)
@@ -139,7 +146,7 @@ func ManageTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	template.Subject = newTemplate.Subject
-	decoder = json.NewDecoder(r.Body)
+	decoder = json.NewDecoder(bytes.NewReader(body))
 	decoder.DisallowUnknownFields()
 	err = decoder.Decode(&template)
 	if err != nil {

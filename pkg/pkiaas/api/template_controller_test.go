@@ -218,17 +218,15 @@ func (m MockAccessControlFailAuthorizationManageTemplate) ManageTemplate(accessT
 
 // TODO: This has not been accomplished because this endpoint is throwing the following error
 // {"errorCode":"CPKIMT003","errorMessage":"Failed to decode request JSON data - EOF","statusCode":400}
-// func TestManageTemplateHandler(t *testing.T) {
-// 	body := createTemplateBody()
-// 	req := newHttpRequest("PUT", "/template/manage", body, true)
-// 	context.Set(req, "Storage", dummyBackend())
-// 	rr := httptest.NewRecorder()
-// 	handler := http.HandlerFunc(api.ManageTemplateHandler)
-// 	handler.ServeHTTP(rr, req)
-// 	assertStatusCode(t, rr, 200)
-
-// 	fmt.Println(string(rr.Body.Bytes()))
-// }
+func TestManageTemplateHandler(t *testing.T) {
+	body := createTemplateBody()
+	req := newHttpRequest("PUT", "/template/manage", body, true)
+	context.Set(req, "Storage", dummyBackend())
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(api.ManageTemplateHandler)
+	handler.ServeHTTP(rr, req)
+	assertStatusCode(t, rr, 200)
+}
 
 func TestInvalidContentTypeManageTemplateHandler(t *testing.T) {
 	body := createTemplateBody()
