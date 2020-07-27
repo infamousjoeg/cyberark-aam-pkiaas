@@ -110,6 +110,7 @@ For more information regarding the PKI API provided, please see the documentatio
 [@infamousjoeg](https://github.com/infamousjoeg)
 [@rcobbins](https://github.com/rcobbins)
 [@AndrewCopeland](https://github.com/AndrewCopeland)
+[@daswak](https://github.com/daswak)
 
 [List of Contributors](https://github.com/infamousjoeg/cyberark-aam-pkiaas/graphs/contributors)
 
