@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/cyberark/secrets-provider-for-k8s/pkg/log"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/log"
 )
 
 // HTTPError ------
