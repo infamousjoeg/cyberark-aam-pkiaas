@@ -58,9 +58,9 @@ jobs:
       - name: Unit Test & Coverage pkg/pkiaas/api
         run: |
           go test -v -cover github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/pkiaas/api
-      - name: Unit Test & Coverage pkg/pkiaas/api
+      - name: Unit Test & Coverage internal/pki
         run: |
           go test -v -cover github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki
-      # - name: Unit Test & Coverage pkg/pkiaas/api
+      # - name: Unit Test & Coverage internal/backend/conjur
       #   run: |
       #     go test -v -cover github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/conjur
