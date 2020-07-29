@@ -47,3 +47,20 @@ jobs:
       - name: Test PKIaaS Health
         run: |
           curl -k -X GET 0.0.0.0:8080/health
+    
+  unit_tests:
+    name: Unit Tests w/ Coverage
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Unit Test & Coverage pkg/pkiaas/api
+        run: |
+          go test -v -cover github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/pkiaas/api
+      - name: Unit Test & Coverage pkg/pkiaas/api
+        run: |
+          go test -v -cover github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki
+      # - name: Unit Test & Coverage pkg/pkiaas/api
+      #   run: |
+      #     go test -v -cover github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/conjur
