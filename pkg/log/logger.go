@@ -12,7 +12,7 @@ var isDebug = false
 
 // Error log and error to stderr
 func Error(errorMessage string, args ...interface{}) error {
-	errorLogger.Output(2, fmt.Sprintf(errorMessage, args...))
+	errorLogger.Output(3, fmt.Sprintf(errorMessage, args...))
 	return fmt.Errorf(errorMessage, args...)
 }
 
