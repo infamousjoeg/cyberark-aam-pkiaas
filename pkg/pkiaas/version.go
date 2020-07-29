@@ -6,7 +6,6 @@ import "fmt"
 // of the broker
 
 var Version = "0.7.9"
-
 // Tag field denotes the specific build type for the broker. It may
 // be replaced by compile-time variables if needed to provide the git
 // commit information in the final binary. See `Static long version tags`
