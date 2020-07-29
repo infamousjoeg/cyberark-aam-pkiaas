@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/log"
 )
 
 // HTTPError ------
@@ -21,7 +23,7 @@ const invalidAuthn string = "Invalid authentication from header - "
 func InvalidContentType() HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplateHandler":
+	case "CreateTemplate":
 		errorCode = "CPKICT001"
 	case "ManageTemplateHandler":
 		errorCode = "CPKIMT001"
@@ -49,7 +51,7 @@ func InvalidContentType() HTTPError {
 func InvalidAuthn(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplateHandler":
+	case "CreateTemplate":
 		errorCode = "CPKICT002"
 	case "GetTemplateHandler":
 		errorCode = "CPKIGT001"
@@ -90,7 +92,7 @@ func InvalidAuthn(err string) HTTPError {
 func InvalidAuthz(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplateHandler":
+	case "CreateTemplate":
 		errorCode = "CPKICT003"
 	case "GetTemplateHandler":
 		errorCode = "CPKIGT002"
@@ -127,7 +129,7 @@ func InvalidAuthz(err string) HTTPError {
 func RequestDecodeFail(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplateHandler":
+	case "CreateTemplate":
 		errorCode = "CPKICT004"
 	case "ManageTemplateHandler":
 		errorCode = "CPKIMT003"
@@ -154,7 +156,7 @@ func RequestDecodeFail(err string) HTTPError {
 func InvalidKeyAlgo(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplateHandler":
+	case "CreateTemplate":
 		errorCode = "CPKICT005"
 	}
 	return HTTPError{ErrorCode: errorCode,
@@ -167,7 +169,7 @@ func InvalidKeyAlgo(err string) HTTPError {
 func InvalidKeyUsage(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplateHandler":
+	case "CreateTemplate":
 		errorCode = "CPKICT006"
 	case "SignCert":
 		errorCode = "CPKISG010"
@@ -184,7 +186,7 @@ func InvalidKeyUsage(err string) HTTPError {
 func InvalidExtKeyUsage(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplateHandler":
+	case "CreateTemplate":
 		errorCode = "CPKICT007"
 	case "SignCert":
 		errorCode = "CPKISG011"
@@ -201,7 +203,7 @@ func InvalidExtKeyUsage(err string) HTTPError {
 func InvalidPolicyID(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplateHandler":
+	case "CreateTemplate":
 		errorCode = "CPKICT008"
 	}
 	return HTTPError{ErrorCode: errorCode,
@@ -214,7 +216,7 @@ func InvalidPolicyID(err string) HTTPError {
 func StorageWriteFail(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplateHandler":
+	case "CreateTemplate":
 		errorCode = "CPKICT009"
 	case "SetCAChain":
 		errorCode = "CPKISC005"
@@ -805,6 +807,7 @@ func InvalidCN(err string) HTTPError {
 
 // JSON ------------
 func (httpErr HTTPError) JSON() string {
+	log.Error("%s %s. Status code: %v", httpErr.ErrorCode, httpErr.ErrorMessage, httpErr.HTTPResponse)
 	json, _ := json.Marshal(httpErr)
 	return string(json)
 }
