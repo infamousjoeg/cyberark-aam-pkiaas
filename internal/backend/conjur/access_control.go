@@ -37,12 +37,14 @@ type AccessControl struct {
 	disabled     bool
 }
 
+// AccessToken ...
 type AccessToken struct {
 	Protected string `json:"protected"`
 	Payload   string `json:"payload"`
 	Signature string `json:"signature"`
 }
 
+// Payload ...
 type Payload struct {
 	Sub string `json:"sub"`
 	Iat int    `json:"iat"`
