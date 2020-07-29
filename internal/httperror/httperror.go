@@ -23,7 +23,7 @@ const invalidAuthn string = "Invalid authentication from header - "
 func InvalidContentType() HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplate":
+	case "CreateTemplateHandler":
 		errorCode = "CPKICT001"
 	case "ManageTemplateHandler":
 		errorCode = "CPKIMT001"
@@ -51,7 +51,7 @@ func InvalidContentType() HTTPError {
 func InvalidAuthn(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplate":
+	case "CreateTemplateHandler":
 		errorCode = "CPKICT002"
 	case "GetTemplateHandler":
 		errorCode = "CPKIGT001"
@@ -59,7 +59,7 @@ func InvalidAuthn(err string) HTTPError {
 		errorCode = "CPKIMT002"
 	case "DeleteTemplateHandler":
 		errorCode = "CPKIDT001"
-	case "ListTemplatesHandler":
+	case "ListTemplates":
 		errorCode = "CPKILT002"
 	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI002"
@@ -92,7 +92,7 @@ func InvalidAuthn(err string) HTTPError {
 func InvalidAuthz(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplate":
+	case "CreateTemplateHandler":
 		errorCode = "CPKICT003"
 	case "GetTemplateHandler":
 		errorCode = "CPKIGT002"
@@ -100,7 +100,7 @@ func InvalidAuthz(err string) HTTPError {
 		errorCode = "CPKIMT004"
 	case "DeleteTemplateHandler":
 		errorCode = "CPKIDT002"
-	case "ListTemplatesHandler":
+	case "ListTemplates":
 		errorCode = "CPKILT002"
 	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI003"
@@ -129,7 +129,7 @@ func InvalidAuthz(err string) HTTPError {
 func RequestDecodeFail(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "CreateTemplate":
+	case "CreateTemplateHandler":
 		errorCode = "CPKICT004"
 	case "ManageTemplateHandler":
 		errorCode = "CPKIMT003"
@@ -231,9 +231,9 @@ func StorageWriteFail(err string) HTTPError {
 func StorageReadFail(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GetTemplateHandler":
+	case "GetTemplate":
 		errorCode = "CPKIGT003"
-	case "ListTemplatesHandler":
+	case "ListTemplates":
 		errorCode = "CPKILT003"
 	case "GetCA":
 		errorCode = "CPKICA01"
@@ -256,9 +256,9 @@ func StorageReadFail(err string) HTTPError {
 func ResponseEncodeError(err string) HTTPError {
 	var errorCode string
 	switch getCallerFunctionName() {
-	case "GetTemplateHandler":
+	case "GetTemplate":
 		errorCode = "CPKIGT004"
-	case "ListTemplatesHandler":
+	case "ListTemplates":
 		errorCode = "CPKILT004"
 	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI017"
