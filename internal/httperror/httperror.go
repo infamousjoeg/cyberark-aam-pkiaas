@@ -59,7 +59,7 @@ func InvalidAuthn(err string) HTTPError {
 		errorCode = "CPKIMT002"
 	case "DeleteTemplateHandler":
 		errorCode = "CPKIDT001"
-	case "ListTemplates":
+	case "ListTemplatesHandler":
 		errorCode = "CPKILT002"
 	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI002"
@@ -100,7 +100,7 @@ func InvalidAuthz(err string) HTTPError {
 		errorCode = "CPKIMT004"
 	case "DeleteTemplateHandler":
 		errorCode = "CPKIDT002"
-	case "ListTemplates":
+	case "ListTemplatesHandler":
 		errorCode = "CPKILT002"
 	case "GenerateIntermediateHandler":
 		errorCode = "CPKIGI003"
