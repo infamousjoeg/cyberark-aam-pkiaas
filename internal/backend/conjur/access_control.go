@@ -2,11 +2,13 @@ package conjur
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/log"
 )
 
 // Privileges ...
@@ -33,6 +35,19 @@ type AccessControl struct {
 	policyBranch string
 	conjurConfig conjurapi.Config
 	disabled     bool
+}
+
+// AccessToken ...
+type AccessToken struct {
+	Protected string `json:"protected"`
+	Payload   string `json:"payload"`
+	Signature string `json:"signature"`
+}
+
+// Payload ...
+type Payload struct {
+	Sub string `json:"sub"`
+	Iat int    `json:"iat"`
 }
 
 // NewDefaultPrivileges ...
@@ -85,6 +100,26 @@ func parseAccessToken(accessToken string) (string, error) {
 
 	accessTokenSlice, err := base64.StdEncoding.DecodeString(accessToken)
 	return string(accessTokenSlice), err
+}
+
+func getJWT(accessToken string) AccessToken {
+	var accessTokenJSON AccessToken
+	decoder := json.NewDecoder(strings.NewReader(accessToken))
+	decoder.Decode(&accessTokenJSON)
+	return accessTokenJSON
+}
+
+func getLogin(accessToken string) string {
+	JWT := getJWT(accessToken)
+	decoded, err := base64.StdEncoding.DecodeString(JWT.Payload)
+	if err != nil {
+		return ""
+	}
+
+	var payload Payload
+	decoder := json.NewDecoder(strings.NewReader(string(decoded)))
+	decoder.Decode(&payload)
+	return payload.Sub
 }
 
 // Authenticate If the client has ability to authenticate to the PKI service
@@ -165,24 +200,27 @@ func (a AccessControl) checkPermission(accessToken string, permission string) er
 
 	accessToken, err := parseAccessToken(accessToken)
 	if err != nil {
-		return fmt.Errorf("Failed to parse access token. %s", err)
+		return log.Error("Failed to parse access token. %s", err)
 	}
+	login := getLogin(accessToken)
 
 	config := a.conjurConfig
 	conjur, err := conjurapi.NewClientFromToken(config, accessToken)
 	if err != nil {
-		return fmt.Errorf("Failed to init conjur client. %s", err)
+		return log.Error("Failed to init conjur client. %s", err)
 	}
 
 	resourceID := fmt.Sprintf("%s:%s:%s", config.Account, "webservice", a.policyBranch)
 	allowed, err := conjur.CheckPermission(resourceID, permission)
 
 	if err != nil {
-		return fmt.Errorf("Could not check the permissions. %s", err)
+		return log.Error("Failed to check for permission '%s'. %s", permission, err)
 	}
 
 	if allowed {
+		log.Debug("Identity '%s' has privilege to '%s'", login, permission)
 		return nil
 	}
-	return fmt.Errorf("You do not have the privilege '%s'", permission)
+
+	return log.Error("Identity '%s' does not have privilege to '%s'", login, permission)
 }
