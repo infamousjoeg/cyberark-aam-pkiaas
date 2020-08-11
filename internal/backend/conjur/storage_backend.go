@@ -2,11 +2,24 @@ package conjur
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
+)
+
+// Type of conjur instance. Should be master or follower
+type Role string
+
+const (
+	// Master conjur appliance
+	Master Role = "master"
+	// Follower conjur appliance
+	Follower Role = "follower"
 )
 
 // PolicyTemplates ...
@@ -23,6 +36,7 @@ type StorageBackend struct {
 	client       *conjurapi.Client
 	policyBranch string
 	templates    PolicyTemplates
+	role         Role
 	Access       AccessControl
 }
 
@@ -33,6 +47,7 @@ func (c StorageBackend) GetAccessControl() backend.Access {
 
 // InitConfig This will init the policy in the 'pki' webservice
 func (c StorageBackend) InitConfig() error {
+
 	pkiPolicy := getInitConfigPolicy()
 	response, err := c.client.LoadPolicy(conjurapi.PolicyModePatch, c.policyBranch, pkiPolicy)
 	if err != nil {
@@ -220,6 +235,36 @@ func (c StorageBackend) getCRLVariableID() string {
 	return c.policyBranch + "/crl"
 }
 
+func getApplianceRole(client *conjurapi.Client) (Role, error) {
+	infoEndpoint := fmt.Sprintf("%s/info", client.GetConfig().ApplianceURL)
+	resp, err := http.Get(infoEndpoint)
+	if err != nil {
+		return "", fmt.Errorf("Failed to retrieve info from the conjur appliance. %s", err)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("Failed to read info from the conjur appliance. %s", err)
+	}
+
+	var respBody map[string]interface{}
+	err = json.Unmarshal(body, respBody)
+	if err != nil {
+		return "", fmt.Errorf("Failed to unmarshal info from conjur appliance. %s", err)
+	}
+
+	role, ok := respBody["role"].(Role)
+	if !ok {
+		return "", fmt.Errorf("Failed to parse role from conjur appliance")
+	}
+
+	if role != Master && role != Follower {
+		return "", fmt.Errorf("Failed to identify role. '%s' is an invalid role", role)
+	}
+
+	return role, nil
+}
+
 func defaultConjurClient() (*conjurapi.Client, error) {
 	config, err := conjurapi.LoadConfig()
 	if err != nil {
@@ -231,7 +276,7 @@ func defaultConjurClient() (*conjurapi.Client, error) {
 		fmt.Printf("Failed to init client from config. %s", err.Error())
 		return nil, fmt.Errorf("Failed to init client from config. %s", err)
 	}
-	return client, err
+	return client, nil
 }
 
 // NewDefaultConjurClient return the default conjur client
@@ -394,11 +439,16 @@ func NewFromDefaults() (StorageBackend, error) {
 		return StorageBackend{}, fmt.Errorf("Failed to init Conjur client: %s", err)
 	}
 
+	role, err := getApplianceRole(conjurClient)
+	if err != nil {
+		return StorageBackend{}, err
+	}
+
 	policyTemplates := NewDefaultTemplates()
 
 	access := NewAccessFromDefaults(conjurClient.GetConfig(), defaultPolicyBranch())
 
-	return NewConjurPki(conjurClient, defaultPolicyBranch(), policyTemplates, access), nil
+	return NewConjurPki(conjurClient, defaultPolicyBranch(), policyTemplates, access, role), nil
 }
 
 // NewTemplates ...
@@ -423,11 +473,12 @@ func NewDefaultTemplates() PolicyTemplates {
 }
 
 // NewConjurPki ...
-func NewConjurPki(client *conjurapi.Client, policyBranch string, templates PolicyTemplates, access AccessControl) StorageBackend {
+func NewConjurPki(client *conjurapi.Client, policyBranch string, templates PolicyTemplates, access AccessControl, role Role) StorageBackend {
 	return StorageBackend{
 		client:       client,
 		policyBranch: policyBranch,
 		templates:    templates,
 		Access:       access,
+		role:         role,
 	}
 }
