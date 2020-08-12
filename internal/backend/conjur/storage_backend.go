@@ -433,6 +433,9 @@ func NewFromDefaults() (StorageBackend, error) {
 	if err != nil {
 		return StorageBackend{}, fmt.Errorf("Failed to init Conjur client: %s", err)
 	}
+	log.Info("Conjur appliance URL: %s", conjurClient.GetConfig().ApplianceURL)
+	log.Info("Conjur account: %s", conjurClient.GetConfig().Account)
+	log.Info("Conjur SSL cert path: %s", conjurClient.GetConfig().SSLCertPath)
 
 	role, err := getApplianceRole(conjurClient)
 	if err != nil {
