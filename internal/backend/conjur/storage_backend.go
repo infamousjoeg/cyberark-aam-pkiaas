@@ -11,7 +11,7 @@ import (
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/log"
 )
 
-// Type of conjur instance. Should be master or follower
+// Role of conjur instance. Should be master or follower
 type Role string
 
 const (
