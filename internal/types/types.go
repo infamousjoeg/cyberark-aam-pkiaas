@@ -22,6 +22,7 @@ type Template struct {
 	KeyBits            string        `json:"keyBits"`
 	MaxTTL             int64         `json:"maxTTL"`
 	Subject            SubjectFields `json:"subject"`
+	StoreCertificate   bool          `json:"storeCertificate"`
 	KeyUsages          []string      `json:"keyUsages,omitempty"`
 	ExtKeyUsages       []string      `json:"extKeyUsages,omitempty"`
 	ValidateCNHostname bool          `json:"validateCNHostname,omitempty"`

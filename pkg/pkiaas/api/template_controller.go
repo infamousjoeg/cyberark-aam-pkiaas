@@ -41,7 +41,8 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-	var newTemplate types.Template
+
+	newTemplate := &types.Template{StoreCertificate: true}
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	err = decoder.Decode(&newTemplate)
@@ -50,7 +51,7 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-	httpErr := pki.CreateTemplate(newTemplate, storage)
+	httpErr := pki.CreateTemplate(*newTemplate, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return

@@ -22,12 +22,13 @@ var dummySubject types.SubjectFields = types.SubjectFields{
 	Province:     "MA",
 }
 var dummyTemplate types.Template = types.Template{
-	TemplateName: "TestTemplate",
-	KeyAlgo:      "RSA",
-	KeyBits:      "2048",
-	MaxTTL:       115200,
-	KeyUsages:    []string{"keyEncipherment", "digitalSignature", "decipherOnly"},
-	ExtKeyUsages: []string{"serverAuth", "clientAuth", "codeSigning", "emailProtection", "ipsecEndSystem", "ipsecTunnel", "ipsecUser", "timeStamping", "OCSPSigning", "msSGC", "nsSGC", "msCodeCom"},
+	TemplateName:     "TestTemplate",
+	KeyAlgo:          "RSA",
+	KeyBits:          "2048",
+	StoreCertificate: true,
+	MaxTTL:           115200,
+	KeyUsages:        []string{"keyEncipherment", "digitalSignature", "decipherOnly"},
+	ExtKeyUsages:     []string{"serverAuth", "clientAuth", "codeSigning", "emailProtection", "ipsecEndSystem", "ipsecTunnel", "ipsecUser", "timeStamping", "OCSPSigning", "msSGC", "nsSGC", "msCodeCom"},
 }
 
 // GetCertificate ----------------------------------------------------------------

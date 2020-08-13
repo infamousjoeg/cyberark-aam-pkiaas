@@ -46,7 +46,7 @@ func TestGetCAChainNonExistent(t *testing.T) {
 	client, _ := conjur.NewDefaultConjurClient()
 	templates := conjur.NewDefaultTemplates()
 	accessControl := conjur.NewAccessFromDefaults(client.GetConfig(), policyBranch)
-	conjurPki := conjur.NewConjurPki(client, policyBranch, templates, accessControl)
+	conjurPki := conjur.NewConjurPki(client, policyBranch, templates, accessControl, "master")
 
 	// Retrieve this chain
 	_, err := conjurPki.GetCAChain()
