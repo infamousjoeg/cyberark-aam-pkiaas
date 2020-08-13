@@ -36,7 +36,7 @@ func invalidConjurPki() conjur.StorageBackend {
 		})
 	templates := conjur.NewDefaultTemplates()
 	accessControl := conjur.NewAccessFromDefaults(client.GetConfig(), policyBranch)
-	conjurPki := conjur.NewConjurPki(client, policyBranch, templates, accessControl)
+	conjurPki := conjur.NewConjurPki(client, policyBranch, templates, accessControl, "master")
 	return conjurPki
 }
 

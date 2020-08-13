@@ -2,11 +2,23 @@ package conjur
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/log"
+)
+
+// Role of conjur instance. Should be master or follower
+type Role string
+
+const (
+	// Master conjur appliance
+	master Role = "master"
+	// Follower conjur appliance
+	follower Role = "follower"
 )
 
 // PolicyTemplates ...
@@ -23,6 +35,7 @@ type StorageBackend struct {
 	client       *conjurapi.Client
 	policyBranch string
 	templates    PolicyTemplates
+	role         Role
 	Access       AccessControl
 }
 
@@ -33,12 +46,13 @@ func (c StorageBackend) GetAccessControl() backend.Access {
 
 // InitConfig This will init the policy in the 'pki' webservice
 func (c StorageBackend) InitConfig() error {
-	pkiPolicy := getInitConfigPolicy()
-	response, err := c.client.LoadPolicy(conjurapi.PolicyModePatch, c.policyBranch, pkiPolicy)
-	if err != nil {
-		return fmt.Errorf("Failed to initialize configuration for the PKI service. %v. %s", response, err)
+	if c.role == master {
+		pkiPolicy := getInitConfigPolicy()
+		response, err := c.client.LoadPolicy(conjurapi.PolicyModePatch, c.policyBranch, pkiPolicy)
+		if err != nil {
+			return fmt.Errorf("Failed to initialize configuration for the PKI service. %v. %s", response, err)
+		}
 	}
-
 	return nil
 }
 
@@ -220,6 +234,32 @@ func (c StorageBackend) getCRLVariableID() string {
 	return c.policyBranch + "/crl"
 }
 
+func getApplianceRole(client *conjurapi.Client) (Role, error) {
+	infoEndpoint := fmt.Sprintf("%s/info", client.GetConfig().ApplianceURL)
+	resp, err := client.GetHttpClient().Get(infoEndpoint)
+	if err != nil {
+		return "", fmt.Errorf("Failed to retrieve info from the conjur appliance. %s", err)
+	}
+
+	var respBody map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+		return "", fmt.Errorf("Failed to unmarshal info from conjur appliance. %s", err)
+	}
+
+	role, ok := respBody["role"].(string)
+	if !ok {
+		return "", fmt.Errorf("Failed to parse role from conjur appliance")
+	}
+
+	if role == string(master) {
+		return master, nil
+	} else if role == string(follower) {
+		return follower, nil
+	}
+
+	return "", fmt.Errorf("Failed to identify role. '%s' is an invalid role", role)
+}
+
 func defaultConjurClient() (*conjurapi.Client, error) {
 	config, err := conjurapi.LoadConfig()
 	if err != nil {
@@ -231,7 +271,7 @@ func defaultConjurClient() (*conjurapi.Client, error) {
 		fmt.Printf("Failed to init client from config. %s", err.Error())
 		return nil, fmt.Errorf("Failed to init client from config. %s", err)
 	}
-	return client, err
+	return client, nil
 }
 
 // NewDefaultConjurClient return the default conjur client
@@ -393,12 +433,21 @@ func NewFromDefaults() (StorageBackend, error) {
 	if err != nil {
 		return StorageBackend{}, fmt.Errorf("Failed to init Conjur client: %s", err)
 	}
+	log.Info("Conjur appliance URL: %s", conjurClient.GetConfig().ApplianceURL)
+	log.Info("Conjur account: %s", conjurClient.GetConfig().Account)
+	log.Info("Conjur SSL cert path: %s", conjurClient.GetConfig().SSLCertPath)
+
+	role, err := getApplianceRole(conjurClient)
+	if err != nil {
+		return StorageBackend{}, err
+	}
+	log.Info("Conjur appliance role: %s", role)
 
 	policyTemplates := NewDefaultTemplates()
 
 	access := NewAccessFromDefaults(conjurClient.GetConfig(), defaultPolicyBranch())
 
-	return NewConjurPki(conjurClient, defaultPolicyBranch(), policyTemplates, access), nil
+	return NewConjurPki(conjurClient, defaultPolicyBranch(), policyTemplates, access, role), nil
 }
 
 // NewTemplates ...
@@ -423,11 +472,12 @@ func NewDefaultTemplates() PolicyTemplates {
 }
 
 // NewConjurPki ...
-func NewConjurPki(client *conjurapi.Client, policyBranch string, templates PolicyTemplates, access AccessControl) StorageBackend {
+func NewConjurPki(client *conjurapi.Client, policyBranch string, templates PolicyTemplates, access AccessControl, role Role) StorageBackend {
 	return StorageBackend{
 		client:       client,
 		policyBranch: policyBranch,
 		templates:    templates,
 		Access:       access,
+		role:         role,
 	}
 }
