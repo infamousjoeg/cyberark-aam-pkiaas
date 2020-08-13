@@ -195,6 +195,48 @@ var routes = Routes{
 	},
 
 	Route{
+		"CreateSSHTemplate",
+		strings.ToUpper("Post"),
+		"/ssh/template",
+		api.CreateSSHTemplateHandler,
+	},
+
+	Route{
+		"GetSSHTemplate",
+		strings.ToUpper("Get"),
+		"/ssh/template/{templateName}",
+		api.GetSSHTemplateHandler,
+	},
+
+	Route{
+		"ListSSHTemplates",
+		strings.ToUpper("Get"),
+		"/ssh/templates",
+		api.ListSSHTemplatesHandler,
+	},
+
+	Route{
+		"ManageSSHTemplate",
+		strings.ToUpper("Put"),
+		"/ssh/template",
+		api.ManageSSHTemplateHandler,
+	},
+
+	Route{
+		"DeleteSSHTemplate",
+		strings.ToUpper("Delete"),
+		"/ssh/template/delete/{templateName}",
+		api.DeleteSSHTemplateHandler,
+	},
+
+	Route{
+		"CreateSSHCertificate",
+		strings.ToUpper("Post"),
+		"/ssh/certificate/create",
+		api.CreateSSHCertificateHandler,
+	},
+
+	Route{
 		"Health",
 		strings.ToUpper("Get"),
 		"/health",

@@ -186,3 +186,23 @@ func (a AccessControl) checkPermission(accessToken string, permission string) er
 	}
 	return fmt.Errorf("You do not have the privilege '%s'", permission)
 }
+
+// ListSSHTemplates ----
+func (a AccessControl) ListSSHTemplates(accessToken string) error { return nil }
+
+// ReadSSHTemplate ----
+func (a AccessControl) ReadSSHTemplate(accessToken string, templateName string) error { return nil }
+
+// DeleteSSHTemplate ----
+func (a AccessControl) DeleteSSHTemplate(accessToken string, templateName string) error { return nil }
+
+// ManageSSHTemplate ---
+func (a AccessControl) ManageSSHTemplate(accessToken string, templateName string) error { return nil }
+
+// CreateSSHTemplate ----
+func (a AccessControl) CreateSSHTemplate(accessToken string) error { return nil }
+
+// CreateSSHCertificate ----
+func (a AccessControl) CreateSSHCertificate(accessToken string, templateName string) error {
+	return nil
+}

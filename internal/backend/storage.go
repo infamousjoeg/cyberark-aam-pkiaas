@@ -21,6 +21,10 @@ type Storage interface {
 	ListTemplates() ([]string, error)
 	GetTemplate(templateName string) (types.Template, error)
 	DeleteTemplate(templateName string) error
+	CreateSSHTemplate(template types.SSHTemplate) error
+	ListSSHTemplates() ([]string, error)
+	GetSSHTemplate(templateName string) (types.SSHTemplate, error)
+	DeleteSSHTemplate(templateName string) error
 	WriteSigningCert(encodedCert string) error
 	GetSigningCert() (string, error)
 	WriteSigningKey(encodedKey string) error
