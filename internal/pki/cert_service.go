@@ -161,9 +161,12 @@ func SignCert(signReq types.SignRequest, backend backend.Storage) (types.CreateC
 		ExpirationDate: time.Now().Add(time.Duration(time.Minute * time.Duration(ttl))).UTC().String(),
 		Certificate:    base64.StdEncoding.EncodeToString(derCert),
 	}
-	err = backend.CreateCertificate(cert)
-	if err != nil {
-		return types.CreateCertificateResponse{}, httperror.CertWriteFail(err.Error())
+
+	if template.StoreCertificate {
+		err = backend.CreateCertificate(cert)
+		if err != nil {
+			return types.CreateCertificateResponse{}, httperror.CertWriteFail(err.Error())
+		}
 	}
 	return response, httperror.HTTPError{}
 }
@@ -310,9 +313,11 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 		Certificate:    base64.StdEncoding.EncodeToString(derCert),
 	}
 
-	err = backend.CreateCertificate(cert)
-	if err != nil {
-		return types.CreateCertificateResponse{}, httperror.CertWriteFail(err.Error())
+	if template.StoreCertificate {
+		err = backend.CreateCertificate(cert)
+		if err != nil {
+			return types.CreateCertificateResponse{}, httperror.CertWriteFail(err.Error())
+		}
 	}
 
 	return response, httperror.HTTPError{}
