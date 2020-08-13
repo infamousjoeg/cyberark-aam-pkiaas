@@ -6,7 +6,7 @@ github.com/cyberark/conjur-api-go/conjurapi
 github.com/cyberark/conjur-api-go/conjurapi/authn
 github.com/cyberark/conjur-api-go/conjurapi/logging
 github.com/cyberark/conjur-api-go/conjurapi/response
-# github.com/golang/gddo v0.0.0-20200324184333-3c2cc9a6329d
+# github.com/golang/gddo v0.0.0-20200715224205-051695c33a3f
 ## explicit
 github.com/golang/gddo/httputil/header
 # github.com/gorilla/context v1.1.1
@@ -15,7 +15,7 @@ github.com/gorilla/context
 # github.com/gorilla/mux v1.7.4
 ## explicit
 github.com/gorilla/mux
-# github.com/onsi/ginkgo v1.12.3
+# github.com/onsi/ginkgo v1.14.0
 ## explicit
 # github.com/sirupsen/logrus v1.0.5
 github.com/sirupsen/logrus
