@@ -1,22 +1,25 @@
 # github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d
 github.com/bgentry/go-netrc/netrc
 # github.com/cyberark/conjur-api-go v0.6.0
-## explicit
 github.com/cyberark/conjur-api-go/conjurapi
 github.com/cyberark/conjur-api-go/conjurapi/authn
 github.com/cyberark/conjur-api-go/conjurapi/logging
 github.com/cyberark/conjur-api-go/conjurapi/response
 # github.com/golang/gddo v0.0.0-20200715224205-051695c33a3f
+<<<<<<< HEAD
 ## explicit
+=======
+>>>>>>> f1e60f6eaf267e213fcf017f8e71aebf889569f0
 github.com/golang/gddo/httputil/header
 # github.com/gorilla/context v1.1.1
-## explicit
 github.com/gorilla/context
 # github.com/gorilla/mux v1.7.4
-## explicit
 github.com/gorilla/mux
+<<<<<<< HEAD
 # github.com/onsi/ginkgo v1.14.0
 ## explicit
+=======
+>>>>>>> f1e60f6eaf267e213fcf017f8e71aebf889569f0
 # github.com/sirupsen/logrus v1.0.5
 github.com/sirupsen/logrus
 # golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
@@ -34,9 +37,5 @@ golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# gopkg.in/airbrake/gobrake.v2 v2.0.9
-## explicit
-# gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2
-## explicit
 # gopkg.in/yaml.v2 v2.3.0
 gopkg.in/yaml.v2

@@ -82,7 +82,9 @@ func (c StorageBackend) ListTemplates() ([]string, error) {
 func (c StorageBackend) GetTemplate(templateName string) (types.Template, error) {
 	variableID := c.getTemplateVariableID(templateName)
 	templateJSON, err := c.client.RetrieveSecret(variableID)
-	template := &types.Template{}
+	template := &types.Template{
+		StoreCertificate: true,
+	}
 
 	if err != nil {
 		return *template, fmt.Errorf("Failed to retrieve template with id '%s'. %s", variableID, err)

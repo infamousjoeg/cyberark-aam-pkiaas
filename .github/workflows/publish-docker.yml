@@ -1,0 +1,39 @@
+name: Publish Docker Image
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  push_to_registries:
+    name: Push to Registries
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Get Current Version
+        run: |
+          cd cmd/pkiaas
+          go build .
+          echo "::set-output name=pki_version::$(pkiaas -v | awk '{print $2}')"
+        id: get_version
+      - name: Push to GitHub Packages
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.pkg.github.com
+          repository: infamousjoeg/cyberark-aam-pkiaas/pkiaas
+          tags: ${{ steps.get_version.outputs.pki_version }}, latest
+      - name: Push to DockerHub
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+          repository: nfmsjoeg/pkiaas
+          tags: ${{ steps.get_version.outputs.pki_version }}, latest
+      

@@ -22,7 +22,7 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	if !pki.ValidateContentType(r.Header, "application/json") {
 		httpErr := httperror.InvalidContentType()
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
-
+		return
 	}
 
 	// Ensure that the requesting entity can both authenticate to the PKI service, as well as
@@ -41,15 +41,17 @@ func CreateTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-	var newTemplate types.Template
+
+	newTemplate := &types.Template{StoreCertificate: true}
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	err = decoder.Decode(&newTemplate)
 	if err != nil {
 		httpErr := httperror.RequestDecodeFail(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
+		return
 	}
-	httpErr := pki.CreateTemplate(newTemplate, storage)
+	httpErr := pki.CreateTemplate(*newTemplate, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
