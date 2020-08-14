@@ -76,9 +76,9 @@ services:
   pkiaas:
     image: conjur-pkiaas:latest
     environment:
-	  PKI_VAULT_BACKEND: yes
-	  VAULT_ADDR: https://vault.company.local
-	  VAULT_TOKEN: s.wOrq5pMIOoSjIt8v3RIv2Z7N
+      PKI_VAULT_BACKEND: yes
+      VAULT_ADDR: https://vault.company.local
+      VAULT_TOKEN: s.wOrq5pMIOoSjIt8v3RIv2Z7N
     command: /app/pkiaas
     ports:
       - "8080:8080"
