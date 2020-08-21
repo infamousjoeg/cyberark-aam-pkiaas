@@ -271,6 +271,7 @@ func CreateSSHCertificateHandler(w http.ResponseWriter, r *http.Request) {
 
 	sshCert, httpErr := ssh.CreateSSHCertificate(certReq, storage)
 	if httpErr != (httperror.HTTPError{}) {
+		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
 	err = json.NewEncoder(w).Encode(sshCert)
