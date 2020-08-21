@@ -690,7 +690,7 @@ func ParseSigningKeyError(err string) HTTPError {
 	case "RevokeCert":
 		errorCode = "CPKIRC011"
 	case "CreateSSHCertificate":
-		errorCode = "CSSHCC012"
+		errorCode = "CSSHCC019"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error parsing the signing key - " + err,
