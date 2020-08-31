@@ -11,7 +11,7 @@ var Version = "0.8.3"
 // commit information in the final binary. See `Static long version tags`
 // in the `Building` section of `CONTRIBUTING.md` for more information on
 // this variable.
-var Tag = "alpha"
+var Tag = "beta"
 
 // FullVersionName is the user-visible aggregation of version and tag
 // of this codebase
