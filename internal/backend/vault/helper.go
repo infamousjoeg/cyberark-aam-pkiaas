@@ -50,10 +50,6 @@ func readSecretAndGetContent(client *api.Client, secretPath string, base64Decode
 	return value.(string), nil
 }
 
-func ReadSecretAndGetContent(client *api.Client, secretPath string, base64Decode bool) (string, error) {
-	return readSecretAndGetContent(client, secretPath, base64Decode)
-}
-
 func writeSecretContent(client *api.Client, secretPath string, base64Encode bool, value string) error {
 	key := getDefaultKey()
 	if base64Encode {
@@ -68,10 +64,6 @@ func writeSecretContent(client *api.Client, secretPath string, base64Encode bool
 		return fmt.Errorf("Failed to set KV '%s' and key '%s'. Message: %v. %s", secretPath, key, message, err)
 	}
 	return nil
-}
-
-func WriteSecretContent(client *api.Client, secretPath string, base64Encode bool, value string) error {
-	return writeSecretContent(client, secretPath, base64Encode, value)
 }
 
 func listKVs(client *api.Client, secretPath string) ([]string, error) {
