@@ -4,9 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/conjur"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/vault"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/pkg/pkiaas"
 )
 
@@ -23,16 +25,19 @@ func init() {
 		os.Exit(1)
 	}
 
-	pkiclient, err := conjur.NewFromDefaults()
+	vaultBackend := strings.ToLower(os.Getenv("PKI_VAULT_BACKEND"))
+	var err error
+	if vaultBackend == "yes" || vaultBackend == "true" {
+		storage, err = vault.NewFromDefaults()
+	} else {
+		storage, err = conjur.NewFromDefaults()
+	}
 	if err != nil {
 		panic("Error initializing PKI backend: " + err.Error())
 	}
 
-	err = pkiclient.InitConfig()
+	err = storage.InitConfig()
 	if err != nil {
 		panic("Error initializing PKI configuration: " + err.Error())
 	}
-
-	storage = pkiclient
-
 }
