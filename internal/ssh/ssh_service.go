@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"strings"
 	"time"
@@ -133,7 +134,8 @@ func CreateSSHCertificate(certReq types.SSHSignRequest, storage backend.Storage)
 		return types.SSHCertificate{}, httperror.DecodeSigningKeyError(err.Error())
 	}
 
-	signer, err := ssh.ParsePrivateKey(decodedKey)
+	pemKey := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: decodedKey})
+	signer, err := ssh.ParsePrivateKey(pemKey)
 	if err != nil {
 		return types.SSHCertificate{}, httperror.ParseSigningKeyError(err.Error())
 	}
