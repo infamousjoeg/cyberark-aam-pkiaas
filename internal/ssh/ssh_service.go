@@ -27,7 +27,7 @@ func CreateSSHTemplate(template types.SSHTemplate, storage backend.Storage) http
 	if err != nil {
 		return httperror.SSHInvalidPrincipal(err.Error())
 	}
-	if strings.ToUpper(template.CertType) != "USER" || strings.ToUpper(template.CertType) != "HOST" {
+	if strings.ToUpper(template.CertType) != "USER" && strings.ToUpper(template.CertType) != "HOST" {
 		return httperror.SSHInvalidCertType()
 	}
 	err = storage.CreateSSHTemplate(template)
