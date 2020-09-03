@@ -905,7 +905,7 @@ func SSHInvalidCertType() HTTPError {
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Invalid certificate type, valid options are Host or User",
-		HTTPResponse: http.StatusInternalServerError,
+		HTTPResponse: http.StatusBadRequest,
 	}
 }
 
