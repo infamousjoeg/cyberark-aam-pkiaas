@@ -19,7 +19,7 @@ data='{
   "keyAlgo": "RSA",
   "keyBits": "2048"
 }'
-curl --fail -H "Content-Type: application/json" \
+curl  -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
   $VERBOSE \
@@ -154,14 +154,55 @@ curl --fail -s \
 	$VERBOSE \
 	"$pki_url/template/delete/andrewsTemplate"
 
+# all my ssh endpoints
+CREATE_SSH_TEMPLATE_ENDPOINT="/ssh/template"
+GET_SSH_TEMPLATE_ENDPOINT="/ssh/template/sshTemplate"
+LIST_SSH_TEMPLATE_ENDPOINT="/ssh/templates"
+MANAGE_SSH_TEMPLATE_ENDPOINT="/ssh/template"
+DELETE_SSH_TEMPLATE_ENDPOINT="/ssh/template/sshTemplate"
+CREATE_SSH_CERT_ENDPOINT="/ssh/certificate/create"
 
-# re-create same template so I can test manually
+# create an ssh template
+data='{
+  "templateName": "sshTemplate",
+  "certType": "User"
+}'
+curl --fail -H "Content-Type: application/json" \
+  -H "$session_token" \
+  --data "$data" \
+  $VERBOSE \
+  "$pki_url$CREATE_SSH_TEMPLATE_ENDPOINT"
+
+# get specific template
+curl --fail -H "$session_token" \
+  $VERBOSE \
+  "$pki_url$GET_SSH_TEMPLATE_ENDPOINT"
+
+# list all templates
+curl --fail -H "$session_token" \
+  $VERBOSE \
+  "$pki_url$LIST_SSH_TEMPLATE_ENDPOINT"
+
+# update a specific template
+curl --fail -H "$session_token" \
+  -H "Content-Type: application/json" \
+  $VERBOSE \
+  -X "PUT" \
+  --data "$data" \
+  "$pki_url$MANAGE_SSH_TEMPLATE_ENDPOINT"
+
+# create an ssh certificate
 # data='{
-#   "templateName": "testingTemplate",
-#   "keyAlgo": "RSA",
-#   "keyBits": "2048"
+#   "templateName": "sshTemplate"
 # }'
-# curl --fail -H "Content-Type: application/json" \
-#   -H "$session_token" \
+# curl --fail -H "$session_token" \
+#   -H "Content-Type: application/json" \
+#   $VERBOSE \
 #   --data "$data" \
-#   $pki_url/template/create
+#   "$pki_url$CREATE_SSH_CERT_ENDPOINT"
+
+# delete a specific template
+curl --fail -H "$session_token" \
+  $VERBOSE \
+  -X "DELETE" \
+  "$pki_url$DELETE_SSH_TEMPLATE_ENDPOINT"
