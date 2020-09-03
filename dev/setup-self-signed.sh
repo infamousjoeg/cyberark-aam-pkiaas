@@ -165,7 +165,8 @@ CREATE_SSH_CERT_ENDPOINT="/ssh/certificate/create"
 # create an ssh template
 data='{
   "templateName": "sshTemplate",
-  "certType": "User"
+  "certType": "Host",
+  "maxTTL": 36000
 }'
 curl --fail -H "Content-Type: application/json" \
   -H "$session_token" \
@@ -192,14 +193,15 @@ curl --fail -H "$session_token" \
   "$pki_url$MANAGE_SSH_TEMPLATE_ENDPOINT"
 
 # create an ssh certificate
-# data='{
-#   "templateName": "sshTemplate"
-# }'
-# curl --fail -H "$session_token" \
-#   -H "Content-Type: application/json" \
-#   $VERBOSE \
-#   --data "$data" \
-#   "$pki_url$CREATE_SSH_CERT_ENDPOINT"
+data='{
+  "templateName": "sshTemplate",
+  "publicKey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDC8BqsuevltRlMFOGCW3dZsVFGRjD7AgO83A0zE/3a0/Zd1YFAwp4a3LwBE3xu2+e3oRCyb9ibU1BZeEGXxByTy+jyS21R5TLmMEOkOB3CHO3Mo1Fm5f12PKalMhXcoEALiJVm5zpBDlDmzi+bExLWkZaLp5lN06HA72k8dfZoD35PzaLOxWRkXhVrJHz9tkas7kwmuykdyZFjffveUCuFBFtcY2XTeZV3YZHjTfttw+bFAsjSB9VNJif/7Ejw7mv0HDD+sbEHJCrS+VYwiYUaipD9BLmBVPKmvNtIj/7EUF3NypqfRhxjlNEPEfrQJAW4z4/QMyVssy3FXW3QrYC1 root@ip-10-0-20-126"
+}'
+curl --fail -H "$session_token" \
+  -H "Content-Type: application/json" \
+  $VERBOSE \
+  --data "$data" \
+  "$pki_url$CREATE_SSH_CERT_ENDPOINT"
 
 # delete a specific template
 curl --fail -H "$session_token" \
