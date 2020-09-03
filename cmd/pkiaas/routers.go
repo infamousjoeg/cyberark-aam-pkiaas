@@ -225,7 +225,7 @@ var routes = Routes{
 	Route{
 		"DeleteSSHTemplate",
 		strings.ToUpper("Delete"),
-		"/ssh/template/delete/{templateName}",
+		"/ssh/template/{templateName}",
 		api.DeleteSSHTemplateHandler,
 	},
 
