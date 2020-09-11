@@ -134,7 +134,28 @@ func CreateSSHCertificate(certReq types.SSHSignRequest, storage backend.Storage)
 		return types.SSHCertificate{}, httperror.DecodeSigningKeyError(err.Error())
 	}
 
-	pemKey := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: decodedKey})
+	parsedKey, err := x509.ParsePKCS8PrivateKey(decodedKey)
+	if err != nil {
+		if strings.Contains(err.Error(), "ParsePKCS1PrivateKey") {
+			parsedKey, err = x509.ParsePKCS1PrivateKey(decodedKey)
+			if err != nil {
+				return types.SSHCertificate{}, httperror.ParseSigningKeyError(err.Error())
+			}
+		} else {
+			return types.SSHCertificate{}, httperror.ParseSigningKeyError(err.Error())
+		}
+	}
+	keyType := fmt.Sprintf("%T", parsedKey)
+	var blockType string
+	switch keyType {
+	case "*rsa.PrivateKey":
+		blockType = "RSA PRIVATE KEY"
+	case "*ecdsa.PrivateKey":
+		blockType = "EC PRIVATE KEY"
+	case "ed25519.PrivateKey":
+		blockType = "OPENSSH PRIVATE KEY"	
+	
+	pemKey := pem.EncodeToMemory(&pem.Block{Type: blockType, Bytes: decodedKey})
 	signer, err := ssh.ParsePrivateKey(pemKey)
 	if err != nil {
 		return types.SSHCertificate{}, httperror.ParseSigningKeyError(err.Error())
