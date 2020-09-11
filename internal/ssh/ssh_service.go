@@ -154,6 +154,7 @@ func CreateSSHCertificate(certReq types.SSHSignRequest, storage backend.Storage)
 		blockType = "EC PRIVATE KEY"
 	case "ed25519.PrivateKey":
 		blockType = "OPENSSH PRIVATE KEY"	
+	}
 	
 	pemKey := pem.EncodeToMemory(&pem.Block{Type: blockType, Bytes: decodedKey})
 	signer, err := ssh.ParsePrivateKey(pemKey)
