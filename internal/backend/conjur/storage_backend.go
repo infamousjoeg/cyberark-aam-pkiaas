@@ -28,6 +28,8 @@ type PolicyTemplates struct {
 	newCertificate    string
 	deleteCertificate string
 	revokeCertificate string
+	newSSHTemplate    string
+	deleteSSHTemplate string
 }
 
 // StorageBackend ...
@@ -74,6 +76,8 @@ func getInitConfigPolicy() io.Reader {
   - !group certificates-admin
   - !group purge-admin
   - !group ca-admin
+  - !group ssh-templates-admin
+  - !group ssh-certificates-admin
 
  # endpoint permission groups
 - &templates
@@ -96,12 +100,32 @@ func getInitConfigPolicy() io.Reader {
   - !group set-ca-signing-key
   - !group set-ca-signing-cert
   - !group generate-intermediate-csr
+- &sshTemplates
+  - !group list-ssh-templates
+  - !group read-ssh-templates
+  - !group create-ssh-templates
+  - !group manage-ssh-templates
+  - !group delete-ssh-templates
+- &sshCertificates
+  - !group create-ssh-certificates
 
 - !permit
   role: !group authenticate
   resource: !webservice
   privileges:
   - authenticate
+
+- !permit
+  role: !group list-ssh-templates
+  resource: !webservice
+  privileges:
+  - list-ssh-templates
+
+- !permit
+  role: !group create-ssh-templates
+  resource: !webservice
+  privileges:
+  - create-ssh-templates
 
 - !permit
   role: !group list-templates
@@ -166,6 +190,14 @@ func getInitConfigPolicy() io.Reader {
   member: !group certificates-admin
 
 - !grant
+  roles: *sshTemplates
+  member: !group ssh-templates-admin
+
+- !grant
+  roles: *sshCertificates
+  member: !group ssh-certificates-admin
+
+- !grant
   roles: *purge
   member: !group purge-admin
 
@@ -190,8 +222,10 @@ func getInitConfigPolicy() io.Reader {
   roles:
   - !group list-templates
   - !group list-certificates
+  - !group list-ssh-templates
   - !group read-templates
   - !group read-certificates
+  - !group read-ssh-templates
   member: !group audit
 
 - !grant
@@ -208,6 +242,10 @@ func (c StorageBackend) getTemplatePolicyBranch() string {
 
 func (c StorageBackend) getTemplateVariableID(templateName string) string {
 	return c.policyBranch + "/templates/" + templateName
+}
+
+func (c StorageBackend) getSSHTemplateVariableID(templateName string) string {
+	return c.policyBranch + "/ssh-templates/" + templateName
 }
 
 func (c StorageBackend) getCertificatePolicyBranch() string {
@@ -423,6 +461,77 @@ func defaultDeleteCertificatePolicy() string {
 `
 }
 
+func defaultCreateSSHTemplatePolicy() string {
+	return `
+- !variable
+  id: ssh-templates/<TemplateName>
+
+# groups related to the privileges
+- !group ssh-templates/<TemplateName>-read
+- !group ssh-templates/<TemplateName>-manage
+- !group ssh-templates/<TemplateName>-delete
+- !group ssh-templates/<TemplateName>-create-certificates
+
+# assign the privileges to the groups above
+- !permit
+  role: !group ssh-templates/<TemplateName>-read
+  resource: !webservice
+  privileges:
+  - read-ssh-template-<TemplateName>
+
+- !permit
+  role: !group ssh-templates/<TemplateName>-manage
+  resource: !webservice
+  privileges:
+  - manage-ssh-template-<TemplateName>
+
+- !permit
+  role: !group ssh-templates/<TemplateName>-delete
+  resource: !webservice
+  privileges:
+  - delete-ssh-template-<TemplateName>
+
+- !permit
+  role: !group ssh-templates/<TemplateName>-create-certificates
+  resource: !webservice
+  privileges:
+  - create-ssh-certificate-from-<TemplateName>
+
+
+# grant the groups accordingly
+- !grant
+  role: !group ssh-templates/<TemplateName>-read
+  member: !group read-ssh-templates
+
+- !grant
+  role: !group ssh-templates/<TemplateName>-manage
+  member: !group manage-ssh-templates
+
+- !grant
+  role: !group ssh-templates/<TemplateName>-delete
+  member: !group delete-ssh-templates
+
+- !grant
+  role: !group ssh-templates/<TemplateName>-create-certificates
+  member: !group create-ssh-certificates
+`
+}
+
+func defaultDeleteSSHTemplatePolicy() string {
+	return `
+- !delete
+  record: !variable ssh-templates/<TemplateName>
+- !delete
+  record: !group ssh-templates/<TemplateName>-read
+- !delete
+  record: !group ssh-templates/<TemplateName>-manage
+- !delete
+  record: !group ssh-templates/<TemplateName>-delete
+- !delete
+  record: !group ssh-templates/<TemplateName>-create-certificates
+`
+}
+
 func defaultPolicyBranch() string {
 	return "pki"
 }
@@ -451,13 +560,15 @@ func NewFromDefaults() (StorageBackend, error) {
 }
 
 // NewTemplates ...
-func NewTemplates(newTemplate string, deleteTemplate string, newCertificate string, deleteCertificate string, revokedCertificate string) PolicyTemplates {
+func NewTemplates(newTemplate string, deleteTemplate string, newCertificate string, deleteCertificate string, revokedCertificate string, newSSHTemplate string, deleteSSHTemplate string) PolicyTemplates {
 	return PolicyTemplates{
 		newTemplate:       newTemplate,
 		deleteTemplate:    deleteTemplate,
 		newCertificate:    newCertificate,
 		deleteCertificate: deleteCertificate,
 		revokeCertificate: revokedCertificate,
+		newSSHTemplate:    newSSHTemplate,
+		deleteSSHTemplate: deleteSSHTemplate,
 	}
 }
 
@@ -468,7 +579,10 @@ func NewDefaultTemplates() PolicyTemplates {
 		defaultDeleteTemplatePolicy(),
 		defaultCreateCertificatePolicy(),
 		defaultDeleteCertificatePolicy(),
-		defaultRevokeCertificatePolicy())
+		defaultRevokeCertificatePolicy(),
+		defaultCreateSSHTemplatePolicy(),
+		defaultDeleteSSHTemplatePolicy(),
+	)
 }
 
 // NewConjurPki ...

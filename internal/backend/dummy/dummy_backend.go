@@ -31,6 +31,12 @@ var dummyTemplate types.Template = types.Template{
 	ExtKeyUsages:     []string{"serverAuth", "clientAuth", "codeSigning", "emailProtection", "ipsecEndSystem", "ipsecTunnel", "ipsecUser", "timeStamping", "OCSPSigning", "msSGC", "nsSGC", "msCodeCom"},
 }
 
+var dummySSHTemplate types.SSHTemplate = types.SSHTemplate{
+	TemplateName: "TestSSHTemplate",
+	MaxTTL:       3600,
+	CertType:     "User",
+}
+
 // GetCertificate ----------------------------------------------------------------
 // Finds matching certificate matching serial number in DAP and returns it; Sends appropriate
 // error message as necessary
@@ -119,6 +125,39 @@ func (d Dummy) DeleteTemplate(templateName string) error {
 // ListTemplates ------------------------------------------------------
 func (d Dummy) ListTemplates() ([]string, error) {
 	return []string{"Template1", "Template2"}, nil
+}
+
+// CreateSSHTemplate Dummy function to simulate creating a new SSH template
+// in the storage backend
+func (d Dummy) CreateSSHTemplate(newTemplate types.SSHTemplate) error {
+	template, err := json.Marshal(newTemplate)
+	if err != nil {
+		return errors.New("Unable to import newly requested template data")
+	}
+	fmt.Println(string(template))
+	return nil
+}
+
+// ListSSHTemplates Dummy function to simulate listing all SSH templates
+// currently existing in the storage backend
+func (d Dummy) ListSSHTemplates() ([]string, error) {
+	return []string{"UserCertAllHosts", "UserCertAllowX11", "HostCert"}, nil
+}
+
+// GetSSHTemplate Dummy function to simulate returning a single template object
+// from the storage backend
+func (d Dummy) GetSSHTemplate(templateName string) (types.SSHTemplate, error) {
+	return dummySSHTemplate, nil
+}
+
+// DeleteSSHTemplate Dummy function to simulate the deletion of a template object
+// from the storage backend
+func (d Dummy) DeleteSSHTemplate(templateName string) error {
+	if templateName == "TestSSHTemplate" {
+		fmt.Println("Successfully deleted TestTemplate")
+		return nil
+	}
+	return errors.New("No template matching " + templateName + " was found")
 }
 
 // GetSigningCert -------------------------------------------------------

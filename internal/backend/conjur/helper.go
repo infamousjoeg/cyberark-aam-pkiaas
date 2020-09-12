@@ -37,6 +37,11 @@ func ReplaceTemplate(template types.Template, templateContent string) string {
 	return newTemplate
 }
 
+// ReplaceSSHTemplate Replace the ssh template content with TemplateName
+func ReplaceSSHTemplate(template types.SSHTemplate, templateContent string) string {
+	return strings.ReplaceAll(templateContent, "<TemplateName>", template.TemplateName)
+}
+
 // ReplaceCertificate ...
 func ReplaceCertificate(cert types.CreateCertificateData, certificateContent string) string {
 	newCertificate := certificateContent
