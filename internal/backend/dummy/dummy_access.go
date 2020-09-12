@@ -21,6 +21,26 @@ func (a AccessControl) ManageTemplate(accessToken string, templateName string) e
 // CreateTemplate ----
 func (a AccessControl) CreateTemplate(accessToken string) error { return nil }
 
+// ListSSHTemplates ----
+func (a AccessControl) ListSSHTemplates(accessToken string) error { return nil }
+
+// CreateSSHTemplate ----
+func (a AccessControl) CreateSSHTemplate(accessToken string) error { return nil }
+
+// ReadSSHTemplate ----
+func (a AccessControl) ReadSSHTemplate(accessToken string, templateName string) error { return nil }
+
+// DeleteSSHTemplate ----
+func (a AccessControl) DeleteSSHTemplate(accessToken string, templateName string) error { return nil }
+
+// ManageSSHTemplate ---
+func (a AccessControl) ManageSSHTemplate(accessToken string, templateName string) error { return nil }
+
+// CreateSSHCertificate ----
+func (a AccessControl) CreateSSHCertificate(accessToken string, templateName string) error {
+	return nil
+}
+
 // Purge -----------
 func (a AccessControl) Purge(accessToken string) error { return nil }
 
@@ -35,9 +55,6 @@ func (a AccessControl) RevokeCertificate(accessToken string, serialNumber string
 
 // SignCertificate -----
 func (a AccessControl) SignCertificate(accessToken string, templateName string) error { return nil }
-
-// AdminOnly ------
-func (a AccessControl) AdminOnly(accessToken string) error { return nil }
 
 // GenerateIntermediateCSR ...
 func (a AccessControl) GenerateIntermediateCSR(accessToken string) error { return nil }
