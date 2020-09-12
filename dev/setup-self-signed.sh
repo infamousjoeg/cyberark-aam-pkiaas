@@ -19,7 +19,7 @@ data='{
   "keyAlgo": "RSA",
   "keyBits": "2048"
 }'
-curl --fail -H "Content-Type: application/json" \
+curl  -H "Content-Type: application/json" \
   -H "$session_token" \
   --data "$data" \
   $VERBOSE \
@@ -154,14 +154,57 @@ curl --fail -s \
 	$VERBOSE \
 	"$pki_url/template/delete/andrewsTemplate"
 
+# all my ssh endpoints
+CREATE_SSH_TEMPLATE_ENDPOINT="/ssh/template"
+GET_SSH_TEMPLATE_ENDPOINT="/ssh/template/sshTemplate"
+LIST_SSH_TEMPLATE_ENDPOINT="/ssh/templates"
+MANAGE_SSH_TEMPLATE_ENDPOINT="/ssh/template"
+DELETE_SSH_TEMPLATE_ENDPOINT="/ssh/template/sshTemplate"
+CREATE_SSH_CERT_ENDPOINT="/ssh/certificate/create"
 
-# re-create same template so I can test manually
-# data='{
-#   "templateName": "testingTemplate",
-#   "keyAlgo": "RSA",
-#   "keyBits": "2048"
-# }'
-# curl --fail -H "Content-Type: application/json" \
-#   -H "$session_token" \
-#   --data "$data" \
-#   $pki_url/template/create
+# create an ssh template
+data='{
+  "templateName": "sshTemplate",
+  "certType": "Host",
+  "maxTTL": 36000
+}'
+curl --fail -H "Content-Type: application/json" \
+  -H "$session_token" \
+  --data "$data" \
+  $VERBOSE \
+  "$pki_url$CREATE_SSH_TEMPLATE_ENDPOINT"
+
+# get specific template
+curl --fail -H "$session_token" \
+  $VERBOSE \
+  "$pki_url$GET_SSH_TEMPLATE_ENDPOINT"
+
+# list all templates
+curl --fail -H "$session_token" \
+  $VERBOSE \
+  "$pki_url$LIST_SSH_TEMPLATE_ENDPOINT"
+
+# update a specific template
+curl --fail -H "$session_token" \
+  -H "Content-Type: application/json" \
+  $VERBOSE \
+  -X "PUT" \
+  --data "$data" \
+  "$pki_url$MANAGE_SSH_TEMPLATE_ENDPOINT"
+
+# create an ssh certificate
+data='{
+  "templateName": "sshTemplate",
+  "publicKey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDC8BqsuevltRlMFOGCW3dZsVFGRjD7AgO83A0zE/3a0/Zd1YFAwp4a3LwBE3xu2+e3oRCyb9ibU1BZeEGXxByTy+jyS21R5TLmMEOkOB3CHO3Mo1Fm5f12PKalMhXcoEALiJVm5zpBDlDmzi+bExLWkZaLp5lN06HA72k8dfZoD35PzaLOxWRkXhVrJHz9tkas7kwmuykdyZFjffveUCuFBFtcY2XTeZV3YZHjTfttw+bFAsjSB9VNJif/7Ejw7mv0HDD+sbEHJCrS+VYwiYUaipD9BLmBVPKmvNtIj/7EUF3NypqfRhxjlNEPEfrQJAW4z4/QMyVssy3FXW3QrYC1 root@ip-10-0-20-126"
+}'
+curl --fail -H "$session_token" \
+  -H "Content-Type: application/json" \
+  $VERBOSE \
+  --data "$data" \
+  "$pki_url$CREATE_SSH_CERT_ENDPOINT"
+
+# delete a specific template
+curl --fail -H "$session_token" \
+  $VERBOSE \
+  -X "DELETE" \
+  "$pki_url$DELETE_SSH_TEMPLATE_ENDPOINT"

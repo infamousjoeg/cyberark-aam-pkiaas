@@ -13,20 +13,26 @@ import (
 
 // Privileges ...
 type Privileges struct {
-	Authenticate               string
-	Purge                      string
-	CRLPurge                   string
-	CertificateSignSpecific    string
-	CertificateCreateSpecific  string
-	CertificateRevokeSpecific  string
-	TemplateCreateAny          string
-	TemplateManageSpecific     string
-	TemplateDeleteSpecific     string
-	TemplateReadSpecific       string
-	ListTemplates              string
-	GenerateIntermediateCSR    string
-	SetIntermediateCertificate string
-	SetCAChain                 string
+	Authenticate                 string
+	Purge                        string
+	CRLPurge                     string
+	CertificateSignSpecific      string
+	CertificateCreateSpecific    string
+	CertificateRevokeSpecific    string
+	TemplateCreateAny            string
+	TemplateManageSpecific       string
+	TemplateDeleteSpecific       string
+	TemplateReadSpecific         string
+	ListTemplates                string
+	GenerateIntermediateCSR      string
+	SetIntermediateCertificate   string
+	SetCAChain                   string
+	SSHTemplateCreateAny         string
+	SSHTemplateManageSpecific    string
+	SSHTemplateDeleteSpecific    string
+	SSHTemplateReadSpecific      string
+	ListSSHTemplates             string
+	SSHCertificateCreateSpecific string
 }
 
 // AccessControl ...
@@ -53,20 +59,26 @@ type Payload struct {
 // NewDefaultPrivileges ...
 func NewDefaultPrivileges() Privileges {
 	return Privileges{
-		Authenticate:               "authenticate",
-		Purge:                      "purge",
-		CRLPurge:                   "purge-crl",
-		CertificateSignSpecific:    "sign-certificate-from-",
-		CertificateCreateSpecific:  "create-certificate-from-",
-		CertificateRevokeSpecific:  "revoke-certificate-",
-		TemplateCreateAny:          "create-templates",
-		TemplateManageSpecific:     "manage-template-",
-		TemplateDeleteSpecific:     "delete-template-",
-		TemplateReadSpecific:       "read-template-",
-		ListTemplates:              "list-templates",
-		GenerateIntermediateCSR:    "generate-intermediate-csr",
-		SetIntermediateCertificate: "set-intermediate-certificate",
-		SetCAChain:                 "set-ca-chain",
+		Authenticate:                 "authenticate",
+		Purge:                        "purge",
+		CRLPurge:                     "purge-crl",
+		CertificateSignSpecific:      "sign-certificate-from-",
+		CertificateCreateSpecific:    "create-certificate-from-",
+		CertificateRevokeSpecific:    "revoke-certificate-",
+		TemplateCreateAny:            "create-templates",
+		TemplateManageSpecific:       "manage-template-",
+		TemplateDeleteSpecific:       "delete-template-",
+		TemplateReadSpecific:         "read-template-",
+		ListTemplates:                "list-templates",
+		GenerateIntermediateCSR:      "generate-intermediate-csr",
+		SetIntermediateCertificate:   "set-intermediate-certificate",
+		SetCAChain:                   "set-ca-chain",
+		SSHTemplateCreateAny:         "create-ssh-templates",
+		SSHTemplateManageSpecific:    "manage-ssh-template-",
+		SSHTemplateDeleteSpecific:    "delete-ssh-template-",
+		SSHTemplateReadSpecific:      "read-ssh-template-",
+		ListSSHTemplates:             "list-ssh-templates",
+		SSHCertificateCreateSpecific: "create-ssh-certificate-from-",
 	}
 }
 
@@ -191,6 +203,36 @@ func (a AccessControl) SetIntermediateCertificate(accessToken string) error {
 // SetCAChain ...
 func (a AccessControl) SetCAChain(accessToken string) error {
 	return a.checkPermission(accessToken, a.privileges.SetCAChain)
+}
+
+// ListSSHTemplates ----
+func (a AccessControl) ListSSHTemplates(accessToken string) error {
+	return a.checkPermission(accessToken, a.privileges.ListSSHTemplates)
+}
+
+// ReadSSHTemplate ----
+func (a AccessControl) ReadSSHTemplate(accessToken string, templateName string) error {
+	return a.checkPermission(accessToken, a.privileges.SSHTemplateReadSpecific+templateName)
+}
+
+// DeleteSSHTemplate ----
+func (a AccessControl) DeleteSSHTemplate(accessToken string, templateName string) error {
+	return a.checkPermission(accessToken, a.privileges.SSHTemplateDeleteSpecific+templateName)
+}
+
+// ManageSSHTemplate ---
+func (a AccessControl) ManageSSHTemplate(accessToken string, templateName string) error {
+	return a.checkPermission(accessToken, a.privileges.SSHTemplateManageSpecific+templateName)
+}
+
+// CreateSSHTemplate ----
+func (a AccessControl) CreateSSHTemplate(accessToken string) error {
+	return a.checkPermission(accessToken, a.privileges.SSHTemplateCreateAny)
+}
+
+// CreateSSHCertificate ----
+func (a AccessControl) CreateSSHCertificate(accessToken string, templateName string) error {
+	return a.checkPermission(accessToken, a.privileges.SSHCertificateCreateSpecific+templateName)
 }
 
 func (a AccessControl) checkPermission(accessToken string, permission string) error {

@@ -39,6 +39,12 @@ func InvalidContentType() HTTPError {
 		errorCode = "CPKICC001"
 	case "RevokeCertHandler":
 		errorCode = "CPKIRC001"
+	case "CreateSSHTemplateHandler":
+		errorCode = "CSSHCT001"
+	case "ManageSSHTemplateHandler":
+		errorCode = "CSSHMT001"
+	case "CreateSSHCertificateHandler":
+		errorCode = "CSSHCC001"
 	}
 	return HTTPError{
 		ErrorCode:    errorCode,
@@ -81,6 +87,18 @@ func InvalidAuthn(err string) HTTPError {
 		errorCode = "CPKILC001"
 	case "RevokeCertHandler":
 		errorCode = "CPKIRC002"
+	case "CreateSSHTemplateHandler":
+		errorCode = "CSSHCT002"
+	case "GetSSHTemplateHandler":
+		errorCode = "CSSHGT001"
+	case "ListSSHTemplatesHandler":
+		errorCode = "CSSHLT001"
+	case "ManageSSHTemplateHandler":
+		errorCode = "CSSHMT003"
+	case "DeleteSSHTemplateHandler":
+		errorCode = "CSSHDT001"
+	case "CreateSSHCertificateHandler":
+		errorCode = "CSSHCC002"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: invalidAuthn + err,
@@ -118,7 +136,20 @@ func InvalidAuthz(err string) HTTPError {
 		errorCode = "CPKICC004"
 	case "RevokeCertHandler":
 		errorCode = "CPKIRC004"
+	case "CreateSSHTemplateHandler":
+		errorCode = "CSSHCT003"
+	case "GetSSHTemplateHandler":
+		errorCode = "CSSHGT002"
+	case "ListSSHTemplatesHandler":
+		errorCode = "CSSHLT002"
+	case "ManageSSHTemplateHandler":
+		errorCode = "CSSHMT004"
+	case "DeleteSSHTemplateHandler":
+		errorCode = "CSSHDT002"
+	case "CreateSSHCertificateHandler":
+		errorCode = "CSSHCC004"
 	}
+
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Not authorized to access requested resource - " + err,
 		HTTPResponse: http.StatusForbidden,
@@ -145,6 +176,10 @@ func RequestDecodeFail(err string) HTTPError {
 		errorCode = "CPKIRC003"
 	case "RevokeCertHandler":
 		errorCode = "CPKIRC003"
+	case "CreateSSHTemplateHandler":
+		errorCode = "CSSHCT002"
+	case "CreateSSHCertificateHandler":
+		errorCode = "CSSHCC003"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Failed to decode request JSON data - " + err,
@@ -220,6 +255,8 @@ func StorageWriteFail(err string) HTTPError {
 		errorCode = "CPKICT009"
 	case "SetCAChain":
 		errorCode = "CPKISC005"
+	case "CreateSSHTemplate":
+		errorCode = "CSSHCT008"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error writing new resource to the storage backend - " + err,
@@ -245,6 +282,12 @@ func StorageReadFail(err string) HTTPError {
 		errorCode = "CPKILC002"
 	case "RevokeCert":
 		errorCode = "CPKIRC008"
+	case "GetSSHTemplate":
+		errorCode = "CSSHGT003"
+	case "ListSSHTemplates":
+		errorCode = "CSSHLT003"
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC006"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error reading resource from storage backend - " + err,
@@ -268,6 +311,10 @@ func ResponseEncodeError(err string) HTTPError {
 		errorCode = "CPKICE005"
 	case "ListCertsHandler":
 		errorCode = "CPKILC004"
+	case "ListSSHTemplatesHandler":
+		errorCode = "CSSHLT004"
+	case "CreateSSHCertificateHandler":
+		errorCode = "CSSHCC018"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error encoding response data - " + err,
@@ -300,6 +347,8 @@ func StorageDeleteFail(err string) HTTPError {
 	switch getCallerFunctionName() {
 	case "DeleteTemplate":
 		errorCode = "CPKIDT003"
+	case "DeleteSSHTemplate":
+		errorCode = "CSSHDT003"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error deleting template from backend - " + err,
@@ -427,6 +476,8 @@ func GenerateSerialFail(err string) HTTPError {
 	switch getCallerFunctionName() {
 	case "GenerateIntermediate":
 		errorCode = "CPKIGI012"
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC013"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error generating serial number - " + err,
@@ -502,6 +553,8 @@ func SigningKeyReadFail(err string) HTTPError {
 		errorCode = "CPKISI008"
 	case "RevokeCert":
 		errorCode = "CPKIRC010"
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC005"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error reading signing key from storage backend - " + err,
@@ -530,6 +583,8 @@ func ParseCertificateError(err string) HTTPError {
 		errorCode = "CPKISI006"
 	case "RevokeCert":
 		errorCode = "CPKIRC014"
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC015"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error parsing X.509 certificate - " + err,
@@ -588,6 +643,8 @@ func DecodeCertError(err string) HTTPError {
 		errorCode = "CPKICE004"
 	case "RevokeCert":
 		errorCode = "CPKIRC013"
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC014"
 
 	}
 	return HTTPError{ErrorCode: errorCode,
@@ -602,6 +659,8 @@ func DecodeSigningKeyError(err string) HTTPError {
 	switch getCallerFunctionName() {
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI009"
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC012"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error decoding signing key from base64 - " + err,
@@ -630,6 +689,8 @@ func ParseSigningKeyError(err string) HTTPError {
 		errorCode = "CPKISI010"
 	case "RevokeCert":
 		errorCode = "CPKIRC011"
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC019"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error parsing the signing key - " + err,
@@ -643,6 +704,8 @@ func ParsePublicKeyError(err string) HTTPError {
 	switch getCallerFunctionName() {
 	case "SetIntermediateCertificate":
 		errorCode = "CPKISI011"
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC011"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error parsing the public key from the signing key - " + err,
@@ -712,6 +775,8 @@ func CreateCertificateFail(err string) HTTPError {
 		errorCode = "CPKISG013"
 	case "CreateCert":
 		errorCode = "CPKICC012"
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC017"
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error while creating certificate - " + err,
@@ -801,6 +866,110 @@ func InvalidCN(err string) HTTPError {
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Invalid Common Name requested for certificate - " + err,
+		HTTPResponse: http.StatusInternalServerError,
+	}
+}
+
+// SSHInvalidHost ---------
+func SSHInvalidHost(err string) HTTPError {
+	var errorCode string
+	switch getCallerFunctionName() {
+	case "CreateSSHTemplate":
+		errorCode = "CSSHCT005"
+	}
+	return HTTPError{ErrorCode: errorCode,
+		ErrorMessage: "The requested SSH hostname is invalid - " + err,
+		HTTPResponse: http.StatusInternalServerError,
+	}
+}
+
+// SSHInvalidPrincipal ---------
+func SSHInvalidPrincipal(err string) HTTPError {
+	var errorCode string
+	switch getCallerFunctionName() {
+	case "CreateSSHTemplate":
+		errorCode = "CSSHCT006"
+	}
+	return HTTPError{ErrorCode: errorCode,
+		ErrorMessage: "The requested SSH principal is invalid - " + err,
+		HTTPResponse: http.StatusInternalServerError,
+	}
+}
+
+// SSHInvalidCertType ---------
+func SSHInvalidCertType() HTTPError {
+	var errorCode string
+	switch getCallerFunctionName() {
+	case "CreateSSHTemplate":
+		errorCode = "CSSHCT007"
+	}
+	return HTTPError{ErrorCode: errorCode,
+		ErrorMessage: "Invalid certificate type, valid options are Host or User",
+		HTTPResponse: http.StatusBadRequest,
+	}
+}
+
+// SSHForbiddenPrincipal ---------
+func SSHForbiddenPrincipal(err string) HTTPError {
+	var errorCode string
+	switch getCallerFunctionName() {
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC007"
+	}
+	return HTTPError{ErrorCode: errorCode,
+		ErrorMessage: "The requested SSH principal is forbidden - " + err,
+		HTTPResponse: http.StatusInternalServerError,
+	}
+}
+
+// SSHForbiddenHost ---------
+func SSHForbiddenHost(err string) HTTPError {
+	var errorCode string
+	switch getCallerFunctionName() {
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC008"
+	}
+	return HTTPError{ErrorCode: errorCode,
+		ErrorMessage: "The requested SSH hostname is forbidden - " + err,
+		HTTPResponse: http.StatusInternalServerError,
+	}
+}
+
+// SSHForbiddenCriticalOption ---------
+func SSHForbiddenCriticalOption(err string) HTTPError {
+	var errorCode string
+	switch getCallerFunctionName() {
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC009"
+	}
+	return HTTPError{ErrorCode: errorCode,
+		ErrorMessage: "The requested SSH critical option is forbidden - " + err,
+		HTTPResponse: http.StatusInternalServerError,
+	}
+}
+
+// SSHForbiddenExtension ---------
+func SSHForbiddenExtension(err string) HTTPError {
+	var errorCode string
+	switch getCallerFunctionName() {
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC010"
+	}
+	return HTTPError{ErrorCode: errorCode,
+		ErrorMessage: "The requested SSH extension is forbidden - " + err,
+		HTTPResponse: http.StatusInternalServerError,
+	}
+}
+
+// InvalidValidityPeriod ---------
+func InvalidValidityPeriod() HTTPError {
+	var errorCode string
+	switch getCallerFunctionName() {
+	case "CreateSSHCertificate":
+		errorCode = "CSSHCC016"
+	}
+	return HTTPError{ErrorCode: errorCode,
+		ErrorMessage: "Requested certificate validity period is greater than the CA validity period",
 		HTTPResponse: http.StatusInternalServerError,
 	}
 }

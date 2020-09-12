@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"errors"
+
 	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/hashicorp/vault/api"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
@@ -138,6 +140,36 @@ func (a AccessControl) SetIntermediateCertificate(accessToken string) error {
 // SetCAChain ...
 func (a AccessControl) SetCAChain(accessToken string) error {
 	return a.checkPermission(accessToken, a.privileges.SetCAChain)
+}
+
+// ListSSHTemplates ----
+func (a AccessControl) ListSSHTemplates(accessToken string) error {
+	return errors.New("Not implemented")
+}
+
+// ReadSSHTemplate ----
+func (a AccessControl) ReadSSHTemplate(accessToken string, templateName string) error {
+	return errors.New("Not implemented")
+}
+
+// DeleteSSHTemplate ----
+func (a AccessControl) DeleteSSHTemplate(accessToken string, templateName string) error {
+	return errors.New("Not implemented")
+}
+
+// ManageSSHTemplate ---
+func (a AccessControl) ManageSSHTemplate(accessToken string, templateName string) error {
+	return errors.New("Not implemented")
+}
+
+// CreateSSHTemplate ----
+func (a AccessControl) CreateSSHTemplate(accessToken string) error {
+	return errors.New("Not implemented")
+}
+
+// CreateSSHCertificate ----
+func (a AccessControl) CreateSSHCertificate(accessToken string, templateName string) error {
+	return errors.New("Not implemented")
 }
 
 func (a AccessControl) checkPermission(accessToken string, permission string) error {

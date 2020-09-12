@@ -6,6 +6,7 @@ github.com/cyberark/conjur-api-go/conjurapi/authn
 github.com/cyberark/conjur-api-go/conjurapi/logging
 github.com/cyberark/conjur-api-go/conjurapi/response
 # github.com/golang/gddo v0.0.0-20200715224205-051695c33a3f
+## explicit
 github.com/golang/gddo/httputil/header
 # github.com/golang/snappy v0.0.1
 github.com/golang/snappy
@@ -13,6 +14,19 @@ github.com/golang/snappy
 github.com/gorilla/context
 # github.com/gorilla/mux v1.7.4
 github.com/gorilla/mux
+# github.com/onsi/ginkgo v1.14.0
+## explicit
+# github.com/sirupsen/logrus v1.0.5
+github.com/sirupsen/logrus
+# golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+## explicit
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/ed25519
+golang.org/x/crypto/ed25519/internal/edwards25519
+golang.org/x/crypto/internal/chacha20
+golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/poly1305
+golang.org/x/crypto/ssh
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-cleanhttp v0.5.1
@@ -66,6 +80,7 @@ golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 # golang.org/x/sys v0.0.0-20200519105757-fe76b779f299
+golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows

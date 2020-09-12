@@ -11,6 +11,12 @@ type Access interface {
 	DeleteTemplate(accessToken string, templateName string) error
 	ManageTemplate(accessToken string, templateName string) error
 	CreateTemplate(accessToken string) error
+	ListSSHTemplates(accessToken string) error
+	CreateSSHTemplate(accessToken string) error
+	ReadSSHTemplate(accessToken string, templateName string) error
+	DeleteSSHTemplate(accessToken string, templateName string) error
+	ManageSSHTemplate(accessToken string, templateName string) error
+	CreateSSHCertificate(accessToken string, templateName string) error
 	Purge(accessToken string) error
 	CRLPurge(accessToken string) error
 	CreateCertificate(accessToken string, templateName string) error
