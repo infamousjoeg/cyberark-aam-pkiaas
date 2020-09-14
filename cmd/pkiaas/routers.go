@@ -225,7 +225,11 @@ var routes = Routes{
 	Route{
 		"DeleteSSHTemplate",
 		strings.ToUpper("Delete"),
+<<<<<<< HEAD
 		"/ssh/template/{templateName}",
+=======
+		"/ssh/template/delete/{templateName}",
+>>>>>>> Created service for generating SSH authentication certificates
 		api.DeleteSSHTemplateHandler,
 	},
 

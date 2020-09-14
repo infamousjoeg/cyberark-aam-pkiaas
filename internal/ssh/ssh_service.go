@@ -4,7 +4,10 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
+<<<<<<< HEAD
 	"encoding/pem"
+=======
+>>>>>>> Created service for generating SSH authentication certificates
 	"fmt"
 	"strings"
 	"time"
@@ -28,7 +31,11 @@ func CreateSSHTemplate(template types.SSHTemplate, storage backend.Storage) http
 	if err != nil {
 		return httperror.SSHInvalidPrincipal(err.Error())
 	}
+<<<<<<< HEAD
 	if strings.ToUpper(template.CertType) != "USER" && strings.ToUpper(template.CertType) != "HOST" {
+=======
+	if strings.ToUpper(template.CertType) != "USER" || strings.ToUpper(template.CertType) != "HOST" {
+>>>>>>> Created service for generating SSH authentication certificates
 		return httperror.SSHInvalidCertType()
 	}
 	err = storage.CreateSSHTemplate(template)
@@ -134,6 +141,7 @@ func CreateSSHCertificate(certReq types.SSHSignRequest, storage backend.Storage)
 		return types.SSHCertificate{}, httperror.DecodeSigningKeyError(err.Error())
 	}
 
+<<<<<<< HEAD
 	parsedKey, err := x509.ParsePKCS8PrivateKey(decodedKey)
 	if err != nil {
 		if strings.Contains(err.Error(), "ParsePKCS1PrivateKey") {
@@ -158,6 +166,9 @@ func CreateSSHCertificate(certReq types.SSHSignRequest, storage backend.Storage)
 	
 	pemKey := pem.EncodeToMemory(&pem.Block{Type: blockType, Bytes: decodedKey})
 	signer, err := ssh.ParsePrivateKey(pemKey)
+=======
+	signer, err := ssh.ParsePrivateKey(decodedKey)
+>>>>>>> Created service for generating SSH authentication certificates
 	if err != nil {
 		return types.SSHCertificate{}, httperror.ParseSigningKeyError(err.Error())
 	}

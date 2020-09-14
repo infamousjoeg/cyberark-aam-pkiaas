@@ -690,7 +690,11 @@ func ParseSigningKeyError(err string) HTTPError {
 	case "RevokeCert":
 		errorCode = "CPKIRC011"
 	case "CreateSSHCertificate":
+<<<<<<< HEAD
 		errorCode = "CSSHCC019"
+=======
+		errorCode = "CSSHCC012"
+>>>>>>> Created service for generating SSH authentication certificates
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Error parsing the signing key - " + err,
@@ -905,7 +909,11 @@ func SSHInvalidCertType() HTTPError {
 	}
 	return HTTPError{ErrorCode: errorCode,
 		ErrorMessage: "Invalid certificate type, valid options are Host or User",
+<<<<<<< HEAD
 		HTTPResponse: http.StatusBadRequest,
+=======
+		HTTPResponse: http.StatusInternalServerError,
+>>>>>>> Created service for generating SSH authentication certificates
 	}
 }
 

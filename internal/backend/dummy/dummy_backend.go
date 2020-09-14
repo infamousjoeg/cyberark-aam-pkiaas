@@ -37,6 +37,12 @@ var dummySSHTemplate types.SSHTemplate = types.SSHTemplate{
 	CertType:     "User",
 }
 
+var dummySSHTemplate types.SSHTemplate = types.SSHTemplate{
+	TemplateName: "TestSSHTemplate",
+	MaxTTL:       3600,
+	CertType:     "User",
+}
+
 // GetCertificate ----------------------------------------------------------------
 // Finds matching certificate matching serial number in DAP and returns it; Sends appropriate
 // error message as necessary
