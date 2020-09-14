@@ -213,6 +213,11 @@ drcJcTzQVTv7zbQ4NMfd8pThaEzOhS0J1Wn3j+rxZOCpHdKmdd2urD4pU4IQGg/O2AIYoftX`
 	return signingKey, nil
 }
 
+// ListExpiredCertificates --------------------------------------------------
+func (d Dummy) ListExpiredCertificates(dayBuffer int) ([]*big.Int, error) {
+	return []*big.Int{big.NewInt(123123)}, nil
+}
+
 // GetRevokedCerts ------------------------------------------------------
 func (d Dummy) GetRevokedCerts() ([]types.RevokedCertificate, error) {
 	serialNumber := new(big.Int)

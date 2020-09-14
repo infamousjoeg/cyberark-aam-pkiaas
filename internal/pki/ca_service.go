@@ -317,6 +317,27 @@ func SetCAChain(pemBundle types.PEMCertificateBundle, backend backend.Storage) h
 	return httperror.HTTPError{}
 }
 
+func PurgeCRL(daysBuffer int, backend backend.Storage) httperror.HTTPError {
+	return httperror.HTTPError{}
+}
+
+// Purge Deletes all certificates from the backend storage certificate store that have been
+// expired for longer than the time specified in `daysBuffer`
+func Purge(daysBuffer int, backend backend.Storage) httperror.HTTPError {
+	deleteList, err := backend.ListExpiredCertificates(daysBuffer)
+	if err != nil {
+		return httperror.StorageReadFail(err.Error())
+	}
+
+	for _, certificate := range deleteList {
+		err = backend.DeleteCertificate(certificate)
+		if err != nil {
+			return httperror.StorageDeleteFail(err.Error())
+		}
+	}
+	return httperror.HTTPError{}
+}
+
 // GetCRL -------------------------
 func GetCRL(backend backend.Storage) ([]byte, httperror.HTTPError) {
 	encodedCRL, err := backend.GetCRL()
