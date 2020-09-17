@@ -10,7 +10,6 @@ type CreateCertReq struct {
 	CommonName   string   `json:"commonName"`
 	TTL          int64    `json:"ttl"`
 	AltNames     []string `json:"altNames,omitempty"`
-	Format       string   `json:"format,omitempty"`
 }
 
 // Template --------------------------------------------------------------------

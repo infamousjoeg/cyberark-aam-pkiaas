@@ -64,17 +64,21 @@ services:
 
 
   pkiaas-tester:
-    image: everpeace/curl-jq
+    image: pkiaas-tester
+    build:
+      context: ./
+      dockerfile: Dockerfile
     environment:
       CONJUR_CERT_FILE: "/app/cert/conjur-master.pem"
       CONJUR_AUTHN_LOGIN: "host/pki-service"
       CONJUR_ACCOUNT: "conjur"
       CONJUR_APPLIANCE_URL: "https://conjur-master"
-    command: sleep infinity
     volumes:
       - conjur-certificate:/app/cert
       - conjur-env:/app/env
       - .:/app/dev
+    ports:
+      - "2221:22"
     depends_on:
       - dap
       - configurer
@@ -82,7 +86,20 @@ services:
     networks:
       pkiaas-network:
         aliases:
-          - pkiaas-tester
+          - ssh-host
+
+  ssh-client:
+    image: ssh-client
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - "2222:22"
+    depends_on:
+      - dap
+      - pkiaas
+    networks:
+      - pkiaas-network
 
 volumes:
   conjur-certificate:

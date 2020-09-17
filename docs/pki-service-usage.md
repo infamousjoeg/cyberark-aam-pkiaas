@@ -8,12 +8,13 @@ You can now authenticate to Conjur using the returned `api_key` and generate a C
 # Get the conjur access token and create header
 access_token=$(curl https://<conjur instance>/authn/<account>/host%2Fpki-admin/authenticate --data "1bzwdwq2mpjpct3qtth2n2wjkh4q28qrx411rcjx9cakp5h16966jw" | base64)
 header="Authorization: Token token=\"$access_token\""
+content_type="Content-Type: application/json"
 
 # This should return with 'OK'
 curl https://<conjur pki service>/health
 
 # Now lets generate a self-signed certificate for the Conjur PKI Service. SELF SIGNED CERTIFICATE SHOULD ONLY BE USED FOR POCs.
-curl -H "$header" --data '{"commonName": "my-pki-service.local", "keyAlgo": "RSA", "keySize": "2048"}' https://<conjur pki service>/ca/generate/selfsigned 
+curl -H "$header" -H "$content_type" --data '{"commonName": "my-pki-service.local", "keyAlgo": "RSA", "keyBits": "2048"}' https://<conjur pki service>/ca/generate/selfsigned 
 ```
 
 The CA certificate and signing key have been generated and are stored within the Conjur PKI Service.
@@ -33,7 +34,7 @@ data='
   "maxTTL": 3600
 }
 '
-curl -H "$header" --data "$data" https://<conjur pki service>/template/create 
+curl -H "$header" -H "$content_type" --data "$data" https://<conjur pki service>/template/create 
 ```
 
 A `200` response code will be returned if the Template was created successfully.
@@ -51,7 +52,7 @@ data=`
   "commonName": "some.app.certificate.company.local"
 }
 `
-curl -H "$header" --data "$data" https://<conjur pki service>/certificate/create 
+curl -H "$header" -H "$content_type" --data "$data" https://<conjur pki service>/certificate/create 
 ```
 
 The returned response should look like the following:
