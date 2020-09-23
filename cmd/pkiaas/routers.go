@@ -78,91 +78,91 @@ var routes = Routes{
 	Route{
 		"CreateCertificate",
 		strings.ToUpper("Post"),
-		"/certificate/create",
+		"/pki/certificate/create",
 		api.CreateCertHandler,
 	},
 
 	Route{
 		"GetCertificate",
 		strings.ToUpper("Get"),
-		"/certificate/{serialNumber}",
+		"/pki/certificate/{serialNumber}",
 		api.GetCertHandler,
 	},
 
 	Route{
 		"ListCertificates",
 		strings.ToUpper("Get"),
-		"/certificates",
+		"/pki/certificates",
 		api.ListCertsHandler,
 	},
 
 	Route{
 		"Purge",
 		strings.ToUpper("Post"),
-		"/purge",
+		"/pki/purge",
 		api.PurgeHandler,
 	},
 
 	Route{
 		"RevokeCertificate",
 		strings.ToUpper("Post"),
-		"/certificate/revoke",
+		"/pki/certificate/revoke",
 		api.RevokeCertHandler,
 	},
 
 	Route{
 		"SignCertificate",
 		strings.ToUpper("Post"),
-		"/certificate/sign",
+		"/pki/certificate/sign",
 		api.SignCertHandler,
 	},
 
 	Route{
 		"GetCRL",
 		strings.ToUpper("Get"),
-		"/crl",
+		"/pki/crl",
 		api.GetCRLHandler,
 	},
 
 	Route{
 		"PurgeCRL",
 		strings.ToUpper("Post"),
-		"/crl/purge",
+		"/pki/crl/purge",
 		api.PurgeCRLHandler,
 	},
 
 	Route{
 		"CreateTemplate",
 		strings.ToUpper("Post"),
-		"/template/create",
+		"/pki/template",
 		api.CreateTemplateHandler,
 	},
 
 	Route{
 		"DeleteTemplate",
 		strings.ToUpper("Delete"),
-		"/template/delete/{templateName}",
+		"/pki/template/{templateName}",
 		api.DeleteTemplateHandler,
 	},
 
 	Route{
 		"GetTemplate",
 		strings.ToUpper("Get"),
-		"/template/{templateName}",
+		"/pki/template/{templateName}",
 		api.GetTemplateHandler,
 	},
 
 	Route{
 		"ListTemplates",
 		strings.ToUpper("Get"),
-		"/templates",
+		"/pki/templates",
 		api.ListTemplatesHandler,
 	},
 
 	Route{
 		"ManageTemplate",
 		strings.ToUpper("Put"),
-		"/template/manage",
+		"/pki/template",
 		api.ManageTemplateHandler,
 	},
 
