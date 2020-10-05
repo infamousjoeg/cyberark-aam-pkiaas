@@ -21,11 +21,7 @@ func CreateSSHTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	if !pki.ValidateContentType(r.Header, "application/json") {
 		httpErr := httperror.InvalidContentType()
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
-<<<<<<< HEAD
 		return
-=======
-
->>>>>>> Created service for generating SSH authentication certificates
 	}
 
 	// Ensure that the requesting entity can both authenticate to the SSH service, as well as
@@ -51,17 +47,13 @@ func CreateSSHTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httpErr := httperror.RequestDecodeFail(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
-<<<<<<< HEAD
 		return
-=======
->>>>>>> Created service for generating SSH authentication certificates
 	}
 	httpErr := ssh.CreateSSHTemplate(newTemplate, storage)
 	if httpErr != (httperror.HTTPError{}) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-<<<<<<< HEAD
 
 	err = json.NewEncoder(w).Encode(newTemplate)
 	if err != nil {
@@ -69,8 +61,6 @@ func CreateSSHTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-=======
->>>>>>> Created service for generating SSH authentication certificates
 }
 
 // ListSSHTemplatesHandler Handles the required logic to retrieve a SSH template list from the SSH service
@@ -216,7 +206,6 @@ func ManageSSHTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-<<<<<<< HEAD
 
 	err = json.NewEncoder(w).Encode(newTemplate)
 	if err != nil {
@@ -224,8 +213,6 @@ func ManageSSHTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
 		return
 	}
-=======
->>>>>>> Created service for generating SSH authentication certificates
 }
 
 // DeleteSSHTemplateHandler Accepts the HTTP request with the SSH template that is desired to be deleted
@@ -299,19 +286,13 @@ func CreateSSHCertificateHandler(w http.ResponseWriter, r *http.Request) {
 
 	sshCert, httpErr := ssh.CreateSSHCertificate(certReq, storage)
 	if httpErr != (httperror.HTTPError{}) {
-<<<<<<< HEAD
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
-=======
->>>>>>> Created service for generating SSH authentication certificates
 		return
 	}
 	err = json.NewEncoder(w).Encode(sshCert)
 	if err != nil {
 		httpErr := httperror.ResponseEncodeError(err.Error())
 		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
-<<<<<<< HEAD
 		return
-=======
->>>>>>> Created service for generating SSH authentication certificates
 	}
 }

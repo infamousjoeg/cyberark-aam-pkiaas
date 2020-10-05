@@ -125,13 +125,6 @@ var routes = Routes{
 	},
 
 	Route{
-		"PurgeCRL",
-		strings.ToUpper("Post"),
-		"/pki/crl/purge",
-		api.PurgeCRLHandler,
-	},
-
-	Route{
 		"CreateTemplate",
 		strings.ToUpper("Post"),
 		"/pki/template",
@@ -225,11 +218,7 @@ var routes = Routes{
 	Route{
 		"DeleteSSHTemplate",
 		strings.ToUpper("Delete"),
-<<<<<<< HEAD
 		"/ssh/template/{templateName}",
-=======
-		"/ssh/template/delete/{templateName}",
->>>>>>> Created service for generating SSH authentication certificates
 		api.DeleteSSHTemplateHandler,
 	},
 

@@ -179,6 +179,14 @@ func CreateSelfSignedCert(certTemplate x509.Certificate, signPrivKey crypto.Priv
 	if err != nil {
 		return types.PEMIntermediate{}, httperror.CertWriteFail(err.Error())
 	}
+	err = backend.WriteCAChain([]string{string(pemSignCert)})
+	if err != nil {
+		return types.PEMIntermediate{}, httperror.StorageWriteFail(err.Error())
+	}
+	httperr := CreateCRL([]types.RevokedCertificate{}, backend)
+	if httperr != (httperror.HTTPError{}) {
+		return types.PEMIntermediate{}, httperr
+	}
 	return types.PEMIntermediate{SelfSignedCert: string(pemSignCert)}, httperror.HTTPError{}
 }
 
@@ -246,6 +254,14 @@ func SetIntermediateCertificate(signedCert types.PEMCertificate, backend backend
 	err = backend.WriteSigningCert(base64.StdEncoding.EncodeToString(derCert))
 	if err != nil {
 		return httperror.CertWriteFail(err.Error())
+	}
+	err = backend.WriteCAChain([]string{signedCert.Certificate})
+	if err != nil {
+		return httperror.StorageWriteFail(err.Error())
+	}
+	httperr := CreateCRL([]types.RevokedCertificate{}, backend)
+	if httperr != (httperror.HTTPError{}) {
+		return httperr
 	}
 	return httperror.HTTPError{}
 }
@@ -317,10 +333,6 @@ func SetCAChain(pemBundle types.PEMCertificateBundle, backend backend.Storage) h
 	return httperror.HTTPError{}
 }
 
-func PurgeCRL(daysBuffer int, backend backend.Storage) httperror.HTTPError {
-	return httperror.HTTPError{}
-}
-
 // Purge Deletes all certificates from the backend storage certificate store that have been
 // expired for longer than the time specified in `daysBuffer`
 func Purge(daysBuffer int, backend backend.Storage) httperror.HTTPError {
@@ -335,7 +347,12 @@ func Purge(daysBuffer int, backend backend.Storage) httperror.HTTPError {
 			return httperror.StorageDeleteFail(err.Error())
 		}
 	}
-	return httperror.HTTPError{}
+	revokedCertificates, err := backend.GetRevokedCerts()
+	if err != nil {
+		return httperror.StorageReadFail(err.Error())
+	}
+
+	return CreateCRL(revokedCertificates, backend)
 }
 
 // GetCRL -------------------------
