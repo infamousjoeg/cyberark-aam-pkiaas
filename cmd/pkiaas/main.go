@@ -40,7 +40,7 @@ func createServerTLS() {
 			OrganizationalUnit: []string{"PKIService"},
 		},
 	}
-	selfCert, err := x509.CreateCertificate(rand.Reader, &certTemplate, &certTemplate, newKey.PublicKey, newKey)
+	selfCert, err := x509.CreateCertificate(rand.Reader, &certTemplate, &certTemplate, &newKey.PublicKey, newKey)
 	if err != nil {
 		log.Fatal("Unable to generate TLS self-signed certificate: " + err.Error())
 	}
