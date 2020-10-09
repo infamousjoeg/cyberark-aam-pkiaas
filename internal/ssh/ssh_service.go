@@ -213,5 +213,5 @@ func CreateSSHCertificate(certReq types.SSHSignRequest, storage backend.Storage)
 		fmt.Println("SignCert: " + err.Error())
 		return types.SSHCertificate{}, httperror.CreateCertificateFail(err.Error())
 	}
-	return types.SSHCertificate{Certificate: string(ssh.MarshalAuthorizedKey(certificate))}, httperror.HTTPError{}
+	return types.SSHCertificate{Certificate: string(ssh.MarshalAuthorizedKey(certificate)), SSHCA: string(signer.PublicKey().Marshal())}, httperror.HTTPError{}
 }
