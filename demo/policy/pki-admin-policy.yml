@@ -1,0 +1,4 @@
+- !host pki-admin
+- !grant
+  role: !group pki/admin
+  member: !host pki-admin

@@ -1,0 +1,107 @@
+version: "3"
+services:
+  dap:
+    image: captainfluffytoes/dap:11.4.0
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      CONTAINER_NAME: "conjur-master"
+      ADMIN_PASSWORD: "CYberark11@@"
+      CONJUR_ACCOUNT: "conjur"
+      CONJUR_LOG_LEVEL: debug
+    ports:
+      - "443:443"
+    volumes:
+      - conjur-certificate:/opt/conjur/etc/ssl/
+    networks:
+      pkiaas-network:
+        aliases:
+          - conjur-master
+
+  configurer:
+    image: configurer
+    build:
+      context: configurer
+      dockerfile: Dockerfile
+    working_dir: ${PWD}
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - .:/${PWD}
+    - conjur-env:/tmp
+    command: [./configurer/config.sh]
+    depends_on:
+      - dap
+    networks:
+      - pkiaas-network
+
+
+  pkiaas:
+    build:
+      context: ../
+      dockerfile: Dockerfile.dev
+    image: pkiaas-test
+    environment:
+      CONJUR_CERT_FILE: "/app/cert/conjur-master.pem"
+      CONJUR_AUTHN_LOGIN: "host/pki-service"
+      CONJUR_ACCOUNT: "conjur"
+      CONJUR_APPLIANCE_URL: "https://conjur-master"
+
+    command: bash -c 'while [ ! -f /app/env/pkiaas.env ]; do echo "pkiaas.env not exist"; sleep 2; done; source /app/env/pkiaas.env && env && /app/pkiaas'
+    volumes:
+      - conjur-certificate:/app/cert
+      - conjur-env:/app/env
+    ports:
+    - "8080:8080"
+    depends_on:
+      - dap
+      - configurer
+    networks:
+      pkiaas-network:
+        aliases:
+          - pkiaas
+
+
+  pkiaas-tester:
+    image: pkiaas-tester
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    environment:
+      CONJUR_CERT_FILE: "/app/cert/conjur-master.pem"
+      CONJUR_AUTHN_LOGIN: "host/pki-service"
+      CONJUR_ACCOUNT: "conjur"
+      CONJUR_APPLIANCE_URL: "https://conjur-master"
+    volumes:
+      - conjur-certificate:/app/cert
+      - conjur-env:/app/env
+      - .:/app/demo
+    ports:
+      - "2221:22"
+    depends_on:
+      - dap
+      - configurer
+      - pkiaas 
+    networks:
+      pkiaas-network:
+        aliases:
+          - ssh-host
+
+  ssh-client:
+    image: ssh-client
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - "2222:22"
+    depends_on:
+      - dap
+      - pkiaas
+    networks:
+      - pkiaas-network
+
+volumes:
+  conjur-certificate:
+  conjur-env:
+
+networks:
+  pkiaas-network:
