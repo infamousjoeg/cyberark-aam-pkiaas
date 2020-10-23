@@ -13,13 +13,13 @@ import (
 )
 
 var (
-	// Username to logon PAS REST API using
+	// Login ... Username to logon PAS REST API using
 	Login string
-	// AuthenticationType to be used to logon PAS REST API
+	// Account ... AuthenticationType to be used to logon PAS REST API
 	Account string
-	// BaseURL to send PAS REST API logon request to
+	// ApplianceURL ... BaseURL to send PAS REST API logon request to
 	ApplianceURL string
-	// SSL Certifictae file path
+	// CertFile ... SSL Certifictae file path
 	CertFile string
 	// InsecureTLS is a boolean value whether to verify TLS or not
 	InsecureTLS bool

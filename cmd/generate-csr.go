@@ -50,11 +50,17 @@ var generateCSRCmd = &cobra.Command{
 }
 
 var (
+	// CommonName ...
 	CommonName string
-	KeyAlgo    string
-	KeyBits    string
-	MaxTTL     int64
-	AltNames   []string
+	// KeyAlgo ...
+	KeyAlgo string
+	// KeyBits ...
+	KeyBits string
+	// MaxTTL ...
+	MaxTTL int64
+	// AltNames ...
+	AltNames []string
+	// SelfSigned ...
 	SelfSigned bool
 )
 
