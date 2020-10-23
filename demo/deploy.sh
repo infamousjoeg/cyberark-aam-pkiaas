@@ -8,10 +8,16 @@ main () {
     elif [[ "$1" == "down" ]]; then
         echo "==> Stopping Demo Environment"
         compose_down
+    elif [[ "$1" == "restart" ]]; then
+        echo "==> Restarting Demo Environment"
+        compose_down
+        compose_up
     else
-        echo "Usage: $ ""$0"" [up/down]"
+        echo "Usage: $ ""$0"" [up/down/restart]"
         exit 1
     fi
+
+    source_tester
 }
 
 compose_up () {
