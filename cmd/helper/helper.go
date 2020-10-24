@@ -12,6 +12,7 @@ import (
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/conjur"
 )
 
+//ConjurCredentials ...
 type ConjurCredentials struct {
 	ApplianceURL string `json:"appliance_url"`
 	Account      string `json:"account"`
