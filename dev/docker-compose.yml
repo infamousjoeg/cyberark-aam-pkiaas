@@ -53,7 +53,7 @@ services:
       - conjur-certificate:/app/cert
       - conjur-env:/app/env
     ports:
-    - "8080:8080"
+    - "8443:443"
     depends_on:
       - dap
       - configurer
