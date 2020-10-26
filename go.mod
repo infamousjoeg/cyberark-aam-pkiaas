@@ -12,8 +12,5 @@ require (
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.5.1 // indirect
-	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
-	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7 // indirect
-	golang.org/x/sys v0.0.0-20200519105757-fe76b779f299 // indirect
-	gopkg.in/yaml.v2 v2.3.0 // indirect
+	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
 )

@@ -16,6 +16,7 @@ type Storage interface {
 	CreateCertificate(certificateData types.CreateCertificateData) error
 	ListCertificates() ([]*big.Int, error)
 	GetCertificate(serialNumber *big.Int) (string, error)
+	DeleteCertificate(serialNumber *big.Int) error
 	RevokeCertificate(serialNumber *big.Int, reasonCode int, revocationDate time.Time) error
 	CreateTemplate(template types.Template) error
 	ListTemplates() ([]string, error)
@@ -33,6 +34,7 @@ type Storage interface {
 	GetCRL() (string, error)
 	WriteCAChain(pemBundle []string) error
 	GetCAChain() ([]string, error)
+	ListExpiredCertificates(int) ([]*big.Int, error)
 	GetRevokedCerts() ([]types.RevokedCertificate, error)
 	CertificateRevoked(serialNumber *big.Int) (types.RevokedCertificate, error)
 

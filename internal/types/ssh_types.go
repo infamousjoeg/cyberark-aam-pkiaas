@@ -14,6 +14,7 @@ type SSHTemplate struct {
 // SSHCertificate --------------------------
 type SSHCertificate struct {
 	Certificate string `json:"certificate"`
+	SSHCA       string `json:"ssh_ca"`
 }
 
 // SSHCertificateList ----------------------

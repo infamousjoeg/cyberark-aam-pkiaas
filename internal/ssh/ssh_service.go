@@ -153,9 +153,9 @@ func CreateSSHCertificate(certReq types.SSHSignRequest, storage backend.Storage)
 	case "*ecdsa.PrivateKey":
 		blockType = "EC PRIVATE KEY"
 	case "ed25519.PrivateKey":
-		blockType = "OPENSSH PRIVATE KEY"	
+		blockType = "OPENSSH PRIVATE KEY"
 	}
-	
+
 	pemKey := pem.EncodeToMemory(&pem.Block{Type: blockType, Bytes: decodedKey})
 	signer, err := ssh.ParsePrivateKey(pemKey)
 	if err != nil {
@@ -213,5 +213,5 @@ func CreateSSHCertificate(certReq types.SSHSignRequest, storage backend.Storage)
 		fmt.Println("SignCert: " + err.Error())
 		return types.SSHCertificate{}, httperror.CreateCertificateFail(err.Error())
 	}
-	return types.SSHCertificate{Certificate: string(ssh.MarshalAuthorizedKey(certificate))}, httperror.HTTPError{}
+	return types.SSHCertificate{Certificate: string(ssh.MarshalAuthorizedKey(certificate)), SSHCA: string(signer.PublicKey().Marshal())}, httperror.HTTPError{}
 }

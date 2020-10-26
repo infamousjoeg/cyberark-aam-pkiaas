@@ -6,14 +6,9 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"math/big"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
@@ -399,73 +394,8 @@ func RevokeCert(crlReq types.RevokeRequest, backend backend.Storage) httperror.H
 	if err != nil {
 		return httperror.StorageReadFail(err.Error())
 	}
-	revokedCertList := []pkix.RevokedCertificate{}
-	for _, revokedCertificate := range revokedCertificates {
-		crlExtensions := []pkix.Extension{}
-		if revokedCertificate.ReasonCode > 0 {
-			reasonExtension := pkix.Extension{
-				Id:    asn1.ObjectIdentifier{2, 5, 29, 21}, // ASN.1 OID for CRL reason code
-				Value: []byte(strconv.Itoa(reasonCode)),
-			}
-			crlExtensions = append(crlExtensions, reasonExtension)
-		}
-		intSerialNum := new(big.Int)
-		intSerialNum, success := intSerialNum.SetString(revokedCertificate.SerialNumber, 10)
-		if !success {
-			return httperror.SerialNumberConversionError(err.Error())
-		}
-		crlEntry := pkix.RevokedCertificate{
-			SerialNumber:   intSerialNum,
-			RevocationTime: revokedCertificate.RevocationDate,
-			Extensions:     crlExtensions,
-		}
-		revokedCertList = append(revokedCertList, crlEntry)
-	}
 
-	// Retrieve the base64 encoded signing key from storage backend and decode it
-	encodedSigningKey, err := backend.GetSigningKey()
-	if err != nil {
-		return httperror.SigningKeyReadFail(err.Error())
-	}
-	decodedSigningKey, err := base64.StdEncoding.DecodeString(encodedSigningKey)
-
-	// Try to parse the private key using PKCS8, and if it fails attempt to use the recommended
-	// parsing format from the PKCS8 error
-	signingKey, err := x509.ParsePKCS8PrivateKey(decodedSigningKey)
-	if err != nil {
-		if strings.Contains(err.Error(), "ParsePKCS1PrivateKey") {
-			signingKey, err = x509.ParsePKCS1PrivateKey(decodedSigningKey)
-			if err != nil {
-				return httperror.ParseSigningKeyError(err.Error())
-			}
-		} else {
-			return httperror.ParseSigningKeyError(err.Error())
-		}
-	}
-
-	// Retrieve the base64 encoded signing key from storage backend and decode it
-	encodedCACert, err := backend.GetSigningCert()
-	if err != nil {
-		return httperror.StorageReadFail(err.Error())
-	}
-	derCACert, err := base64.StdEncoding.DecodeString(encodedCACert)
-	if err != nil {
-		return httperror.DecodeCertError(err.Error())
-	}
-	caCert, err := x509.ParseCertificate(derCACert)
-	if err != nil {
-		return httperror.ParseCertificateError(err.Error())
-	}
-	newCRL, err := caCert.CreateCRL(rand.Reader, signingKey, revokedCertList, revokeTime, revokeTime.Add(time.Hour*12))
-	if err != nil {
-		return httperror.CreateCRLFail(err.Error())
-	}
-
-	err = backend.WriteCRL(base64.StdEncoding.EncodeToString(newCRL))
-	if err != nil {
-		return httperror.WriteCRLFail(err.Error())
-	}
-	return httperror.HTTPError{}
+	return CreateCRL(revokedCertificates, backend)
 }
 
 /********************************************
