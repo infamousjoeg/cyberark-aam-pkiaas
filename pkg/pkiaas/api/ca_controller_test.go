@@ -334,30 +334,3 @@ type MockAccessControlFailAuthorizationCRLPurge struct {
 func (m MockAccessControlFailAuthorizationCRLPurge) CRLPurge(accessToken string) error {
 	return fmt.Errorf("Authorization Failed")
 }
-
-func TestPurgeCRLHandler(t *testing.T) {
-	req := newHttpRequest("POST", "/crl/purge", "", false)
-	context.Set(req, "Storage", dummyBackend())
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(api.PurgeCRLHandler)
-	handler.ServeHTTP(rr, req)
-	assertStatusCode(t, rr, 200)
-}
-
-func TestFailAuthenticationPurgeCRLHandler(t *testing.T) {
-	req := newHttpRequest("POST", "/crl/purge", "", false)
-	context.Set(req, "Storage", MockFailAuthenticate{})
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(api.PurgeCRLHandler)
-	handler.ServeHTTP(rr, req)
-	assertStatusCode(t, rr, 401)
-}
-
-func TestFailAuthorizationPurgeCRLHandler(t *testing.T) {
-	req := newHttpRequest("POST", "/crl/purge", "", false)
-	context.Set(req, "Storage", MockFailAuthorizationCRLPurge{})
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(api.PurgeCRLHandler)
-	handler.ServeHTTP(rr, req)
-	assertStatusCode(t, rr, 403)
-}

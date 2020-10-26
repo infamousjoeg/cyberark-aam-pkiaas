@@ -230,24 +230,3 @@ func PurgeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-
-// PurgeCRLHandler --------------------------------------------------
-// Handler that will purge all expired certificates from the CRL
-// within a given buffer time that is passed in the request
-func PurgeCRLHandler(w http.ResponseWriter, r *http.Request) {
-	storage := context.Get(r, "Storage").(backend.Storage)
-	authHeader := r.Header.Get("Authorization")
-	err := storage.GetAccessControl().Authenticate(authHeader)
-	if err != nil {
-		httpErr := httperror.InvalidAuthn(err.Error())
-		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
-		return
-	}
-
-	err = storage.GetAccessControl().CRLPurge(authHeader)
-	if err != nil {
-		httpErr := httperror.InvalidAuthz(err.Error())
-		http.Error(w, httpErr.JSON(), httpErr.HTTPResponse)
-		return
-	}
-}

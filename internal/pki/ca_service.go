@@ -52,6 +52,25 @@ func GenerateIntermediate(intermediateRequest types.IntermediateRequest, selfSig
 	}
 	var intermediateResponse types.PEMIntermediate
 	httpErr := httperror.HTTPError{}
+
+	var keyBytes []byte
+	// Capture the DER format of the new signing key to be written to backend storage
+	switch intermediateRequest.KeyAlgo {
+	case "RSA":
+		keyBytes = x509.MarshalPKCS1PrivateKey(signPrivKey.(*rsa.PrivateKey))
+	case "ECDSA":
+		keyBytes, err = x509.MarshalECPrivateKey(signPrivKey.(*ecdsa.PrivateKey))
+		if err != nil {
+			return types.PEMIntermediate{}, httperror.ECDSAKeyError(err.Error())
+		}
+	case "ED25519":
+		keyBytes = signPrivKey.(ed25519.PrivateKey)
+	}
+
+	err = backend.WriteSigningKey(base64.StdEncoding.EncodeToString(keyBytes))
+	if err != nil {
+		return types.PEMIntermediate{}, httperror.SigningKeyWriteFail(err.Error())
+	}
 	if !selfSigned { // Generate a CSR if self-signed is not passed or is passed as false
 
 		signRequest := x509.CertificateRequest{
@@ -88,24 +107,6 @@ func GenerateIntermediate(intermediateRequest types.IntermediateRequest, selfSig
 		}
 	}
 
-	var keyBytes []byte
-	// Capture the DER format of the new signing key to be written to backend storage
-	switch intermediateRequest.KeyAlgo {
-	case "RSA":
-		keyBytes = x509.MarshalPKCS1PrivateKey(signPrivKey.(*rsa.PrivateKey))
-	case "ECDSA":
-		keyBytes, err = x509.MarshalECPrivateKey(signPrivKey.(*ecdsa.PrivateKey))
-		if err != nil {
-			return types.PEMIntermediate{}, httperror.ECDSAKeyError(err.Error())
-		}
-	case "ED25519":
-		keyBytes = signPrivKey.(ed25519.PrivateKey)
-	}
-
-	err = backend.WriteSigningKey(base64.StdEncoding.EncodeToString(keyBytes))
-	if err != nil {
-		return types.PEMIntermediate{}, httperror.SigningKeyWriteFail(err.Error())
-	}
 	return intermediateResponse, httpErr
 }
 
@@ -179,6 +180,14 @@ func CreateSelfSignedCert(certTemplate x509.Certificate, signPrivKey crypto.Priv
 	if err != nil {
 		return types.PEMIntermediate{}, httperror.CertWriteFail(err.Error())
 	}
+	err = backend.WriteCAChain([]string{string(pemSignCert)})
+	if err != nil {
+		return types.PEMIntermediate{}, httperror.StorageWriteFail(err.Error())
+	}
+	httperr := CreateCRL([]types.RevokedCertificate{}, backend)
+	if httperr != (httperror.HTTPError{}) {
+		return types.PEMIntermediate{}, httperr
+	}
 	return types.PEMIntermediate{SelfSignedCert: string(pemSignCert)}, httperror.HTTPError{}
 }
 
@@ -246,6 +255,14 @@ func SetIntermediateCertificate(signedCert types.PEMCertificate, backend backend
 	err = backend.WriteSigningCert(base64.StdEncoding.EncodeToString(derCert))
 	if err != nil {
 		return httperror.CertWriteFail(err.Error())
+	}
+	err = backend.WriteCAChain([]string{signedCert.Certificate})
+	if err != nil {
+		return httperror.StorageWriteFail(err.Error())
+	}
+	httperr := CreateCRL([]types.RevokedCertificate{}, backend)
+	if httperr != (httperror.HTTPError{}) {
+		return httperr
 	}
 	return httperror.HTTPError{}
 }
@@ -315,6 +332,28 @@ func SetCAChain(pemBundle types.PEMCertificateBundle, backend backend.Storage) h
 		return httperror.StorageWriteFail(err.Error())
 	}
 	return httperror.HTTPError{}
+}
+
+// Purge Deletes all certificates from the backend storage certificate store that have been
+// expired for longer than the time specified in `daysBuffer`
+func Purge(daysBuffer int, backend backend.Storage) httperror.HTTPError {
+	deleteList, err := backend.ListExpiredCertificates(daysBuffer)
+	if err != nil {
+		return httperror.StorageReadFail(err.Error())
+	}
+
+	for _, certificate := range deleteList {
+		err = backend.DeleteCertificate(certificate)
+		if err != nil {
+			return httperror.StorageDeleteFail(err.Error())
+		}
+	}
+	revokedCertificates, err := backend.GetRevokedCerts()
+	if err != nil {
+		return httperror.StorageReadFail(err.Error())
+	}
+
+	return CreateCRL(revokedCertificates, backend)
 }
 
 // GetCRL -------------------------

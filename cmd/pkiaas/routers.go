@@ -125,13 +125,6 @@ var routes = Routes{
 	},
 
 	Route{
-		"PurgeCRL",
-		strings.ToUpper("Post"),
-		"/pki/crl/purge",
-		api.PurgeCRLHandler,
-	},
-
-	Route{
 		"CreateTemplate",
 		strings.ToUpper("Post"),
 		"/pki/template",
