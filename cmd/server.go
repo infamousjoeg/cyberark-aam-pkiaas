@@ -4,11 +4,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/conjur"
-	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend/vault"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/httperror"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
@@ -81,19 +78,6 @@ var serverCMD = &cobra.Command{
 	Example Usage:
 	$ pkiaas server -c pki1-service.company.local -a pki-altname.company.local`,
 	Run: func(cmd *cobra.Command, args []string) {
-		vaultBackend := strings.ToLower(os.Getenv("PKI_VAULT_BACKEND"))
-
-		var err error
-		if vaultBackend == "yes" || vaultBackend == "true" {
-			storage, err := vault.NewFromDefaults()
-		} else {
-			storage, err := conjur.NewFromDefaults()
-		}
-
-		if err != nil {
-			panic("Error initializing PKI backend: " + err.Error())
-		}
-
 		createServerTLS()
 
 		log.Printf("Server started")
