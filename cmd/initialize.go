@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 
 	"github.com/cyberark/conjur-api-go/conjurapi"
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/cmd/helper"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/httperror"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/pki"
+	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -48,6 +52,19 @@ var initCMD = &cobra.Command{
 		err = storage.InitConfig()
 		if err != nil {
 			log.Fatalf("Failed to Init the Conjur PKI Service. %s", err)
+		}
+
+		template := types.Template{
+			TemplateName: "pki-service",
+			KeyAlgo:      "rsa",
+			KeyBits:      "2048",
+			MaxTTL:       43200,
+		}
+
+		httpErr := pki.CreateTemplate(template, storage)
+		if httpErr != (httperror.HTTPError{}) {
+			httpErr.JSON()
+			os.Exit(1)
 		}
 	},
 }
