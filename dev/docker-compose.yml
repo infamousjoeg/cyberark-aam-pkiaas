@@ -48,7 +48,7 @@ services:
       CONJUR_ACCOUNT: "conjur"
       CONJUR_APPLIANCE_URL: "https://conjur-master"
 
-    command: bash -c 'while [ ! -f /app/env/pkiaas.env ]; do echo "pkiaas.env not exist"; sleep 2; done; source /app/env/pkiaas.env && env && /app/pkiaas'
+    command: bash -c 'while [ ! -f /app/env/pkiaas.env ]; do echo "pkiaas.env not exist"; sleep 2; done; source /app/env/pkiaas.env && env && /app/pkiaas server -c pkiaas'
     volumes:
       - conjur-certificate:/app/cert
       - conjur-env:/app/env
