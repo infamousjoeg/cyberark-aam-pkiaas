@@ -30,7 +30,7 @@ A service written in Golang providing just-in-time generation of X.509 certifica
 
 ## Usage
 
-As of Beta (current), the PKI service listens over port `8080`. This port may be changed by providing the environment variable `PORT` with a new value.
+As of Beta (current), the PKI service listens over port `443`. This port may be changed by providing the environment variable `PORT` with a new value.
 
 For more detailed documentation, please read [PKI Service Usage Guide](docs/pki-service-usage.md).
 

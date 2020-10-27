@@ -46,7 +46,7 @@ jobs:
           docker logs dev_pkiaas_1
       - name: Test PKIaaS Health
         run: |
-          curl -k -X GET https://0.0.0.0/health
+          curl -k -X GET https://0.0.0.0:8443/health
     
   unit_tests:
     name: Unit Tests w/ Coverage

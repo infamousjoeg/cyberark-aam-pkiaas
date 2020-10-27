@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
@@ -273,7 +274,7 @@ func CreateCert(certReq types.CreateCertReq, backend backend.Storage) (types.Cre
 	var pemPrivKey []byte
 
 	// Generate the appropriate PEM type for the created private key
-	switch template.KeyAlgo {
+	switch strings.ToUpper(template.KeyAlgo) {
 	case "RSA":
 		pemPrivKey = pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(clientPrivKey.(*rsa.PrivateKey))})
 	case "ECDSA":

@@ -13,6 +13,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/bits"
+	"strings"
 	"time"
 
 	"github.com/infamousjoeg/cyberark-aam-pkiaas/internal/backend"
@@ -55,7 +56,7 @@ func GenerateIntermediate(intermediateRequest types.IntermediateRequest, selfSig
 
 	var keyBytes []byte
 	// Capture the DER format of the new signing key to be written to backend storage
-	switch intermediateRequest.KeyAlgo {
+	switch strings.ToUpper(intermediateRequest.KeyAlgo) {
 	case "RSA":
 		keyBytes = x509.MarshalPKCS1PrivateKey(signPrivKey.(*rsa.PrivateKey))
 	case "ECDSA":
@@ -65,6 +66,8 @@ func GenerateIntermediate(intermediateRequest types.IntermediateRequest, selfSig
 		}
 	case "ED25519":
 		keyBytes = signPrivKey.(ed25519.PrivateKey)
+	default:
+		return types.PEMIntermediate{}, httperror.BadSigAlgo("")
 	}
 
 	err = backend.WriteSigningKey(base64.StdEncoding.EncodeToString(keyBytes))
