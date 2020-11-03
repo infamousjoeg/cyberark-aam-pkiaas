@@ -21,13 +21,13 @@ var storage backend.Storage
 const (
 	certFile = "/etc/ssl/server.pem"
 	keyFile  = "/etc/ssl/server.key"
+	portFlag = "port"
 )
 
 // Gets the port number supplied by end-user or else defaults to 443
 func getPort() string {
-	p := os.Getenv("PORT")
-	if p != "" {
-		return ":" + p
+	if Port != "" {
+		return ":" + Port
 	}
 	return ":443"
 }
@@ -101,6 +101,13 @@ var serverCMD = &cobra.Command{
 		if vaultBackend == "yes" || vaultBackend == "true" {
 			storage, err = vault.NewFromDefaults()
 		} else {
+			os.Setenv("CONJUR_APPLIANCE_URL", ApplianceURL)
+			os.Setenv("CONJUR_ACCOUNT", Account)
+			os.Setenv("CONJUR_AUTHN_LOGIN", Login)
+			if CertFile != "" {
+				os.Setenv("CONJUR_CERT_FILE", CertFile)
+			}
+
 			storage, err = conjur.NewFromDefaults()
 		}
 
@@ -119,13 +126,48 @@ var serverCMD = &cobra.Command{
 	},
 }
 
+func mandatoryFlagWithEnvVar(cmd cobra.Command, flag string, envVar string) {
+	if envVar == "" {
+		cmd.MarkFlagRequired(flag)
+	}
+}
+
+var (
+	// Port of the PKI Service
+	Port string
+)
+
 func init() {
+	applianceURLEnv := os.Getenv("CONJUR_APPLIANCE_URL")
+	accountEnv := os.Getenv("CONJUR_ACCOUNT")
+	loginEnv := os.Getenv("CONJUR_AUTHN_LOGIN")
+	certFileEnv := os.Getenv("CONJUR_CERT_FILE")
+	portEnv := os.Getenv("PORT")
+
 	// Common Name
 	serverCMD.Flags().StringVarP(&CommonName, commonNameFlag, "c", "", "Common name for the PKI Service")
 	serverCMD.MarkFlagRequired(commonNameFlag)
 
-	// AltNames
-	serverCMD.Flags().StringSliceVarP(&AltNames, altNamesFlag, "a", []string{}, "Alternative names for the PKI Service")
+	// Appliance
+	serverCMD.Flags().StringVarP(&ApplianceURL, applianceURLFlag, "u", applianceURLEnv, "Conjur appliance URL. Environment variable equivalent 'CONJUR_APPLIANCE_URL'")
+	mandatoryFlagWithEnvVar(*serverCMD, applianceURLFlag, applianceURLEnv)
+
+	// Account
+	serverCMD.Flags().StringVarP(&Account, accountFlag, "a", accountEnv, "Conjur account. Environment variable equivalent 'CONJUR_ACCOUNT'")
+	mandatoryFlagWithEnvVar(*serverCMD, accountFlag, accountEnv)
+
+	// Login
+	serverCMD.Flags().StringVarP(&Login, loginFlag, "l", loginEnv, "Login for Conjur. Environment variable equivalent 'CONJUR_AUTHN_LOGIN'")
+	mandatoryFlagWithEnvVar(*serverCMD, loginFlag, loginEnv)
+
+	// Optional cert File
+	serverCMD.Flags().StringVarP(&CertFile, certFileFlag, "f", certFileEnv, "Path to the Conjur certificate chain file. Environment variable equivalent 'CONJUR_CERT_FILE'")
+
+	// Optional Port
+	serverCMD.Flags().StringVarP(&Port, portFlag, "p", portEnv, "Port of the PKI Service. Environment variable equivalent 'PORT'")
+
+	// Optional AltNames
+	serverCMD.Flags().StringSliceVarP(&AltNames, altNamesFlag, "n", []string{}, "Alternative names for the PKI Service")
 
 	rootCmd.AddCommand(serverCMD)
 }
