@@ -17,10 +17,10 @@ import (
 
 func initPolicy() io.Reader {
 	return bytes.NewReader([]byte(`
-- !host pki-service
+- !group pki-service
 - !policy
   id: pki
-  owner: !host pki-service
+  owner: !group pki-service
   body:
     - !group admin
 `))
@@ -47,7 +47,6 @@ var initCMD = &cobra.Command{
 		if err != nil {
 			log.Fatalf("Failed to load init Conjur policy. %v. %s", resp, err)
 		}
-		fmt.Printf("%v", resp)
 
 		err = storage.InitConfig()
 		if err != nil {
@@ -66,6 +65,9 @@ var initCMD = &cobra.Command{
 			httpErr.JSON()
 			os.Exit(1)
 		}
+
+		fmt.Printf("%v\n", resp)
+		fmt.Printf("Add your PKI service host to the '%s' group.", "pki-service")
 	},
 }
 
