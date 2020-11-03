@@ -145,7 +145,7 @@ func init() {
 	portEnv := os.Getenv("PORT")
 
 	// Common Name
-	serverCMD.Flags().StringVarP(&CommonName, commonNameFlag, "c", applianceURLEnv, "Common name for the PKI Service")
+	serverCMD.Flags().StringVarP(&CommonName, commonNameFlag, "c", "", "Common name for the PKI Service")
 	serverCMD.MarkFlagRequired(commonNameFlag)
 
 	// Appliance
