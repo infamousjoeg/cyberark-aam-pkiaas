@@ -101,6 +101,13 @@ var serverCMD = &cobra.Command{
 		if vaultBackend == "yes" || vaultBackend == "true" {
 			storage, err = vault.NewFromDefaults()
 		} else {
+			os.Setenv("CONJUR_APPLIANCE_URL", CommonName)
+			os.Setenv("CONJUR_ACCOUNT", Account)
+			os.Setenv("CONJUR_AUTHN_LOGIN", Login)
+			if CertFile != "" {
+				os.Setenv("CONJUR_CERT_FILE", CertFile)
+			}
+
 			storage, err = conjur.NewFromDefaults()
 		}
 
@@ -119,12 +126,38 @@ var serverCMD = &cobra.Command{
 	},
 }
 
+func mandatoryFlagWithEnvVar(cmd *cobra.Command, flag string, envVar string) {
+	if envVar != "" {
+		cmd.MarkFlagRequired(flag)
+	}
+}
+
 func init() {
+	applianceURLEnv := os.Getenv("CONJUR_APPLIANCE_URL")
+	accountEnv := os.Getenv("CONJUR_ACCOUNT")
+	loginEnv := os.Getenv("CONJUR_AUTHN_LOGIN")
+	certFileEnv := os.Getenv("CONJUR_CERT_FILE")
+
 	// Common Name
-	serverCMD.Flags().StringVarP(&CommonName, commonNameFlag, "c", "", "Common name for the PKI Service")
+	serverCMD.Flags().StringVarP(&CommonName, commonNameFlag, "c", applianceURLEnv, "Common name for the PKI Service")
 	serverCMD.MarkFlagRequired(commonNameFlag)
 
-	// AltNames
+	// Appliance
+	serverCMD.Flags().StringVarP(&ApplianceURL, applianceURLFlag, "u", applianceURLEnv, "Conjur appliance URL. Environment variable equivalent 'CONJUR_APPLIANCE_URL'")
+	mandatoryFlagWithEnvVar(serverCMD, applianceURLFlag, applianceURLEnv)
+
+	// Account
+	serverCMD.Flags().StringVarP(&Account, accountFlag, "a", accountEnv, "Conjur account. Environment variable equivalent 'CONJUR_ACCOUNT'")
+	mandatoryFlagWithEnvVar(serverCMD, accountFlag, accountEnv)
+
+	// Login
+	serverCMD.Flags().StringVarP(&Login, loginFlag, "l", loginEnv, "Login for Conjur. Environment variable equivalent 'CONJUR_AUTHN_LOGIN'")
+	mandatoryFlagWithEnvVar(serverCMD, loginFlag, loginEnv)
+
+	// Optional cert File
+	serverCMD.Flags().StringVarP(&CertFile, certFileFlag, "c", certFileEnv, "Path to the Conjur certificate chain file. Environment variable equivalent 'CONJUR_CERT_FILE'")
+
+	// Optional AltNames
 	serverCMD.Flags().StringSliceVarP(&AltNames, altNamesFlag, "a", []string{}, "Alternative names for the PKI Service")
 
 	rootCmd.AddCommand(serverCMD)
