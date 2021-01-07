@@ -4,7 +4,7 @@ source conjur_utils.sh
 
 export CONTAINER_NAME="conjur-master"
 export ADMIN_PASSWORD="CYberark11@@"
-export IMAGE_NAME="captainfluffytoes/dap:11.4.0"
+export IMAGE_NAME="captainfluffytoes/csme:latest"
 export CONJUR_ACCOUNT=conjur
 
 docker rm -f $CONTAINER_NAME
