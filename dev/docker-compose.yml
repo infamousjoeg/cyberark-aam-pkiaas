@@ -1,7 +1,7 @@
 version: "3"
 services:
   dap:
-    image: captainfluffytoes/dap:11.4.0
+    image: captainfluffytoes/csme:latest
     security_opt:
       - seccomp:unconfined
     environment:
