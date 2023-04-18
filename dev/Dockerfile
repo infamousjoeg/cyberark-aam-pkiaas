@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:22.10
 
 RUN apt-get update && apt-get install -y openssh-server nano curl jq \
     && rm -rf /var/lib/apt/lists/*
